@@ -1,10 +1,32 @@
-import { type MouseEvent, useState } from 'react';
+import { type MouseEvent, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const Header = () => {
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const location = useLocation();
+  const [hasUserClosedModal, setHasUserClosedModal] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(location.pathname === '/');
 
-  const openLoginModal = () => setIsLoginModalOpen(true);
-  const closeLoginModal = () => setIsLoginModalOpen(false);
+  useEffect(() => {
+    if (location.pathname === '/' && !hasUserClosedModal) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    setIsLoginModalOpen(false);
+
+    if (location.pathname !== '/') {
+      setHasUserClosedModal(false);
+    }
+  }, [hasUserClosedModal, location.pathname]);
+
+  const openLoginModal = () => {
+    setHasUserClosedModal(false);
+    setIsLoginModalOpen(true);
+  };
+  const closeLoginModal = () => {
+    setHasUserClosedModal(true);
+    setIsLoginModalOpen(false);
+  };
   const stopPropagation = (event: MouseEvent<HTMLDivElement>) => {
     event.stopPropagation();
   };
