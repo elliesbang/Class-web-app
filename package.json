@@ -1,0 +1,10 @@
+{
+  "name": "elliesroom-class",
+  "private": true,
+  "workspaces": [
+    "class-web-app"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace class-web-app"
+  }
+}
