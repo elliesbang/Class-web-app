@@ -1,7 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
-import NavSection from './components/NavSection';
-import NavbarTop from './components/NavbarTop.jsx';
+import NavbarBottom from './components/NavbarBottom';
 import Home from './pages/Home.jsx';
 import InternalCourses from './pages/InternalCourses.jsx';
 import VOD from './pages/VOD.jsx';
@@ -10,10 +9,9 @@ import MyPage from './pages/MyPage.jsx';
 
 function App() {
   return (
-    <div className="flex min-h-screen flex-col bg-ivory">
+    <div className="flex min-h-screen flex-col bg-[#fefaf4]">
       <Header />
-      <NavbarTop />
-      <main className="flex-1 px-4 pb-10 pt-20">
+      <main className="flex-1 px-4 pb-20 pt-20">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/internal" element={<InternalCourses />} />
@@ -22,7 +20,7 @@ function App() {
           <Route path="/mypage" element={<MyPage />} />
         </Routes>
       </main>
-      <NavSection />
+      <NavbarBottom />
     </div>
   );
 }
