@@ -4,7 +4,7 @@
 
 ## 프로젝트 구조
 
-- `elliesroom-class/`
+- `class-web-app/`
   - `index.html`, `manifest.webmanifest`
   - `src/`
     - `components/` – 공통 UI 컴포넌트(NavbarTop, AccordionCategory, CourseCard)
@@ -12,15 +12,13 @@
     - `App.jsx`, `main.jsx`, `index.css`
   - `tailwind.config.js`, `postcss.config.js`, `vite.config.js`
   - `package.json`
+- `package.json` (루트) – Cloudflare Pages용 workspace 및 빌드 스크립트 정의
+- `wrangler.toml` – Pages 빌드 설정 및 출력 디렉터리 지정
 
-## 주요 라우트
+## Cloudflare Pages 빌드 설정
 
-- `/` – 홈
-- `/internal` – 내부 강의실 (카테고리 아코디언 포함)
-- `/vod` – VOD
-- `/notices` – 공지
-- `/mypage` – 마이페이지
+- **Build command**: `npm run build`
+- **Build output directory**: `dist`
+- **Root directory**: `class-web-app`
 
-## 빌드
-
-Cloudflare Pages 빌드 명령어는 `npm run build`, 출력 디렉터리는 `dist` 입니다.
+Cloudflare Pages는 루트 `package.json`의 workspace 스크립트를 통해 하위 프로젝트에서 `npm run build`를 실행하며, 빌드 결과는 `class-web-app/dist`에 생성됩니다.
