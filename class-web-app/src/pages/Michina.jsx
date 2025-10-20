@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import MichinaTabs from '../components/MichinaTabs.jsx';
 import MichinaVideo from '../components/michina/MichinaVideo.jsx';
 import MichinaUpload from '../components/michina/MichinaUpload.jsx';
@@ -13,19 +14,19 @@ const TAB_CONFIG = [
 ];
 
 function Michina() {
-  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+  const initialOpen = location.state?.autoOpen ?? false;
+  const [isOpen, setIsOpen] = useState(initialOpen);
   const [activeTab, setActiveTab] = useState('video');
   const [transitionKey, setTransitionKey] = useState(0);
 
   const handleToggle = () => {
-    setIsOpen((prev) => {
-      const next = !prev;
-      if (!prev && activeTab !== 'video') {
-        setActiveTab('video');
-        setTransitionKey((key) => key + 1);
-      }
-      return next;
-    });
+    if (isOpen) return;
+    if (activeTab !== 'video') {
+      setActiveTab('video');
+      setTransitionKey((key) => key + 1);
+    }
+    setIsOpen(true);
   };
 
   const handleTabChange = (tabId) => {
@@ -57,13 +58,15 @@ function Michina() {
         </p>
       </header>
 
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-ellieYellow px-6 py-3 text-base font-semibold text-ellieGray shadow-soft transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ellieYellow/80"
-      >
-        수강하기
-      </button>
+      {!isOpen && (
+        <button
+          type="button"
+          onClick={handleToggle}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-ellieYellow px-6 py-3 text-base font-semibold text-ellieGray shadow-soft transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ellieYellow/80"
+        >
+          수강하기
+        </button>
+      )}
 
       {isOpen && (
         <MichinaTabs

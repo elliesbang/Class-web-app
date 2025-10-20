@@ -33,7 +33,7 @@ const categories = [
     title: 'AI·콘텐츠',
     accentColor: '#ffe26a',
     courses: [
-      { name: '미치나', link: '/internal/michina' },
+      { name: '미치나', link: '/internal/michina', linkState: { autoOpen: true } },
       { name: '미템나' },
     ],
   },
