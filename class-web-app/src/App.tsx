@@ -6,6 +6,7 @@ import InternalCourses from './pages/InternalCourses.jsx';
 import VOD from './pages/VOD.jsx';
 import Notices from './pages/Notices.jsx';
 import MyPage from './pages/MyPage.jsx';
+import Michina from './pages/Michina.jsx';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/vod" element={<VOD />} />
           <Route path="/notices" element={<Notices />} />
           <Route path="/mypage" element={<MyPage />} />
+          <Route path="/internal/michina" element={<Michina />} />
         </Routes>
       </main>
       <NavbarBottom />
