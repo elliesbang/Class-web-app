@@ -18,3 +18,19 @@ body {
 .card-shadow {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.1);
 }
+
+@keyframes michinaFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.michina-fade {
+  animation: michinaFadeIn 0.3s ease-in-out;
+}

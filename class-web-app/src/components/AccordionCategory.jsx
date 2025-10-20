@@ -29,7 +29,7 @@ function AccordionCategory({ title, courses, accentColor }) {
       >
         {isOpen &&
           courses.map((course) => (
-            <CourseCard key={course} name={course} accentColor={accentColor} />
+            <CourseCard key={course.name} course={course} accentColor={accentColor} />
           ))}
       </div>
     </section>
