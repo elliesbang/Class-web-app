@@ -3,6 +3,7 @@ import MainLayout from './layouts/MainLayout';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminComingSoon from './pages/admin/AdminComingSoon';
 import AdminDashboardHome from './pages/admin/AdminDashboardHome';
+import AdminContentManagement from './pages/admin/AdminContentManagement';
 import Home from './pages/Home.jsx';
 import InternalCourses from './pages/InternalCourses.jsx';
 import Michina from './pages/Michina.jsx';
@@ -28,7 +29,7 @@ function App() {
         <Route path="students" element={<AdminComingSoon title="수강생 관리" />} />
         <Route path="assignments" element={<AdminComingSoon title="과제 관리" />} />
         <Route path="feedback" element={<AdminComingSoon title="피드백 관리" />} />
-        <Route path="content" element={<AdminComingSoon title="콘텐츠 관리" />} />
+        <Route path="content" element={<AdminContentManagement />} />
         <Route path="reports" element={<AdminComingSoon title="통계 & 리포트" />} />
         <Route path="settings" element={<AdminComingSoon title="설정" />} />
       </Route>
