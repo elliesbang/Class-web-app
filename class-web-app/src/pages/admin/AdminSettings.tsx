@@ -52,7 +52,7 @@ type DataManagementState = {
   isExporting: boolean;
 };
 
-const classTypes = ['미치나', '캔디마', '캔디수', '디캘드로', '나캔디'];
+const classTypes = ['이얼챌', '미치나', '미템나', '에그작', '에그작챌', '나컬작', '나컬작챌'];
 
 const uploadFormatOptions: { label: string; value: UploadFormat }[] = [
   { label: '이미지', value: 'image' },
@@ -100,7 +100,7 @@ const AdminSettings = () => {
 
   const [classPolicies, setClassPolicies] = useState<ClassUploadPolicy[]>([
     {
-      classType: '미치나',
+      classType: '이얼챌',
       allowedFormats: ['image'],
       maxFileSize: 15,
       uploadStart: '00:00',
@@ -109,7 +109,7 @@ const AdminSettings = () => {
       autoInherit: true,
     },
     {
-      classType: '캔디마',
+      classType: '미치나',
       allowedFormats: ['pdf', 'link'],
       maxFileSize: 25,
       uploadStart: '09:00',
