@@ -6,6 +6,7 @@ import AdminCourseManagement from './pages/admin/AdminCourseManagement';
 import AdminDashboardHome from './pages/admin/AdminDashboardHome';
 import AdminContentManagement from './pages/admin/AdminContentManagement';
 import AdminCourseDetail from './pages/admin/AdminCourseDetail';
+import AdminStudentManagement from './pages/admin/AdminStudentManagement';
 import Home from './pages/Home.jsx';
 import InternalCourses from './pages/InternalCourses.jsx';
 import Michina from './pages/Michina.jsx';
@@ -29,7 +30,7 @@ function App() {
         <Route index element={<AdminDashboardHome />} />
         <Route path="courses" element={<AdminCourseManagement />} />
         <Route path="courses/:id" element={<AdminCourseDetail />} />
-        <Route path="students" element={<AdminComingSoon title="수강생 관리" />} />
+        <Route path="students" element={<AdminStudentManagement />} />
         <Route path="assignments" element={<AdminComingSoon title="과제 관리" />} />
         <Route path="feedback" element={<AdminComingSoon title="피드백 관리" />} />
         <Route path="content" element={<AdminContentManagement />} />
