@@ -9,7 +9,7 @@ const menuItems = [
   { label: '과제 관리', icon: '🖼️', to: '/admin/assignments' },
   { label: '피드백 관리', icon: '💬', to: '/admin/feedback' },
   { label: '콘텐츠 관리', icon: '🎥', to: '/admin/content' },
-  { label: '통계 & 리포트', icon: '📊', to: '/admin/reports' },
+  { label: '통계 & 리포트', icon: '📊', to: '/admin/statistics' },
   { label: '설정', icon: '⚙️', to: '/admin/settings' },
 ];
 
