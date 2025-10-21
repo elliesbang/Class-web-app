@@ -8,7 +8,7 @@ import AdminCourseDetail from './pages/admin/AdminCourseDetail';
 import AdminStudentManagement from './pages/admin/AdminStudentManagement';
 import AdminAssignmentsManagement from './pages/admin/AdminAssignmentsManagement';
 import AdminFeedbackManagement from './pages/admin/AdminFeedbackManagement';
-import AdminComingSoon from './pages/admin/AdminComingSoon';
+import AdminSettings from './pages/admin/AdminSettings';
 import AdminStatistics from './pages/admin/AdminStatistics';
 import Home from './pages/Home.jsx';
 import InternalCourses from './pages/InternalCourses.jsx';
@@ -41,7 +41,7 @@ function App() {
         <Route path="feedback/edit/:id" element={<AdminFeedbackManagement />} />
         <Route path="content" element={<AdminContentManagement />} />
         <Route path="statistics" element={<AdminStatistics />} />
-        <Route path="settings" element={<AdminComingSoon title="설정" />} />
+        <Route path="settings" element={<AdminSettings />} />
       </Route>
     </Routes>
   );
