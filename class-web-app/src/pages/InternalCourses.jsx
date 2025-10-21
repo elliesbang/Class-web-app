@@ -5,7 +5,7 @@ const categories = [
     title: '캔바',
     accentColor: '#fde767',
     courses: [
-      { name: '캔디마' },
+      { name: '캔디마', link: '/courses/candyma' },
       { name: '나캔디' },
       { name: '캔디수' },
     ],
@@ -14,27 +14,27 @@ const categories = [
     title: '중국어 캘리그라피',
     accentColor: '#ffd57a',
     courses: [
-      { name: '이얼챌' },
+      { name: '이얼챌', link: '/courses/earlchal' },
       { name: '글씨체' },
       { name: '응용반' },
     ],
   },
   {
-    title: '창작',
+    title: 'ai창작',
     accentColor: '#ffec8b',
     courses: [
-      { name: '나컬작' },
-      { name: '나컬작챌' },
-      { name: '에그작' },
-      { name: '에그작챌' },
+      { name: '나컬작', link: '/courses/nacoljak' },
+      { name: '나컬작챌', link: '/courses/nacoljakchal' },
+      { name: '에그작', link: '/courses/eggjak' },
+      { name: '에그작챌', link: '/courses/eggjakchal' },
     ],
   },
   {
-    title: 'AI·콘텐츠',
+    title: '콘텐츠',
     accentColor: '#ffe26a',
     courses: [
       { name: '미치나', link: '/internal/michina', linkState: { autoOpen: true } },
-      { name: '미템나' },
+      { name: '미템나', link: '/courses/mitemna' },
     ],
   },
 ];
