@@ -1,29 +1,38 @@
 import { Route, Routes } from 'react-router-dom';
-import Header from './components/Header';
-import NavbarBottom from './components/NavbarBottom';
+import MainLayout from './layouts/MainLayout';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminComingSoon from './pages/admin/AdminComingSoon';
+import AdminDashboardHome from './pages/admin/AdminDashboardHome';
 import Home from './pages/Home.jsx';
 import InternalCourses from './pages/InternalCourses.jsx';
-import VOD from './pages/VOD.jsx';
-import Notices from './pages/Notices.jsx';
-import MyPage from './pages/MyPage.jsx';
 import Michina from './pages/Michina.jsx';
+import MyPage from './pages/MyPage.jsx';
+import Notices from './pages/Notices.jsx';
+import VOD from './pages/VOD.jsx';
 
 function App() {
   return (
-    <div className="flex min-h-screen flex-col bg-[#fefaf4]">
-      <Header />
-      <main className="flex-1 px-4 pb-20 pt-20">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/internal" element={<InternalCourses />} />
-          <Route path="/vod" element={<VOD />} />
-          <Route path="/notices" element={<Notices />} />
-          <Route path="/mypage" element={<MyPage />} />
-          <Route path="/internal/michina" element={<Michina />} />
-        </Routes>
-      </main>
-      <NavbarBottom />
-    </div>
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/internal" element={<InternalCourses />} />
+        <Route path="/vod" element={<VOD />} />
+        <Route path="/notices" element={<Notices />} />
+        <Route path="/mypage" element={<MyPage />} />
+        <Route path="/internal/michina" element={<Michina />} />
+      </Route>
+
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<AdminDashboardHome />} />
+        <Route path="classes" element={<AdminComingSoon title="수업 관리" />} />
+        <Route path="students" element={<AdminComingSoon title="수강생 관리" />} />
+        <Route path="assignments" element={<AdminComingSoon title="과제 관리" />} />
+        <Route path="feedback" element={<AdminComingSoon title="피드백 관리" />} />
+        <Route path="content" element={<AdminComingSoon title="콘텐츠 관리" />} />
+        <Route path="reports" element={<AdminComingSoon title="통계 & 리포트" />} />
+        <Route path="settings" element={<AdminComingSoon title="설정" />} />
+      </Route>
+    </Routes>
   );
 }
 
