@@ -1,16 +1,14 @@
-import { type FormEvent, type MouseEvent, useState } from 'react';
+import { type MouseEvent, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginView, setLoginView] = useState<'selection' | 'student' | 'admin'>('selection');
-  const [adminPassword, setAdminPassword] = useState('');
   const navigate = useNavigate();
 
   const goBackToSelection = () => {
     setLoginView('selection');
-    setAdminPassword('');
   };
   const openLoginModal = () => {
     goBackToSelection();
@@ -30,9 +28,7 @@ const Header = () => {
     event.stopPropagation();
   };
 
-  const handleAdminLogin = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+  const enterAdminDashboard = () => {
     closeLoginModal();
     navigate('/admin');
   };
@@ -109,29 +105,18 @@ const Header = () => {
             </>
           ) : (
             <>
-              <p className="mb-4 text-base font-semibold text-gray-800">관리자 비밀번호를 입력하세요</p>
-              <form className="flex flex-col gap-4 text-left" onSubmit={handleAdminLogin}>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-gray-600" htmlFor="admin-password">
-                    관리자 비밀번호
-                  </label>
-                  <input
-                    id="admin-password"
-                    type="password"
-                    value={adminPassword}
-                    onChange={(event) => setAdminPassword(event.target.value)}
-                    placeholder="비밀번호를 입력하세요"
-                    className="w-full rounded-full border border-[#f0e7c6] px-4 py-2 text-sm text-[#404040] focus:border-[#f6e94f] focus:outline-none"
-                  />
-                </div>
+              <p className="mb-4 text-base font-semibold text-gray-800">
+                관리자 전용 대시보드로 바로 이동할 수 있어요.
+              </p>
+              <div className="flex flex-col gap-4 text-left">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={enterAdminDashboard}
                   className="w-full rounded-full bg-[#fef568] px-4 py-2 text-sm font-semibold text-[#404040] shadow-[0_4px_10px_rgba(0,0,0,0.12)] transition-colors hover:bg-[#f6e94f]"
-                  disabled={adminPassword.trim().length === 0}
                 >
-                  로그인
+                  대시보드 바로가기
                 </button>
-              </form>
+              </div>
               <button
                 type="button"
                 onClick={goBackToSelection}
