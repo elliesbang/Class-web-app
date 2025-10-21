@@ -64,7 +64,9 @@ const LoginModal = () => {
       <button
         type="button"
         className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full transition-colors"
-        onClick={() => setActiveForm("admin")}
+        onClick={() => {
+          window.open("/admin", "_blank");
+        }}
       >
         관리자 로그인
       </button>
