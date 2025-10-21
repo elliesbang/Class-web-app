@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 const menuItems = [
   { label: '대시보드 홈', icon: '🏠', to: '/admin', end: true },
-  { label: '수업 관리', icon: '📚', to: '/admin/classes' },
+  { label: '수업 관리', icon: '📚', to: '/admin/courses' },
   { label: '수강생 관리', icon: '👩‍🎓', to: '/admin/students' },
   { label: '과제 관리', icon: '🖼️', to: '/admin/assignments' },
   { label: '피드백 관리', icon: '💬', to: '/admin/feedback' },

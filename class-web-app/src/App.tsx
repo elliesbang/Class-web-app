@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminComingSoon from './pages/admin/AdminComingSoon';
+import AdminCourseManagement from './pages/admin/AdminCourseManagement';
 import AdminDashboardHome from './pages/admin/AdminDashboardHome';
 import AdminContentManagement from './pages/admin/AdminContentManagement';
 import Home from './pages/Home.jsx';
@@ -25,7 +26,7 @@ function App() {
 
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboardHome />} />
-        <Route path="classes" element={<AdminComingSoon title="수업 관리" />} />
+        <Route path="courses" element={<AdminCourseManagement />} />
         <Route path="students" element={<AdminComingSoon title="수강생 관리" />} />
         <Route path="assignments" element={<AdminComingSoon title="과제 관리" />} />
         <Route path="feedback" element={<AdminComingSoon title="피드백 관리" />} />
