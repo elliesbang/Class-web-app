@@ -1,4 +1,5 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 type CourseType = '강의' | '챌린지' | '특강' | '원데이';
 
@@ -133,7 +134,6 @@ const AdminCourseManagement = () => {
   const [statusFilter, setStatusFilter] = useState<'전체' | CourseStatus>('전체');
   const [sortOption, setSortOption] = useState<'latest' | 'status'>('latest');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
   const [courseForm, setCourseForm] = useState({
     title: '',
@@ -151,6 +151,8 @@ const AdminCourseManagement = () => {
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadInputKey, setUploadInputKey] = useState(0);
+
+  const navigate = useNavigate();
 
   const filteredCourses = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -745,7 +747,7 @@ const AdminCourseManagement = () => {
                   <tr
                     key={course.id}
                     className="cursor-pointer transition-all hover:bg-[#fdf7f0]/70"
-                    onClick={() => setSelectedCourse(course)}
+                    onClick={() => navigate(`/admin/courses/${course.id}`)}
                   >
                     <td className="px-4 py-4 text-sm font-semibold text-[#404040]">{course.title}</td>
                     <td className="px-4 py-4 text-sm text-[#5c5c5c]">{course.type}</td>
@@ -794,12 +796,12 @@ const AdminCourseManagement = () => {
               <div
                 key={course.id}
                 className="rounded-2xl border border-[#f0e3d8] bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
-                onClick={() => setSelectedCourse(course)}
+                onClick={() => navigate(`/admin/courses/${course.id}`)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
-                    setSelectedCourse(course);
+                    navigate(`/admin/courses/${course.id}`);
                   }
                 }}
               >
@@ -956,99 +958,6 @@ const AdminCourseManagement = () => {
         )}
       </section>
 
-      {selectedCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-2xl font-bold text-[#404040]">{selectedCourse.title}</h3>
-                <p className="mt-1 text-sm text-[#5c5c5c]">{selectedCourse.description || '등록된 설명이 없습니다.'}</p>
-              </div>
-              <button
-                type="button"
-                className="rounded-full bg-[#f5eee9] px-4 py-2 text-sm font-semibold text-[#5c5c5c] transition-all hover:-translate-y-0.5 hover:bg-[#ffd331]/60"
-                onClick={() => setSelectedCourse(null)}
-              >
-                닫기
-              </button>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl bg-[#fdf7f0] p-4 shadow-sm">
-                <h4 className="text-sm font-semibold text-[#404040]">기본 정보</h4>
-                <dl className="mt-3 space-y-2 text-sm text-[#5c5c5c]">
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">유형</dt>
-                    <dd>{selectedCourse.type}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">기간</dt>
-                    <dd>
-                      {selectedCourse.startDate} ~ {selectedCourse.endDate}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">업로드 가능 시간</dt>
-                    <dd>{selectedCourse.uploadPeriod}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">담당 관리자</dt>
-                    <dd>{selectedCourse.manager}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">상태</dt>
-                    <dd>{selectedCourse.status}</dd>
-                  </div>
-                </dl>
-              </div>
-              <div className="rounded-2xl bg-[#fdf7f0] p-4 shadow-sm">
-                <h4 className="text-sm font-semibold text-[#404040]">수강생 & 콘텐츠 현황</h4>
-                <dl className="mt-3 space-y-2 text-sm text-[#5c5c5c]">
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">수강생 수</dt>
-                    <dd>{selectedCourse.students.length}명</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">업로드된 영상</dt>
-                    <dd>{selectedCourse.metrics.videos}개</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">자료</dt>
-                    <dd>{selectedCourse.metrics.materials}개</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">공지</dt>
-                    <dd>{selectedCourse.metrics.notices}개</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">과제 제출률</dt>
-                    <dd>{selectedCourse.metrics.assignmentSubmissionRate}%</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="font-semibold text-[#404040]">피드백 완료율</dt>
-                    <dd>{selectedCourse.metrics.feedbackCompletionRate}%</dd>
-                  </div>
-                </dl>
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <a
-                href="#"
-                className="flex-1 min-w-[150px] rounded-full bg-[#ffd331] px-4 py-2 text-center text-sm font-semibold text-[#404040] shadow-md transition-all hover:-translate-y-0.5 hover:bg-[#e6bd2c]"
-              >
-                콘텐츠 관리로 이동
-              </a>
-              <a
-                href="#"
-                className="flex-1 min-w-[150px] rounded-full border border-[#e9dccf] px-4 py-2 text-center text-sm font-semibold text-[#404040] transition-all hover:-translate-y-0.5 hover:border-[#ffd331]"
-              >
-                과제 관리로 이동
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
