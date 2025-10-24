@@ -3,14 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 type LoginMode = 'student' | 'admin';
 
-type AdminAuthResponse = {
-  success: boolean;
-  message?: string;
-  data?: {
-    name: string;
-    email: string;
-  };
-};
+const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL ?? '').trim();
+const ADMIN_PASSWORD = (import.meta.env.VITE_ADMIN_PASSWORD ?? '').trim();
 
 const AdminLogin = () => {
   const [mode, setMode] = useState<LoginMode>('student');
@@ -40,46 +34,49 @@ const AdminLogin = () => {
     alert('수강생 로그인 기능은 준비 중입니다.');
   };
 
-  const handleAdminSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleAdminSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
 
-    if (!adminEmail.trim() || !adminPassword.trim()) {
+    setIsLoading(true);
+
+    const trimmedEmail = adminEmail.trim();
+    const trimmedPassword = adminPassword.trim();
+
+    if (!trimmedEmail || !trimmedPassword) {
       setError('이메일과 비밀번호를 모두 입력하세요.');
+      setIsLoading(false);
       return;
     }
 
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/admin-auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: adminEmail, password: adminPassword }),
-      });
-
-      const data = (await response.json()) as AdminAuthResponse;
-
-      if (!data.success) {
-        setError(data.message ?? '관리자 인증에 실패했습니다.');
-        return;
-      }
-
-      localStorage.setItem('adminAuth', 'true');
-      if (data.data) {
-        localStorage.setItem('adminInfo', JSON.stringify(data.data));
-      } else {
-        localStorage.removeItem('adminInfo');
-      }
-
-      navigate('/admin', { replace: true });
-    } catch (error) {
-      console.error('[admin-auth] 로그인 실패', error);
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+      console.error('[admin-auth] 환경변수가 설정되지 않았습니다.');
       setError('관리자 인증에 실패했습니다. 잠시 후 다시 시도해주세요.');
-    } finally {
+      alert('관리자 인증에 실패했습니다.');
       setIsLoading(false);
+      return;
     }
+
+    const isEmailMatch = trimmedEmail === ADMIN_EMAIL;
+    const isPasswordMatch = trimmedPassword === ADMIN_PASSWORD;
+
+    if (!isEmailMatch || !isPasswordMatch) {
+      setError('관리자 인증에 실패했습니다.');
+      alert('관리자 인증에 실패했습니다.');
+      setIsLoading(false);
+      return;
+    }
+
+    localStorage.setItem('adminAuth', 'true');
+    localStorage.setItem(
+      'adminInfo',
+      JSON.stringify({
+        email: ADMIN_EMAIL,
+      })
+    );
+
+    setIsLoading(false);
+    navigate('/admin', { replace: true });
   };
 
   return (
