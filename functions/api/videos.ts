@@ -1,5 +1,5 @@
 import type { Env } from './_utils';
-import { ensureBaseSchema, errorResponse, jsonResponse, rowsToCamelCase } from './_utils';
+import { ensureBaseSchema, errorResponse, jsonResponse, rowsToCamelCase, seedBaseClasses } from './_utils';
 
 type VideoRow = {
   id: number;
@@ -19,6 +19,7 @@ type CreateVideoPayload = {
 
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   await ensureBaseSchema(env.DB);
+  await seedBaseClasses(env.DB);
   const { results } = await env.DB.prepare(
     'SELECT id, title, url, description, class_id, created_at FROM videos ORDER BY created_at DESC, id DESC',
   ).all<VideoRow>();
@@ -41,13 +42,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   await ensureBaseSchema(env.DB);
+  await seedBaseClasses(env.DB);
+
+  const classExists = await env.DB.prepare('SELECT 1 FROM classes WHERE id = ?1').bind(classId).first();
+  if (!classExists) {
+    return errorResponse('존재하지 않는 수업입니다.', 400);
+  }
 
   const statement = env.DB.prepare(
     'INSERT INTO videos (title, url, description, class_id) VALUES (?1, ?2, ?3, ?4) RETURNING id, title, url, description, class_id, created_at',
   ).bind(title, url, description ?? null, classId);
 
-  const { results } = await statement.all<VideoRow>();
-  const [video] = rowsToCamelCase(results);
+  const result = await statement.first<VideoRow>();
+  if (!result) {
+    return errorResponse('영상 정보를 확인할 수 없습니다.', 500);
+  }
+  const [video] = rowsToCamelCase([result]);
 
   return jsonResponse({ video }, { status: 201 });
 };
