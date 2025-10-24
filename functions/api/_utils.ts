@@ -65,6 +65,22 @@ export const ensureBaseSchema = async (db: D1Database) => {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (class_id) REFERENCES classes(id)
     );
+
+    CREATE TABLE IF NOT EXISTS assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      student_name TEXT NOT NULL,
+      student_email TEXT,
+      class_id INTEGER NOT NULL,
+      file_url TEXT,
+      file_name TEXT,
+      file_type TEXT NOT NULL DEFAULT 'other',
+      link TEXT,
+      status TEXT NOT NULL DEFAULT '제출됨',
+      submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (class_id) REFERENCES classes(id)
+    );
   `);
 };
 

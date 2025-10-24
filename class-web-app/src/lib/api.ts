@@ -38,6 +38,25 @@ export type FeedbackPayload = {
   createdAt: string;
 };
 
+export type AssignmentStatus = '미제출' | '제출됨' | '피드백 완료';
+export type AssignmentFileType = 'image' | 'pdf' | 'link' | 'other';
+
+export type AssignmentListItem = {
+  id: number;
+  title: string;
+  classId: number;
+  className: string | null;
+  studentName: string;
+  studentEmail: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileType: AssignmentFileType;
+  link: string | null;
+  status: AssignmentStatus;
+  submittedAt: string;
+  createdAt: string;
+};
+
 type ApiResponse<T> = {
   classes?: ClassInfo[];
   videos?: Array<{
@@ -101,6 +120,8 @@ type ApiResponse<T> = {
     classId: number;
     createdAt: string;
   };
+  assignments?: AssignmentListItem[];
+  assignment?: AssignmentListItem;
 };
 
 const assertResponse = async (response: Response) => {
@@ -192,4 +213,45 @@ export const createFeedback = async (payload: { userName: string; comment: strin
     throw new Error('피드백 정보를 확인할 수 없습니다.');
   }
   return data.feedback;
+};
+
+export const getAssignments = async (params: { classId?: number; limit?: number } = {}) => {
+  const searchParams = new URLSearchParams();
+  if (typeof params.classId === 'number') {
+    searchParams.set('classId', String(params.classId));
+  }
+  if (typeof params.limit === 'number') {
+    searchParams.set('limit', String(params.limit));
+  }
+
+  const query = searchParams.toString();
+  const response = await fetch(`/api/assignments${query ? `?${query}` : ''}`);
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  return (data.assignments ?? []) as AssignmentListItem[];
+};
+
+export const createAssignmentSubmission = async (payload: {
+  title?: string;
+  classId: number;
+  studentName?: string;
+  studentEmail?: string | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileType?: AssignmentFileType;
+  link?: string | null;
+  status?: AssignmentStatus;
+  submittedAt?: string | null;
+}) => {
+  const response = await fetch('/api/assignments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  if (!data.assignment || Array.isArray(data.assignment)) {
+    throw new Error('과제 정보를 확인할 수 없습니다.');
+  }
+  return data.assignment as AssignmentListItem;
 };
