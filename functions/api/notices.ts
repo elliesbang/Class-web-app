@@ -1,102 +1,133 @@
 import { Hono } from 'hono';
-import {
-  AppEnv,
-  assertClassExists,
-  ensureBaseSchema,
-  errorResponse,
-  handleRoute,
-  parseJsonBody,
-  parseNumericQuery,
-  successResponse,
-} from './hono-utils';
 
-type NoticeRow = {
-  id: number;
-  title: string;
-  content: string;
-  class_id: number;
-  created_at: string;
+interface Env {
+  DB: D1Database;
+}
+
+const TABLE_CONFIG = {
+  videos: {
+    schema: `
+      CREATE TABLE IF NOT EXISTS videos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        url TEXT NOT NULL,
+        class_id INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `,
+    columns: ['title', 'url', 'class_id'] as const,
+  },
+  materials: {
+    schema: `
+      CREATE TABLE IF NOT EXISTS materials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        link TEXT NOT NULL,
+        class_id INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `,
+    columns: ['title', 'link', 'class_id'] as const,
+  },
+  notices: {
+    schema: `
+      CREATE TABLE IF NOT EXISTS notices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        class_id INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `,
+    columns: ['title', 'content', 'class_id'] as const,
+  },
+  feedback: {
+    schema: `
+      CREATE TABLE IF NOT EXISTS feedback (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        class_id INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `,
+    columns: ['title', 'content', 'class_id'] as const,
+  },
 };
 
-type CreateNoticePayload = {
-  title?: string;
-  content?: string;
-  class_id?: number;
-  classId?: number;
+type TableName = keyof typeof TABLE_CONFIG;
+
+const getTableName = (path: string): TableName => {
+  const [, , table] = path.split('/');
+  if (!table || !(table in TABLE_CONFIG)) {
+    throw new Error('유효하지 않은 테이블입니다.');
+  }
+  return table as TableName;
 };
 
-const app = new Hono<AppEnv>();
+const ensureTable = async (db: D1Database, table: TableName) => {
+  await db.exec(TABLE_CONFIG[table].schema);
+};
 
-app.use('*', async (c, next) => {
-  await ensureBaseSchema(c.env.DB);
-  await next();
+const app = new Hono<{ Bindings: Env }>();
+
+app.post('/', async (c) => {
+  try {
+    const table = getTableName(c.req.path);
+    await ensureTable(c.env.DB, table);
+
+    const body = await c.req.json();
+    const config = TABLE_CONFIG[table];
+    const values = config.columns.map((column) => body[column]);
+
+    const placeholders = values.map(() => '?').join(', ');
+    const query = `INSERT INTO ${table} (${config.columns.join(', ')}) VALUES (${placeholders})`;
+    await c.env.DB.prepare(query).bind(...values).run();
+
+    return c.json({ success: true, message: '등록 성공' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return c.json({ success: false, message }, 500);
+  }
 });
 
-app.get('/', (c) =>
-  handleRoute(c, async () => {
-    const classId = parseNumericQuery(c.req.query('class_id') ?? c.req.query('classId'));
+app.get('/', async (c) => {
+  try {
+    const table = getTableName(c.req.path);
+    await ensureTable(c.env.DB, table);
 
-    if (Number.isNaN(classId)) {
-      return errorResponse(c, 'class_id 쿼리 파라미터가 필요합니다.', 400);
+    const classId = c.req.query('class_id');
+    const query = classId
+      ? `SELECT * FROM ${table} WHERE class_id = ? ORDER BY created_at DESC`
+      : `SELECT * FROM ${table} ORDER BY created_at DESC`;
+
+    const { results } = classId
+      ? await c.env.DB.prepare(query).bind(classId).all()
+      : await c.env.DB.prepare(query).all();
+
+    return c.json({ success: true, data: results ?? [] });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return c.json({ success: false, message }, 500);
+  }
+});
+
+app.delete('/', async (c) => {
+  try {
+    const table = getTableName(c.req.path);
+    await ensureTable(c.env.DB, table);
+
+    const id = c.req.query('id');
+    if (!id) {
+      throw new Error('id는 필수 값입니다.');
     }
 
-    const { results } = await c.env.DB
-      .prepare(
-        'SELECT id, title, content, class_id, created_at FROM notices WHERE class_id = ?1 ORDER BY created_at DESC, id DESC',
-      )
-      .bind(classId)
-      .all<NoticeRow>();
-
-    const notices = results ?? [];
-    return successResponse(c, notices, '공지 목록을 조회했습니다.');
-  }),
-);
-
-app.post('/', (c) =>
-  handleRoute(c, async () => {
-    const payload = await parseJsonBody<CreateNoticePayload>(c);
-    const { title, content, class_id, classId } = payload;
-    const resolvedClassId = typeof class_id === 'number' ? class_id : classId;
-
-    if (!title || !content || typeof resolvedClassId !== 'number' || Number.isNaN(resolvedClassId)) {
-      return errorResponse(c, 'title, content, class_id는 필수 항목입니다.', 400);
-    }
-
-    const classExists = await assertClassExists(c.env.DB, resolvedClassId);
-    if (!classExists) {
-      return errorResponse(c, '존재하지 않는 class_id 입니다.', 400);
-    }
-
-    const { results } = await c.env.DB
-      .prepare(
-        'INSERT INTO notices (title, content, class_id) VALUES (?1, ?2, ?3) RETURNING id, title, content, class_id, created_at',
-      )
-      .bind(title, content, resolvedClassId)
-      .all<NoticeRow>();
-
-    const [notice] = results ?? [];
-
-    return successResponse(c, notice ?? null, '공지가 등록되었습니다.', 201);
-  }),
-);
-
-app.delete('/', (c) =>
-  handleRoute(c, async () => {
-    const id = parseNumericQuery(c.req.query('id'));
-
-    if (Number.isNaN(id)) {
-      return errorResponse(c, 'id 쿼리 파라미터가 필요합니다.', 400);
-    }
-
-    const result = await c.env.DB.prepare('DELETE FROM notices WHERE id = ?1').bind(id).run();
-    const changes = typeof result.meta?.changes === 'number' ? result.meta.changes : 0;
-
-    if (changes === 0) {
-      return errorResponse(c, '삭제할 공지가 없습니다.', 404);
-    }
-
-    return successResponse(c, { id }, '공지가 삭제되었습니다.');
-  }),
-);
+    await c.env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
+    return c.json({ success: true, message: '삭제 완료' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return c.json({ success: false, message }, 500);
+  }
+});
 
 export default app;
