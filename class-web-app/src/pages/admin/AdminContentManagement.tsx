@@ -6,8 +6,6 @@ import Toast, { ToastVariant } from '../../components/admin/Toast';
 import type { ClassInfo } from '../../lib/api';
 import { createMaterial, createNotice, createVideo, getClasses, getMaterials, getNotices, getVideos } from '../../lib/api';
 
-type ClassFilter = '전체' | number;
-
 type VideoContent = {
   id: number;
   type: 'video';
@@ -130,12 +128,10 @@ const hydrateVideosWithStoredOrder = (baseVideos: VideoContent[]): VideoContent[
 
 const AdminContentManagement = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('video');
-  const [selectedCategory, setSelectedCategory] = useState<ClassFilter>('전체');
   const [videos, setVideos] = useState<VideoContent[]>([]);
   const [files, setFiles] = useState<FileContent[]>([]);
   const [notices, setNotices] = useState<NoticeContent[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -238,8 +234,6 @@ const AdminContentManagement = () => {
       } catch (error) {
         console.error('Failed to load admin content', error);
         setToast({ message: '콘텐츠 정보를 불러오지 못했습니다.', variant: 'error' });
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -265,30 +259,11 @@ const AdminContentManagement = () => {
     [classNameById],
   );
 
-  const filteredVideos = useMemo(() => {
-    const baseList =
-      selectedCategory === '전체'
-        ? videos
-        : videos.filter((video) => video.classId === selectedCategory);
+  const filteredVideos = useMemo(() => [...videos].sort((a, b) => a.order - b.order), [videos]);
 
-    return [...baseList].sort((a, b) => a.order - b.order);
-  }, [selectedCategory, videos]);
+  const filteredFiles = useMemo(() => [...files], [files]);
 
-  const filteredFiles = useMemo(
-    () =>
-      selectedCategory === '전체'
-        ? files
-        : files.filter((file) => file.classId === selectedCategory),
-    [selectedCategory, files],
-  );
-
-  const filteredNotices = useMemo(
-    () =>
-      selectedCategory === '전체'
-        ? notices
-        : notices.filter((notice) => notice.classId === selectedCategory),
-    [selectedCategory, notices],
-  );
+  const filteredNotices = useMemo(() => [...notices], [notices]);
 
   const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
@@ -529,35 +504,11 @@ const AdminContentManagement = () => {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 text-[#404040]">
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <h1 className="text-2xl font-bold">콘텐츠 관리</h1>
-            <p className="text-sm text-gray-500">
-              수업별 영상, 자료, 공지를 한 곳에서 관리하세요.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 text-sm">
-            <label htmlFor="categoryFilter" className="font-semibold">
-              수업 카테고리 필터
-            </label>
-            <select
-              id="categoryFilter"
-              className="w-48 rounded-2xl border border-[#e9dccf] bg-white px-4 py-2 text-sm shadow-sm focus:border-[#ffd331] focus:outline-none"
-              value={selectedCategory === '전체' ? '전체' : String(selectedCategory)}
-              onChange={(event) => {
-                const { value } = event.target;
-                setSelectedCategory(value === '전체' ? '전체' : Number(value));
-              }}
-              disabled={isLoading || classes.length === 0}
-            >
-              <option value="전체">전체</option>
-              {classes.map((classItem) => (
-                <option key={classItem.id} value={classItem.id}>
-                  {classItem.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold">콘텐츠 관리</h1>
+          <p className="text-sm text-gray-500">
+            수업별 영상, 자료, 공지를 한 곳에서 관리하세요.
+          </p>
         </div>
 
         <div className="rounded-3xl bg-white/80 p-4 shadow-md">
@@ -631,11 +582,12 @@ const AdminContentManagement = () => {
                 <select
                   id="videoCategory"
                   className="rounded-2xl border border-[#e9dccf] px-4 py-2 focus:border-[#ffd331] focus:outline-none"
-                  value={videoForm.classId ?? ''}
-                  onChange={(event) =>
-                    setVideoForm((prev) => ({ ...prev, classId: Number(event.target.value) }))
-                  }
-                  disabled={isLoading || classes.length === 0}
+                  value={videoForm.classId !== null ? String(videoForm.classId) : ''}
+                  onChange={(event) => {
+                    const { value } = event.target;
+                    setVideoForm((prev) => ({ ...prev, classId: value === '' ? null : Number(value) }));
+                  }}
+                  disabled={classes.length === 0}
                   required
                 >
                   <option value="" disabled>
@@ -772,11 +724,12 @@ const AdminContentManagement = () => {
                 <select
                   id="fileCategory"
                   className="rounded-2xl border border-[#e9dccf] px-4 py-2 focus:border-[#ffd331] focus:outline-none"
-                  value={fileForm.classId ?? ''}
-                  onChange={(event) =>
-                    setFileForm((prev) => ({ ...prev, classId: Number(event.target.value) }))
-                  }
-                  disabled={isLoading || classes.length === 0}
+                  value={fileForm.classId !== null ? String(fileForm.classId) : ''}
+                  onChange={(event) => {
+                    const { value } = event.target;
+                    setFileForm((prev) => ({ ...prev, classId: value === '' ? null : Number(value) }));
+                  }}
+                  disabled={classes.length === 0}
                   required
                 >
                   <option value="" disabled>
@@ -904,11 +857,12 @@ const AdminContentManagement = () => {
                 <select
                   id="noticeCategory"
                   className="rounded-2xl border border-[#e9dccf] px-4 py-2 focus:border-[#ffd331] focus:outline-none"
-                  value={noticeForm.classId ?? ''}
-                  onChange={(event) =>
-                    setNoticeForm((prev) => ({ ...prev, classId: Number(event.target.value) }))
-                  }
-                  disabled={isLoading || classes.length === 0}
+                  value={noticeForm.classId !== null ? String(noticeForm.classId) : ''}
+                  onChange={(event) => {
+                    const { value } = event.target;
+                    setNoticeForm((prev) => ({ ...prev, classId: value === '' ? null : Number(value) }));
+                  }}
+                  disabled={classes.length === 0}
                   required
                 >
                   <option value="" disabled>
