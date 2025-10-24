@@ -1,5 +1,7 @@
 export type Env = {
   DB: D1Database;
+  ADMIN_EMAIL: string;
+  ADMIN_PASSWORD: string;
 };
 
 export type ClassRecord = {
