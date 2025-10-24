@@ -1,4 +1,4 @@
-import app from '../../src/functions/api/classes';
+import app from '../../src/functions/api/class-categories';
 
 type Env = {
   DB: D1Database;
