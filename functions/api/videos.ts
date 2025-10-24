@@ -1,94 +1,141 @@
-import type { Env } from './_utils';
-import { ensureBaseSchema, errorResponse, jsonResponse, rowsToCamelCase, seedBaseClasses } from './_utils';
+import { Hono } from 'hono';
 
-type VideoRow = {
-  id: number;
-  title: string;
-  url: string;
-  description: string | null;
-  class_id: number;
-  created_at: string;
-};
+interface Env {
+  DB: D1Database;
+}
 
 type CreateVideoPayload = {
   title?: string;
   url?: string;
-  description?: string | null;
-  classId?: number;
+  class_id?: number;
 };
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
-  await ensureBaseSchema(env.DB);
-  await seedBaseClasses(env.DB);
-  const { results } = await env.DB.prepare(
-    'SELECT id, title, url, description, class_id, created_at FROM videos ORDER BY created_at DESC, id DESC',
-  ).all<VideoRow>();
-
-  const videos = rowsToCamelCase(results);
-  return jsonResponse({ videos });
+type VideoRecord = {
+  id: number;
+  title: string;
+  url: string;
 };
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const payload = (await request.json().catch(() => null)) as CreateVideoPayload | null;
+const ensureVideosTable = async (db: D1Database) => {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS videos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL,
+      class_id INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+};
 
-  if (!payload) {
-    return errorResponse('잘못된 요청입니다.', 400);
-  }
+const app = new Hono<{ Bindings: Env }>();
 
-  const { title, url, description, classId } = payload;
+app.post('/', async (c) => {
+  try {
+    const payload = ((await c.req.json().catch(() => null)) ?? {}) as CreateVideoPayload;
+    const { title, url, class_id } = payload;
 
-  if (!title || !url || typeof classId !== 'number') {
-    return errorResponse('title, url, classId는 필수 값입니다.', 400);
-  }
-
-  await ensureBaseSchema(env.DB);
-  await seedBaseClasses(env.DB);
-
-  const classExists = await env.DB.prepare('SELECT 1 FROM classes WHERE id = ?1').bind(classId).first();
-  if (!classExists) {
-    return errorResponse('존재하지 않는 수업입니다.', 400);
-  }
-
-  const insertResult = await env.DB
-    .prepare('INSERT INTO videos (title, url, description, class_id) VALUES (?1, ?2, ?3, ?4)')
-    .bind(title, url, description ?? null, classId)
-    .run();
-
-  if (!insertResult.success) {
-    return errorResponse('영상 정보를 저장하는 중 오류가 발생했습니다.', 500);
-  }
-
-  const extractLastInsertId = (meta: unknown) => {
-    if (!meta || typeof meta !== 'object') {
-      return null;
+    if (!title || !url || typeof class_id !== 'number') {
+      return c.json(
+        { success: false, message: 'title, url, class_id는 필수 값입니다.' },
+        400,
+      );
     }
 
-    const metadata = meta as Record<string, unknown>;
-    const candidateKeys = ['last_row_id', 'lastRowId', 'lastInsertRowid', 'lastInsertRowId'];
-    for (const key of candidateKeys) {
-      const value = metadata[key];
-      if (typeof value === 'number') {
-        return value;
-      }
+    await ensureVideosTable(c.env.DB);
+
+    const result = await c.env.DB.prepare(
+      'INSERT INTO videos (title, url, class_id) VALUES (?1, ?2, ?3)',
+    )
+      .bind(title, url, class_id)
+      .run();
+
+    if (!result.success) {
+      return c.json(
+        { success: false, message: '영상 정보를 저장하는 중 오류가 발생했습니다.' },
+        500,
+      );
     }
-    return null;
-  };
 
-  const insertedId = extractLastInsertId(insertResult.meta);
-
-  const videoRow = insertedId
-    ? await env.DB
-        .prepare('SELECT id, title, url, description, class_id, created_at FROM videos WHERE id = ?1')
-        .bind(insertedId)
-        .first<VideoRow>()
-    : await env.DB
-        .prepare('SELECT id, title, url, description, class_id, created_at FROM videos ORDER BY id DESC LIMIT 1')
-        .first<VideoRow>();
-
-  if (!videoRow) {
-    return errorResponse('영상 정보를 확인할 수 없습니다.', 500);
+    return c.json({ success: true }, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return c.json({ success: false, message }, 500);
   }
-  const [video] = rowsToCamelCase([videoRow]);
+});
 
-  return jsonResponse({ video }, { status: 201 });
+app.get('/', async (c) => {
+  try {
+    const classIdParam = c.req.query('class_id');
+
+    if (!classIdParam) {
+      return c.json(
+        { success: false, message: 'class_id는 필수 쿼리 매개변수입니다.' },
+        400,
+      );
+    }
+
+    const classId = Number(classIdParam);
+    if (!Number.isInteger(classId)) {
+      return c.json(
+        { success: false, message: 'class_id는 정수여야 합니다.' },
+        400,
+      );
+    }
+
+    await ensureVideosTable(c.env.DB);
+
+    const { results } = await c.env.DB
+      .prepare('SELECT id, title, url FROM videos WHERE class_id = ?1 ORDER BY created_at DESC, id DESC')
+      .bind(classId)
+      .all<VideoRecord>();
+
+    return c.json({ success: true, data: results ?? [] });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return c.json({ success: false, message }, 500);
+  }
+});
+
+app.delete('/', async (c) => {
+  try {
+    const idParam = c.req.query('id');
+
+    if (!idParam) {
+      return c.json({ success: false, message: 'id는 필수 쿼리 매개변수입니다.' }, 400);
+    }
+
+    const id = Number(idParam);
+    if (!Number.isInteger(id)) {
+      return c.json({ success: false, message: 'id는 정수여야 합니다.' }, 400);
+    }
+
+    await ensureVideosTable(c.env.DB);
+
+    const result = await c.env.DB.prepare('DELETE FROM videos WHERE id = ?1').bind(id).run();
+
+    if (!result.success) {
+      return c.json({ success: false, message: '영상 삭제 중 오류가 발생했습니다.' }, 500);
+    }
+
+    const changes = Number((result.meta as { changes?: number } | undefined)?.changes ?? 0);
+    if (changes < 1) {
+      return c.json({ success: false, message: '삭제할 영상을 찾을 수 없습니다.' }, 404);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return c.json({ success: false, message }, 500);
+  }
+});
+
+type PagesContext<Bindings> = {
+  request: Request;
+  env: Bindings;
+  waitUntil(promise: Promise<unknown>): void;
+  passThroughOnException(): void;
 };
+
+export const onRequest = (context: PagesContext<Env>) =>
+  app.fetch(context.request, context.env, context);
