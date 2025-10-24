@@ -20,6 +20,7 @@ const AdminLogin = () => {
   const [adminPassword, setAdminPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdminPasswordVisible, setIsAdminPasswordVisible] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -170,15 +171,55 @@ const AdminLogin = () => {
             <label className="text-xs font-semibold text-[#5c5c5c]" htmlFor="admin-password">
               비밀번호
             </label>
-            <input
-              id="admin-password"
-              name="admin-password"
-              type="password"
-              value={adminPassword}
-              onChange={(event) => setAdminPassword(event.target.value)}
-              placeholder="비밀번호를 입력하세요"
-              className="w-full rounded-2xl border border-[#f0e7c6] px-4 py-3 text-sm text-[#404040] focus:border-[#f6c244] focus:outline-none"
-            />
+            <div className="relative">
+              <input
+                id="admin-password"
+                name="admin-password"
+                type={isAdminPasswordVisible ? 'text' : 'password'}
+                value={adminPassword}
+                onChange={(event) => setAdminPassword(event.target.value)}
+                placeholder="비밀번호를 입력하세요"
+                className="w-full rounded-2xl border border-[#f0e7c6] px-4 py-3 pr-12 text-sm text-[#404040] focus:border-[#f6c244] focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setIsAdminPasswordVisible((prev) => !prev)}
+                className="absolute inset-y-0 right-3 flex items-center text-[#9a9a9a] transition-colors hover:text-[#404040]"
+                aria-label={isAdminPasswordVisible ? '비밀번호 숨기기' : '비밀번호 보기'}
+              >
+                {isAdminPasswordVisible ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 3l18 18" />
+                    <path d="M9.88 9.88a3 3 0 004.24 4.24" />
+                    <path d="M10.73 5.08A10.4 10.4 0 0112 5c5.52 0 9.57 4.33 10.89 6.09a1 1 0 010 1.18 18.62 18.62 0 01-2.1 2.41" />
+                    <path d="M6.61 6.61A18.31 18.31 0 001.11 12a1 1 0 000 1.18c.48.63 1.35 1.68 2.51 2.74" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1.23 12.32a1 1 0 010-.63C2.13 9.36 6.18 5 12 5s9.87 4.36 10.77 6.69a1 1 0 010 .63C21.87 14.64 17.82 19 12 19S2.13 14.64 1.23 12.32z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
