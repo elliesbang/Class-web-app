@@ -3,9 +3,11 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
+import { getAssignments, type AssignmentListItem } from '../../../lib/api';
 
 export type AssignmentStatus = '미제출' | '제출됨' | '피드백 완료';
 export type AssignmentFileType = 'image' | 'pdf' | 'link' | 'other';
@@ -147,9 +149,61 @@ const initialFeedbacks: Feedback[] = [
 
 const AdminDataContext = createContext<AdminDataContextValue | undefined>(undefined);
 
+const normaliseAssignment = (assignment: AssignmentListItem): Assignment => {
+  const allowedStatuses: AssignmentStatus[] = ['미제출', '제출됨', '피드백 완료'];
+  const allowedFileTypes: AssignmentFileType[] = ['image', 'pdf', 'link', 'other'];
+
+  const status: AssignmentStatus = allowedStatuses.includes(assignment.status)
+    ? assignment.status
+    : '제출됨';
+
+  const fileType: AssignmentFileType = allowedFileTypes.includes(assignment.fileType)
+    ? assignment.fileType
+    : assignment.link
+      ? 'link'
+      : 'other';
+
+  return {
+    id: assignment.id,
+    title: assignment.title,
+    course: assignment.className ?? '미지정 클래스',
+    student: {
+      name: assignment.studentName || '이름 미입력',
+      email: assignment.studentEmail ?? '-',
+    },
+    submittedAt: assignment.submittedAt || null,
+    status,
+    fileType,
+    fileUrl: assignment.fileUrl ?? undefined,
+    link: assignment.link ?? null,
+  };
+};
+
 export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>(initialFeedbacks);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const fetchAssignments = async () => {
+      try {
+        const items = await getAssignments();
+        if (ignore) return;
+
+        const normalised = items.map(normaliseAssignment);
+        setAssignments(normalised);
+      } catch (error) {
+        console.error('과제 목록을 불러오지 못했습니다.', error);
+      }
+    };
+
+    fetchAssignments();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const addFeedback: AdminDataContextValue['addFeedback'] = useCallback(
     ({ assignmentId, content, author, attachmentUrl, classId = null }) => {
