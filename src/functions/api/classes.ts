@@ -415,4 +415,12 @@ app.delete('/:id', async (c) => {
   }
 });
 
+app.notFound((c) => c.json({ success: false, message: '요청하신 API 경로를 찾을 수 없습니다.' }, 404));
+
+app.onError((err, c) => {
+  console.error('[classes] unexpected error', err);
+  const message = err instanceof Error ? err.message : '서버 처리 중 오류가 발생했습니다.';
+  return c.json({ success: false, message }, 500);
+});
+
 export default app;
