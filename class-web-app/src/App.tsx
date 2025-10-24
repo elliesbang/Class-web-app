@@ -55,6 +55,7 @@ function App() {
         <Route path="feedback" element={<AdminFeedbackManagement />} />
         <Route path="feedback/new" element={<AdminFeedbackManagement />} />
         <Route path="feedback/edit/:id" element={<AdminFeedbackManagement />} />
+        <Route path="dashboard/content" element={<AdminContentManagement />} />
         <Route path="content" element={<AdminContentManagement />} />
         <Route path="statistics" element={<AdminStatistics />} />
         <Route path="settings" element={<AdminSettings />} />
