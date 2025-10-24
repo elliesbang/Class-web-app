@@ -1,19 +1,20 @@
-import { DragEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { DragEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 
 import AdminModal from '../../components/admin/AdminModal';
 import Toast, { ToastVariant } from '../../components/admin/Toast';
+import type { ClassInfo } from '../../lib/api';
+import { createMaterial, createNotice, createVideo, getClasses, getMaterials, getNotices, getVideos } from '../../lib/api';
 
-const categories = ['전체', '미치나', '캔디마', '나캔디', '캔디수'];
-
-type Category = (typeof categories)[number];
+type ClassFilter = '전체' | number;
 
 type VideoContent = {
   id: number;
   type: 'video';
   title: string;
-  category: Category;
-  embedCode: string;
+  classId: number;
+  className: string;
+  url: string;
   description?: string;
   date: string;
   order: number;
@@ -23,7 +24,8 @@ type FileContent = {
   id: number;
   type: 'file';
   title: string;
-  category: Category;
+  classId: number;
+  className: string;
   fileUrl: string;
   description?: string;
   date: string;
@@ -33,7 +35,8 @@ type NoticeContent = {
   id: number;
   type: 'notice';
   title: string;
-  category: Category;
+  classId: number;
+  className: string;
   content: string;
   author: string;
   date: string;
@@ -125,79 +128,14 @@ const hydrateVideosWithStoredOrder = (baseVideos: VideoContent[]): VideoContent[
   }
 };
 
-const initialVideos: VideoContent[] = [
-  {
-    id: 1,
-    type: 'video',
-    title: '미치나 8기 OT 영상',
-    category: '미치나',
-    embedCode:
-      "<iframe class='w-full aspect-video rounded-xl' src='https://www.youtube.com/embed/dQw4w9WgXcQ' title='미치나 8기 OT 영상' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' allowfullscreen></iframe>",
-    description: '오리엔테이션 영상',
-    date: '2025-10-21',
-    order: 1,
-  },
-  {
-    id: 2,
-    type: 'video',
-    title: '캔디마 2회차 수업 복습',
-    category: '캔디마',
-    embedCode:
-      "<iframe class='w-full aspect-video rounded-xl' src='https://player.vimeo.com/video/76979871' title='캔디마 2회차 수업 복습' allow='autoplay; fullscreen; picture-in-picture' allowfullscreen></iframe>",
-    description: '캔디마 실습 복습용 영상',
-    date: '2025-10-18',
-    order: 2,
-  },
-];
-
-const initialFiles: FileContent[] = [
-  {
-    id: 1,
-    type: 'file',
-    title: '캔디마 수업 안내 PDF',
-    category: '캔디마',
-    fileUrl: '/uploads/candima-guide.pdf',
-    description: '1회차 수업용 워크시트',
-    date: '2025-10-21',
-  },
-  {
-    id: 2,
-    type: 'file',
-    title: '미치나 프로젝트 자료 ZIP',
-    category: '미치나',
-    fileUrl: '/uploads/michina-project.zip',
-    description: 'OT 후 배포되는 프로젝트 자료',
-    date: '2025-10-19',
-  },
-];
-
-const initialNotices: NoticeContent[] = [
-  {
-    id: 1,
-    type: 'notice',
-    title: '미치나 8기 시작 안내',
-    category: '미치나',
-    content: '미치나 8기 오리엔테이션은 내일 오후 8시에 진행됩니다.',
-    author: '관리자',
-    date: '2025-10-21',
-  },
-  {
-    id: 2,
-    type: 'notice',
-    title: '캔디마 과제 제출 기한 연장',
-    category: '캔디마',
-    content: '금주 캔디마 과제 제출 기한을 일요일 밤까지로 연장합니다.',
-    author: '관리자',
-    date: '2025-10-20',
-  },
-];
-
 const AdminContentManagement = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('video');
-  const [selectedCategory, setSelectedCategory] = useState<Category>('전체');
-  const [videos, setVideos] = useState<VideoContent[]>(() => hydrateVideosWithStoredOrder(initialVideos));
-  const [files, setFiles] = useState(initialFiles);
-  const [notices, setNotices] = useState(initialNotices);
+  const [selectedCategory, setSelectedCategory] = useState<ClassFilter>('전체');
+  const [videos, setVideos] = useState<VideoContent[]>([]);
+  const [files, setFiles] = useState<FileContent[]>([]);
+  const [notices, setNotices] = useState<NoticeContent[]>([]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -205,21 +143,21 @@ const AdminContentManagement = () => {
 
   const [videoForm, setVideoForm] = useState({
     title: '',
-    category: '미치나' as Category,
+    classId: null as number | null,
     description: '',
-    embedCode: '',
+    url: '',
   });
 
   const [fileForm, setFileForm] = useState({
     title: '',
-    category: '미치나' as Category,
+    classId: null as number | null,
     description: '',
     fileName: '',
   });
 
   const [noticeForm, setNoticeForm] = useState({
     title: '',
-    category: '미치나' as Category,
+    classId: null as number | null,
     content: '',
   });
 
@@ -235,11 +173,103 @@ const AdminContentManagement = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const classList = await getClasses();
+        setClasses(classList);
+
+        const classMap = new Map(classList.map((item) => [item.id, item.name]));
+
+        const [videoList, materialList, noticeList] = await Promise.all([
+          getVideos(),
+          getMaterials(),
+          getNotices(),
+        ]);
+
+        const formatDate = (value?: string) => {
+          if (!value) {
+            return new Date().toISOString().split('T')[0];
+          }
+          const parsed = new Date(value);
+          if (Number.isNaN(parsed.getTime())) {
+            return new Date().toISOString().split('T')[0];
+          }
+          return parsed.toISOString().split('T')[0];
+        };
+
+        const mappedVideos: VideoContent[] = videoList.map((video) => ({
+          id: video.id,
+          type: 'video',
+          title: video.title,
+          classId: video.classId,
+          className: classMap.get(video.classId) ?? '미지정',
+          url: video.url,
+          description: video.description ?? undefined,
+          date: formatDate(video.createdAt),
+          order: 0,
+        }));
+
+        const mappedFiles: FileContent[] = materialList.map((material) => ({
+          id: material.id,
+          type: 'file',
+          title: material.title,
+          classId: material.classId,
+          className: classMap.get(material.classId) ?? '미지정',
+          fileUrl: material.fileUrl,
+          description: material.description ?? undefined,
+          date: formatDate(material.createdAt),
+        }));
+
+        const mappedNotices: NoticeContent[] = noticeList.map((notice) => ({
+          id: notice.id,
+          type: 'notice',
+          title: notice.title,
+          classId: notice.classId,
+          className: classMap.get(notice.classId) ?? '미지정',
+          content: notice.content,
+          author: notice.author ?? '관리자',
+          date: formatDate(notice.createdAt),
+        }));
+
+        setVideos(hydrateVideosWithStoredOrder(mappedVideos));
+        setFiles(mappedFiles);
+        setNotices(mappedNotices);
+      } catch (error) {
+        console.error('Failed to load admin content', error);
+        setToast({ message: '콘텐츠 정보를 불러오지 못했습니다.', variant: 'error' });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadInitialData();
+  }, []);
+
+  const defaultClassId = classes[0]?.id ?? null;
+
+  useEffect(() => {
+    if (defaultClassId === null) {
+      return;
+    }
+
+    setVideoForm((prev) => ({ ...prev, classId: prev.classId ?? defaultClassId }));
+    setFileForm((prev) => ({ ...prev, classId: prev.classId ?? defaultClassId }));
+    setNoticeForm((prev) => ({ ...prev, classId: prev.classId ?? defaultClassId }));
+  }, [defaultClassId]);
+
+  const classNameById = useMemo(() => new Map(classes.map((item) => [item.id, item.name])), [classes]);
+
+  const getClassName = useCallback(
+    (classId: number) => classNameById.get(classId) ?? '미지정',
+    [classNameById],
+  );
+
   const filteredVideos = useMemo(() => {
     const baseList =
       selectedCategory === '전체'
         ? videos
-        : videos.filter((video) => video.category === selectedCategory);
+        : videos.filter((video) => video.classId === selectedCategory);
 
     return [...baseList].sort((a, b) => a.order - b.order);
   }, [selectedCategory, videos]);
@@ -248,7 +278,7 @@ const AdminContentManagement = () => {
     () =>
       selectedCategory === '전체'
         ? files
-        : files.filter((file) => file.category === selectedCategory),
+        : files.filter((file) => file.classId === selectedCategory),
     [selectedCategory, files],
   );
 
@@ -256,7 +286,7 @@ const AdminContentManagement = () => {
     () =>
       selectedCategory === '전체'
         ? notices
-        : notices.filter((notice) => notice.category === selectedCategory),
+        : notices.filter((notice) => notice.classId === selectedCategory),
     [selectedCategory, notices],
   );
 
@@ -264,75 +294,140 @@ const AdminContentManagement = () => {
     setActiveTab(tab);
   };
 
-  const resetVideoForm = () => {
-    setVideoForm({ title: '', category: '미치나', description: '', embedCode: '' });
+  const resetVideoForm = useCallback(() => {
+    setVideoForm({ title: '', classId: defaultClassId, description: '', url: '' });
+  }, [defaultClassId]);
+
+  const resetFileForm = useCallback(() => {
+    setFileForm({ title: '', classId: defaultClassId, description: '', fileName: '' });
+  }, [defaultClassId]);
+
+  const resetNoticeForm = useCallback(() => {
+    setNoticeForm({ title: '', classId: defaultClassId, content: '' });
+  }, [defaultClassId]);
+
+  const handleVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!videoForm.title || !videoForm.url || videoForm.classId === null) {
+      setToast({ message: '영상 제목, URL, 수업을 모두 입력해주세요.', variant: 'error' });
+      return;
+    }
+
+    try {
+      const createdVideo = await createVideo({
+        title: videoForm.title,
+        url: videoForm.url,
+        description: videoForm.description || undefined,
+        classId: videoForm.classId,
+      });
+
+      const className = getClassName(createdVideo.classId);
+      const newVideo: VideoContent = {
+        id: createdVideo.id,
+        type: 'video',
+        title: createdVideo.title,
+        classId: createdVideo.classId,
+        className,
+        url: createdVideo.url,
+        description: createdVideo.description ?? undefined,
+        date: new Date(createdVideo.createdAt).toISOString().split('T')[0],
+        order: 0,
+      };
+
+      setVideos((prev) => {
+        const updated = assignSequentialOrder([newVideo, ...prev]);
+        persistVideoOrder(updated);
+        return updated;
+      });
+      setToast({ message: `선택한 클래스(${className})에 업로드되었습니다.`, variant: 'success' });
+      resetVideoForm();
+    } catch (error) {
+      console.error('Failed to upload video', error);
+      setToast({
+        message: error instanceof Error ? error.message : '영상 업로드 중 오류가 발생했습니다.',
+        variant: 'error',
+      });
+    }
   };
 
-  const resetFileForm = () => {
-    setFileForm({ title: '', category: '미치나', description: '', fileName: '' });
+  const handleFileSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!fileForm.title || !fileForm.fileName || fileForm.classId === null) {
+      setToast({ message: '자료 제목, 파일명, 수업을 모두 입력해주세요.', variant: 'error' });
+      return;
+    }
+
+    const fileUrl = `/uploads/${fileForm.fileName}`;
+
+    try {
+      const createdMaterial = await createMaterial({
+        title: fileForm.title,
+        fileUrl,
+        description: fileForm.description || undefined,
+        classId: fileForm.classId,
+      });
+
+      const className = getClassName(createdMaterial.classId);
+      const newFile: FileContent = {
+        id: createdMaterial.id,
+        type: 'file',
+        title: createdMaterial.title,
+        classId: createdMaterial.classId,
+        className,
+        fileUrl: createdMaterial.fileUrl,
+        description: createdMaterial.description ?? undefined,
+        date: new Date(createdMaterial.createdAt).toISOString().split('T')[0],
+      };
+
+      setFiles((prev) => [newFile, ...prev]);
+      setToast({ message: `선택한 클래스(${className})에 업로드되었습니다.`, variant: 'success' });
+      resetFileForm();
+    } catch (error) {
+      console.error('Failed to upload material', error);
+      setToast({
+        message: error instanceof Error ? error.message : '자료 업로드 중 오류가 발생했습니다.',
+        variant: 'error',
+      });
+    }
   };
 
-  const resetNoticeForm = () => {
-    setNoticeForm({ title: '', category: '미치나', content: '' });
-  };
+  const handleNoticeSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!noticeForm.title || !noticeForm.content || noticeForm.classId === null) {
+      setToast({ message: '공지 제목, 내용, 수업을 모두 입력해주세요.', variant: 'error' });
+      return;
+    }
 
-  const handleVideoSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!videoForm.title || !videoForm.embedCode) return;
+    try {
+      const createdNotice = await createNotice({
+        title: noticeForm.title,
+        content: noticeForm.content,
+        classId: noticeForm.classId,
+        author: '관리자',
+      });
 
-    const newVideo: VideoContent = {
-      id: Date.now(),
-      type: 'video',
-      title: videoForm.title,
-      category: videoForm.category,
-      embedCode: videoForm.embedCode,
-      description: videoForm.description,
-      date: new Date().toISOString().split('T')[0],
-      order: 0,
-    };
+      const className = getClassName(createdNotice.classId);
+      const newNotice: NoticeContent = {
+        id: createdNotice.id,
+        type: 'notice',
+        title: createdNotice.title,
+        classId: createdNotice.classId,
+        className,
+        content: createdNotice.content,
+        author: createdNotice.author ?? '관리자',
+        date: new Date(createdNotice.createdAt).toISOString().split('T')[0],
+      };
 
-    setVideos((prev) => {
-      const updated = assignSequentialOrder([newVideo, ...prev]);
-      persistVideoOrder(updated);
-      return updated;
-    });
-    resetVideoForm();
-  };
-
-  const handleFileSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!fileForm.title || !fileForm.fileName) return;
-
-    const newFile: FileContent = {
-      id: Date.now(),
-      type: 'file',
-      title: fileForm.title,
-      category: fileForm.category,
-      fileUrl: `/uploads/${fileForm.fileName}`,
-      description: fileForm.description,
-      date: new Date().toISOString().split('T')[0],
-    };
-
-    setFiles((prev) => [newFile, ...prev]);
-    resetFileForm();
-  };
-
-  const handleNoticeSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!noticeForm.title || !noticeForm.content) return;
-
-    const newNotice: NoticeContent = {
-      id: Date.now(),
-      type: 'notice',
-      title: noticeForm.title,
-      category: noticeForm.category,
-      content: noticeForm.content,
-      author: '관리자',
-      date: new Date().toISOString().split('T')[0],
-    };
-
-    setNotices((prev) => [newNotice, ...prev]);
-    resetNoticeForm();
+      setNotices((prev) => [newNotice, ...prev]);
+      setToast({ message: `선택한 클래스(${className})에 업로드되었습니다.`, variant: 'success' });
+      resetNoticeForm();
+    } catch (error) {
+      console.error('Failed to upload notice', error);
+      setToast({
+        message: error instanceof Error ? error.message : '공지 업로드 중 오류가 발생했습니다.',
+        variant: 'error',
+      });
+    }
   };
 
   const handleDeleteRequest = (type: ContentType, id: number, title: string) => {
@@ -448,12 +543,17 @@ const AdminContentManagement = () => {
             <select
               id="categoryFilter"
               className="w-48 rounded-2xl border border-[#e9dccf] bg-white px-4 py-2 text-sm shadow-sm focus:border-[#ffd331] focus:outline-none"
-              value={selectedCategory}
-              onChange={(event) => setSelectedCategory(event.target.value as Category)}
+              value={selectedCategory === '전체' ? '전체' : String(selectedCategory)}
+              onChange={(event) => {
+                const { value } = event.target;
+                setSelectedCategory(value === '전체' ? '전체' : Number(value));
+              }}
+              disabled={isLoading || classes.length === 0}
             >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+              <option value="전체">전체</option>
+              {classes.map((classItem) => (
+                <option key={classItem.id} value={classItem.id}>
+                  {classItem.name}
                 </option>
               ))}
             </select>
@@ -531,18 +631,21 @@ const AdminContentManagement = () => {
                 <select
                   id="videoCategory"
                   className="rounded-2xl border border-[#e9dccf] px-4 py-2 focus:border-[#ffd331] focus:outline-none"
-                  value={videoForm.category}
+                  value={videoForm.classId ?? ''}
                   onChange={(event) =>
-                    setVideoForm((prev) => ({ ...prev, category: event.target.value as Category }))
+                    setVideoForm((prev) => ({ ...prev, classId: Number(event.target.value) }))
                   }
+                  disabled={isLoading || classes.length === 0}
+                  required
                 >
-                  {categories
-                    .filter((category) => category !== '전체')
-                    .map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
+                  <option value="" disabled>
+                    수업을 선택하세요
+                  </option>
+                  {classes.map((classItem) => (
+                    <option key={classItem.id} value={classItem.id}>
+                      {classItem.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -560,15 +663,15 @@ const AdminContentManagement = () => {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold" htmlFor="videoEmbed">
-                  영상 임베드 코드
+                <label className="text-sm font-semibold" htmlFor="videoUrl">
+                  영상 URL 또는 임베드 코드
                 </label>
                 <textarea
-                  id="videoEmbed"
+                  id="videoUrl"
                   className="min-h-[96px] rounded-2xl border border-[#e9dccf] px-4 py-2 font-mono text-xs focus:border-[#ffd331] focus:outline-none"
-                  value={videoForm.embedCode}
-                  onChange={(event) => setVideoForm((prev) => ({ ...prev, embedCode: event.target.value }))}
-                  placeholder="&lt;iframe ...&gt;&lt;/iframe&gt;"
+                  value={videoForm.url}
+                  onChange={(event) => setVideoForm((prev) => ({ ...prev, url: event.target.value }))}
+                  placeholder="동영상 URL 혹은 iframe 코드를 입력하세요"
                   required
                 />
               </div>
@@ -600,11 +703,23 @@ const AdminContentManagement = () => {
                   aria-grabbed={draggedVideoId === video.id}
                 >
                   <div className="relative aspect-video w-full overflow-hidden bg-black/5 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:rounded-md [&_iframe]:border-0 [&_iframe]:pointer-events-none">
-                    <div dangerouslySetInnerHTML={{ __html: video.embedCode }} />
+                    {video.url.trim().startsWith('<') ? (
+                      <div dangerouslySetInnerHTML={{ __html: video.url }} />
+                    ) : (
+                      <a
+                        href={video.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex h-full w-full items-center justify-center bg-white text-sm font-semibold text-[#404040] underline"
+                      >
+                        영상 열기
+                      </a>
+                    )}
                   </div>
                   <div className="flex items-start justify-between gap-3 px-4 pb-4 pt-3">
                     <div className="space-y-1">
                       <h4 className="text-sm font-semibold text-[#404040]">{video.title}</h4>
+                      <p className="text-xs text-gray-500">{video.className}</p>
                       <p className="text-xs text-gray-500">등록일 {video.date}</p>
                     </div>
                     <button
@@ -657,18 +772,21 @@ const AdminContentManagement = () => {
                 <select
                   id="fileCategory"
                   className="rounded-2xl border border-[#e9dccf] px-4 py-2 focus:border-[#ffd331] focus:outline-none"
-                  value={fileForm.category}
+                  value={fileForm.classId ?? ''}
                   onChange={(event) =>
-                    setFileForm((prev) => ({ ...prev, category: event.target.value as Category }))
+                    setFileForm((prev) => ({ ...prev, classId: Number(event.target.value) }))
                   }
+                  disabled={isLoading || classes.length === 0}
+                  required
                 >
-                  {categories
-                    .filter((category) => category !== '전체')
-                    .map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
+                  <option value="" disabled>
+                    수업을 선택하세요
+                  </option>
+                  {classes.map((classItem) => (
+                    <option key={classItem.id} value={classItem.id}>
+                      {classItem.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -724,7 +842,7 @@ const AdminContentManagement = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h4 className="text-base font-semibold text-[#404040]">{file.title}</h4>
-                      <p className="text-sm text-gray-500">{file.category}</p>
+                      <p className="text-sm text-gray-500">{file.className}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="rounded-full bg-[#f5eee9] px-3 py-1 text-xs font-semibold text-[#5c5c5c]">
@@ -786,18 +904,21 @@ const AdminContentManagement = () => {
                 <select
                   id="noticeCategory"
                   className="rounded-2xl border border-[#e9dccf] px-4 py-2 focus:border-[#ffd331] focus:outline-none"
-                  value={noticeForm.category}
+                  value={noticeForm.classId ?? ''}
                   onChange={(event) =>
-                    setNoticeForm((prev) => ({ ...prev, category: event.target.value as Category }))
+                    setNoticeForm((prev) => ({ ...prev, classId: Number(event.target.value) }))
                   }
+                  disabled={isLoading || classes.length === 0}
+                  required
                 >
-                  {categories
-                    .filter((category) => category !== '전체')
-                    .map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
+                  <option value="" disabled>
+                    수업을 선택하세요
+                  </option>
+                  {classes.map((classItem) => (
+                    <option key={classItem.id} value={classItem.id}>
+                      {classItem.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -841,7 +962,7 @@ const AdminContentManagement = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="text-base font-semibold text-[#404040]">{notice.title}</h4>
-                          <p className="text-sm text-gray-500">{notice.category}</p>
+                          <p className="text-sm text-gray-500">{notice.className}</p>
                         </div>
                         <div className="text-right text-xs text-gray-400">
                           <p>등록일 {notice.date}</p>
@@ -876,7 +997,7 @@ const AdminContentManagement = () => {
               <div>
                 <h3 className="text-xl font-semibold text-[#404040]">{noticeModal.title}</h3>
                 <p className="text-sm text-gray-500">
-                  {noticeModal.category} ・ {noticeModal.date} ・ {noticeModal.author}
+                  {noticeModal.className} ・ {noticeModal.date} ・ {noticeModal.author}
                 </p>
               </div>
               <button
