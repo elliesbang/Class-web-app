@@ -1,11 +1,19 @@
-import type { Env } from './_utils';
-import { ensureBaseSchema, errorResponse, jsonResponse, rowsToCamelCase } from './_utils';
+import { Hono } from 'hono';
+import {
+  AppEnv,
+  assertClassExists,
+  ensureBaseSchema,
+  errorResponse,
+  handleRoute,
+  parseJsonBody,
+  parseNumericQuery,
+  successResponse,
+} from './hono-utils';
 
 type NoticeRow = {
   id: number;
   title: string;
   content: string;
-  author: string | null;
   class_id: number;
   created_at: string;
 };
@@ -13,65 +21,82 @@ type NoticeRow = {
 type CreateNoticePayload = {
   title?: string;
   content?: string;
-  author?: string | null;
-  classId?: number;
   class_id?: number;
+  classId?: number;
 };
 
-export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
-  await ensureBaseSchema(env.DB);
+const app = new Hono<AppEnv>();
 
-  const url = new URL(request.url);
-  const classIdParam = url.searchParams.get('classId') ?? url.searchParams.get('class_id');
+app.use('*', async (c, next) => {
+  await ensureBaseSchema(c.env.DB);
+  await next();
+});
 
-  let statement = env.DB.prepare(
-    'SELECT id, title, content, author, class_id, created_at FROM notices ORDER BY created_at DESC, id DESC',
-  );
+app.get('/', (c) =>
+  handleRoute(c, async () => {
+    const classId = parseNumericQuery(c.req.query('class_id') ?? c.req.query('classId'));
 
-  if (classIdParam !== null) {
-    const parsedClassId = Number(classIdParam);
-    if (Number.isNaN(parsedClassId)) {
-      return errorResponse('유효하지 않은 classId 입니다.', 400);
+    if (Number.isNaN(classId)) {
+      return errorResponse(c, 'class_id 쿼리 파라미터가 필요합니다.', 400);
     }
 
-    statement = env.DB
+    const { results } = await c.env.DB
       .prepare(
-        'SELECT id, title, content, author, class_id, created_at FROM notices WHERE class_id = ?1 ORDER BY created_at DESC, id DESC',
+        'SELECT id, title, content, class_id, created_at FROM notices WHERE class_id = ?1 ORDER BY created_at DESC, id DESC',
       )
-      .bind(parsedClassId);
-  }
+      .bind(classId)
+      .all<NoticeRow>();
 
-  const { results } = await statement.all<NoticeRow>();
+    const notices = results ?? [];
+    return successResponse(c, notices, '공지 목록을 조회했습니다.');
+  }),
+);
 
-  const notices = rowsToCamelCase(results);
-  return jsonResponse({ notices });
-};
+app.post('/', (c) =>
+  handleRoute(c, async () => {
+    const payload = await parseJsonBody<CreateNoticePayload>(c);
+    const { title, content, class_id, classId } = payload;
+    const resolvedClassId = typeof class_id === 'number' ? class_id : classId;
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const payload = (await request.json().catch(() => null)) as CreateNoticePayload | null;
+    if (!title || !content || typeof resolvedClassId !== 'number' || Number.isNaN(resolvedClassId)) {
+      return errorResponse(c, 'title, content, class_id는 필수 항목입니다.', 400);
+    }
 
-  if (!payload) {
-    return errorResponse('잘못된 요청입니다.', 400);
-  }
+    const classExists = await assertClassExists(c.env.DB, resolvedClassId);
+    if (!classExists) {
+      return errorResponse(c, '존재하지 않는 class_id 입니다.', 400);
+    }
 
-  const { title, content, author, classId, class_id } = payload;
-  const resolvedClassId =
-    typeof classId === 'number' ? classId : typeof class_id === 'number' ? class_id : Number.NaN;
+    const { results } = await c.env.DB
+      .prepare(
+        'INSERT INTO notices (title, content, class_id) VALUES (?1, ?2, ?3) RETURNING id, title, content, class_id, created_at',
+      )
+      .bind(title, content, resolvedClassId)
+      .all<NoticeRow>();
 
-  if (!title || !content || Number.isNaN(resolvedClassId)) {
-    return errorResponse('title, content, classId는 필수 값입니다.', 400);
-  }
+    const [notice] = results ?? [];
 
-  await ensureBaseSchema(env.DB);
+    return successResponse(c, notice ?? null, '공지가 등록되었습니다.', 201);
+  }),
+);
 
-  const statement = env.DB
-    .prepare(
-      'INSERT INTO notices (title, content, author, class_id) VALUES (?1, ?2, ?3, ?4) RETURNING id, title, content, author, class_id, created_at',
-    )
-    .bind(title, content, author ?? null, resolvedClassId);
+app.delete('/', (c) =>
+  handleRoute(c, async () => {
+    const id = parseNumericQuery(c.req.query('id'));
 
-  const { results } = await statement.all<NoticeRow>();
-  const [notice] = rowsToCamelCase(results);
+    if (Number.isNaN(id)) {
+      return errorResponse(c, 'id 쿼리 파라미터가 필요합니다.', 400);
+    }
 
-  return jsonResponse({ notice }, { status: 201 });
-};
+    const result = await c.env.DB.prepare('DELETE FROM notices WHERE id = ?1').bind(id).run();
+    const changes = typeof result.meta?.changes === 'number' ? result.meta.changes : 0;
+
+    if (changes === 0) {
+      return errorResponse(c, '삭제할 공지가 없습니다.', 404);
+    }
+
+    return successResponse(c, { id }, '공지가 삭제되었습니다.');
+  }),
+);
+
+export default app;
