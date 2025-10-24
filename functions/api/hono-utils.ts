@@ -72,9 +72,26 @@ const ensureFeedbackTable = async (db: D1Database) => {
     .run();
 };
 
+const ensureStudentsTable = async (db: D1Database) => {
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        class_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(email, class_id),
+        FOREIGN KEY (class_id) REFERENCES classes(id)
+      )`
+    )
+    .bind()
+    .run();
+};
+
 export const ensureBaseSchema = async (db: D1Database) => {
   await ensureClassesTable(db);
-  await Promise.all([ensureVideosTable(db), ensureNoticesTable(db), ensureFeedbackTable(db)]);
+  await Promise.all([ensureVideosTable(db), ensureNoticesTable(db), ensureFeedbackTable(db), ensureStudentsTable(db)]);
 };
 
 export const successResponse = <T>(

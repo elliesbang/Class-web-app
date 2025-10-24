@@ -1,21 +1,35 @@
-import { type MouseEvent, useState } from 'react';
+import { type FormEvent, type MouseEvent, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { authenticateStudent, saveStudentAccess } from '../lib/auth';
+import { getRouteByClassName } from '../lib/classAccess';
 
 const Header = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginView, setLoginView] = useState<'selection' | 'student' | 'admin'>('selection');
+  const [studentName, setStudentName] = useState('');
+  const [studentEmail, setStudentEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const goBackToSelection = () => {
     setLoginView('selection');
   };
+  const resetStudentForm = () => {
+    setStudentName('');
+    setStudentEmail('');
+    setErrorMessage(null);
+    setIsSubmitting(false);
+  };
   const openLoginModal = () => {
     goBackToSelection();
+    resetStudentForm();
     setIsLoginModalOpen(true);
   };
   const closeLoginModal = () => {
     goBackToSelection();
+    resetStudentForm();
     setIsLoginModalOpen(false);
   };
   const openStudentLogin = () => {
@@ -26,6 +40,42 @@ const Header = () => {
   };
   const stopPropagation = (event: MouseEvent<HTMLDivElement>) => {
     event.stopPropagation();
+  };
+
+  const handleStudentSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedName = studentName.trim();
+    const trimmedEmail = studentEmail.trim();
+
+    if (!trimmedName || !trimmedEmail) {
+      setErrorMessage('이름과 이메일을 모두 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      const accessList = await authenticateStudent({ name: trimmedName, email: trimmedEmail });
+      saveStudentAccess(accessList);
+
+      const firstClass = accessList[0];
+      const redirectRoute = firstClass ? getRouteByClassName(firstClass.className) : null;
+
+      closeLoginModal();
+      window.alert('로그인 성공!');
+
+      if (redirectRoute) {
+        navigate(redirectRoute);
+      } else {
+        navigate('/mypage');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '수강생 인증에 실패했습니다.';
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const enterAdminDashboard = () => {
@@ -65,7 +115,7 @@ const Header = () => {
           ) : loginView === 'student' ? (
             <>
               <p className="mb-4 text-base font-semibold text-gray-800">수강생 정보를 입력하세요</p>
-              <form className="flex flex-col gap-4 text-left">
+              <form className="flex flex-col gap-4 text-left" onSubmit={handleStudentSubmit}>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-gray-600" htmlFor="student-name">
                     이름
@@ -73,6 +123,8 @@ const Header = () => {
                   <input
                     id="student-name"
                     type="text"
+                    value={studentName}
+                    onChange={(event) => setStudentName(event.target.value)}
                     placeholder="이름을 입력하세요"
                     className="w-full rounded-full border border-[#f0e7c6] px-4 py-2 text-sm text-[#404040] focus:border-[#f6e94f] focus:outline-none"
                   />
@@ -84,15 +136,19 @@ const Header = () => {
                   <input
                     id="student-email"
                     type="email"
+                    value={studentEmail}
+                    onChange={(event) => setStudentEmail(event.target.value)}
                     placeholder="이메일을 입력하세요"
                     className="w-full rounded-full border border-[#f0e7c6] px-4 py-2 text-sm text-[#404040] focus:border-[#f6e94f] focus:outline-none"
                   />
                 </div>
+                {errorMessage && <p className="text-xs font-semibold text-red-500">{errorMessage}</p>}
                 <button
                   type="submit"
-                  className="w-full rounded-full bg-[#fef568] px-4 py-2 text-sm font-semibold text-[#404040] shadow-[0_4px_10px_rgba(0,0,0,0.12)] transition-colors hover:bg-[#f6e94f]"
+                  disabled={isSubmitting}
+                  className="w-full rounded-full bg-[#fef568] px-4 py-2 text-sm font-semibold text-[#404040] shadow-[0_4px_10px_rgba(0,0,0,0.12)] transition-colors hover:bg-[#f6e94f] disabled:opacity-60"
                 >
-                  로그인
+                  {isSubmitting ? '로그인 중...' : '로그인'}
                 </button>
               </form>
               <button

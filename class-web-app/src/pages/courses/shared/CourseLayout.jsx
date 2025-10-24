@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CourseTabs from './CourseTabs';
 import VideoTab from './VideoTab';
 import AssignmentTab from './AssignmentTab';
 import FeedbackTab from './FeedbackTab';
 import NoticeTab from './NoticeTab';
 import MaterialsTab from './MaterialsTab';
+import { getStoredStudentAccess } from '../../../lib/auth';
+import { getClassNameBySlug, normaliseClassName } from '../../../lib/classAccess';
 
 const BASE_TAB_CONFIG = [
   { id: 'video', label: '영상 보기' },
@@ -23,6 +26,29 @@ function CourseLayout({
   materials,
 }) {
   const [activeTab, setActiveTab] = useState('video');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const expectedClassName = getClassNameBySlug(courseId);
+    if (!expectedClassName || typeof window === 'undefined') {
+      return;
+    }
+
+    const storedAccess = getStoredStudentAccess();
+    if (storedAccess.length === 0) {
+      window.alert('로그인이 필요합니다.');
+      navigate('/');
+      return;
+    }
+
+    const expectedName = normaliseClassName(expectedClassName);
+    const hasAccess = storedAccess.some((record) => normaliseClassName(record.className) === expectedName);
+
+    if (!hasAccess) {
+      window.alert('수강 내역이 없습니다.');
+      navigate('/mypage');
+    }
+  }, [courseId, navigate]);
 
   const shouldDisplayMaterialsTab = materials !== undefined;
 

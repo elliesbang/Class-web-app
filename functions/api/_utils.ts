@@ -53,6 +53,16 @@ export const ensureBaseSchema = async (db: D1Database) => {
       FOREIGN KEY (class_id) REFERENCES classes(id)
     );
 
+    CREATE TABLE IF NOT EXISTS students (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      class_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(email, class_id),
+      FOREIGN KEY (class_id) REFERENCES classes(id)
+    );
+
     CREATE TABLE IF NOT EXISTS assignments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
