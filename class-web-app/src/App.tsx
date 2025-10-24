@@ -23,6 +23,7 @@ import EggjakCoursePage from './pages/courses/eggjak/index.jsx';
 import NacoljakCoursePage from './pages/courses/nacoljak/index.jsx';
 import EggjakChalCoursePage from './pages/courses/eggjakchal/index.jsx';
 import NacoljakChalCoursePage from './pages/courses/nacoljakchal/index.jsx';
+import AdminLogin from './pages/AdminLogin';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/vod" element={<VOD />} />
         <Route path="/notices" element={<Notices />} />
         <Route path="/mypage" element={<MyPage />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/internal/michina" element={<Michina />} />
         <Route path="/courses/earlchal" element={<EarlChalCoursePage />} />
         <Route path="/courses/candyma" element={<CandymaCoursePage />} />
