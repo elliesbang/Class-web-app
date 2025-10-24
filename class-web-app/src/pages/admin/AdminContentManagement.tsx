@@ -4,7 +4,8 @@ import { Trash2 } from 'lucide-react';
 import AdminModal from '../../components/admin/AdminModal';
 import Toast, { ToastVariant } from '../../components/admin/Toast';
 import type { ClassInfo, NoticePayload } from '../../lib/api';
-import { createMaterial, createNotice, createVideo, getClasses, getMaterials, getNotices, getVideos } from '../../lib/api';
+import { createMaterial, createNotice, createVideo, getMaterials, getNotices, getVideos } from '../../lib/api';
+import { useAdminClasses } from './data/AdminClassContext';
 
 type VideoContent = {
   id: number;
@@ -164,7 +165,7 @@ const AdminContentManagement = () => {
   const [videos, setVideos] = useState<VideoContent[]>([]);
   const [files, setFiles] = useState<FileContent[]>([]);
   const [notices, setNotices] = useState<NoticeContent[]>([]);
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const { classes, refresh: refreshClasses } = useAdminClasses();
   const [isMobile, setIsMobile] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -204,20 +205,21 @@ const AdminContentManagement = () => {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadInitialData = async () => {
       let encounteredError = false;
 
-      let resolvedClasses: ClassInfo[] = [];
-      try {
-        const fetchedClasses = await getClasses();
-        resolvedClasses = fetchedClasses;
-      } catch (error) {
-        console.error('Failed to load admin classes', error);
-        encounteredError = true;
-        resolvedClasses = [];
+      let resolvedClasses: ClassInfo[] = classes;
+      if (resolvedClasses.length === 0) {
+        try {
+          resolvedClasses = await refreshClasses();
+        } catch (error) {
+          console.error('Failed to load admin classes', error);
+          encounteredError = true;
+          resolvedClasses = [];
+        }
       }
-
-      setClasses(resolvedClasses);
 
       const classMap = new Map(resolvedClasses.map((item) => [item.id, item.name]));
 
@@ -266,16 +268,24 @@ const AdminContentManagement = () => {
           toNoticeContent(notice, classMap.get(notice.classId) ?? '미지정'),
         );
 
-        setVideos(hydrateVideosWithStoredOrder(mappedVideos));
-        setFiles(mappedFiles);
-        setNotices(sortNotices(mappedNotices));
+      if (cancelled) {
+        return;
+      }
+
+      setVideos(hydrateVideosWithStoredOrder(mappedVideos));
+      setFiles(mappedFiles);
+      setNotices(sortNotices(mappedNotices));
       if (encounteredError) {
         setToast({ message: '콘텐츠 정보를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.', variant: 'error' });
       }
     };
 
     void loadInitialData();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [classes, refreshClasses]);
 
   const defaultClassId = classes[0]?.id ?? null;
 
