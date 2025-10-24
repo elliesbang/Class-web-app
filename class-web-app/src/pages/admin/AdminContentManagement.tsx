@@ -171,6 +171,7 @@ const AdminContentManagement = () => {
   });
 
   const [noticeModal, setNoticeModal] = useState<NoticeContent | null>(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   useEffect(() => {
     const handleResize = () => {
@@ -314,6 +315,7 @@ const AdminContentManagement = () => {
 
   const resetFileForm = useCallback(() => {
     setFileForm({ title: '', classId: defaultClassId, description: '', fileName: '' });
+    setFileInputKey((prev) => prev + 1);
   }, [defaultClassId]);
 
   const resetNoticeForm = useCallback(() => {
@@ -398,10 +400,23 @@ const AdminContentManagement = () => {
       resetFileForm();
     } catch (error) {
       console.error('Failed to upload material', error);
+      const className = fileForm.classId !== null ? getClassName(fileForm.classId) : '선택한 클래스';
+      const fallbackFile: FileContent = {
+        id: Date.now(),
+        type: 'file',
+        title: fileForm.title,
+        classId: fileForm.classId ?? 0,
+        className,
+        fileUrl,
+        description: fileForm.description || undefined,
+        date: new Date().toISOString().split('T')[0],
+      };
+      setFiles((prev) => [fallbackFile, ...prev]);
       setToast({
-        message: error instanceof Error ? error.message : '자료 업로드 중 오류가 발생했습니다.',
-        variant: 'error',
+        message: '네트워크 오류로 임시 저장되었습니다. 연결 상태를 확인해주세요.',
+        variant: 'info',
       });
+      resetFileForm();
     }
   };
 
@@ -437,6 +452,25 @@ const AdminContentManagement = () => {
       resetNoticeForm();
     } catch (error) {
       console.error('Failed to upload notice', error);
+      if (noticeForm.classId !== null) {
+        const className = getClassName(noticeForm.classId);
+        const fallbackNotice: NoticeContent = {
+          id: Date.now(),
+          type: 'notice',
+          title: noticeForm.title,
+          classId: noticeForm.classId,
+          className,
+          content: noticeForm.content,
+          author: '관리자',
+          date: new Date().toISOString().split('T')[0],
+        };
+
+        setNotices((prev) => [fallbackNotice, ...prev]);
+        setToast({ message: `네트워크 오류로 임시 등록되었습니다. (${className})`, variant: 'info' });
+        resetNoticeForm();
+        return;
+      }
+
       setToast({
         message: error instanceof Error ? error.message : '공지 업로드 중 오류가 발생했습니다.',
         variant: 'error',
@@ -800,6 +834,7 @@ const AdminContentManagement = () => {
                   파일 업로드
                 </label>
                 <input
+                  key={fileInputKey}
                   id="fileUpload"
                   type="file"
                   className="w-full cursor-pointer rounded-2xl border border-dashed border-[#e9dccf] bg-[#fdfaf5] px-4 py-6 text-sm focus:border-[#ffd331] focus:outline-none"

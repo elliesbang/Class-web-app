@@ -206,6 +206,14 @@ const AdminCourseManagement = () => {
     );
   };
 
+  const handleDeleteCourse = (courseId: number) => {
+    const targetCourse = courses.find((course) => course.id === courseId);
+    const courseTitle = targetCourse?.title ?? '선택한 수업';
+    if (window.confirm(`‘${courseTitle}’ 수업을 삭제하시겠습니까?`)) {
+      setCourses((prev) => prev.filter((course) => course.id !== courseId));
+    }
+  };
+
   const resetCourseForm = () => {
     setCourseForm({
       title: '',
@@ -779,7 +787,10 @@ const AdminCourseManagement = () => {
                         <button
                           type="button"
                           className="rounded-full border border-[#e9dccf] px-3 py-1 text-xs font-semibold text-[#c25a4f] transition-all hover:-translate-y-0.5 hover:border-[#ffd331] hover:text-[#a13f35]"
-                          onClick={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteCourse(course.id);
+                          }}
                         >
                           삭제
                         </button>
@@ -852,7 +863,10 @@ const AdminCourseManagement = () => {
                   <button
                     type="button"
                     className="flex-1 rounded-full border border-[#e9dccf] px-3 py-1 text-xs font-semibold text-[#c25a4f]"
-                    onClick={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleDeleteCourse(course.id);
+                    }}
                   >
                     삭제
                   </button>
