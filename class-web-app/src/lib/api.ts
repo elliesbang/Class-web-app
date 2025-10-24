@@ -158,6 +158,18 @@ const normaliseClassList = (input: unknown): ClassInfo[] => {
     .filter((value): value is ClassInfo => value !== null);
 };
 
+const toNormalisedClassList = (input: unknown): ClassInfo[] => {
+  if (Array.isArray(input)) {
+    return normaliseClassList(input);
+  }
+
+  if (input && typeof input === 'object') {
+    return normaliseClassList([input]);
+  }
+
+  return [];
+};
+
 export const getClasses = async (): Promise<ClassInfo[]> => {
   const response = await fetch('/api/classes');
   await assertResponse(response);
@@ -178,6 +190,33 @@ export const getClasses = async (): Promise<ClassInfo[]> => {
   }
 
   return [];
+};
+
+export const createClass = async ({ name }: { name: string }): Promise<ClassInfo> => {
+  const response = await fetch('/api/classes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  await assertResponse(response);
+
+  const data = (await response.json()) as ApiResponse<ClassInfo | ClassInfo[]>;
+
+  if (data.success === false) {
+    throw new Error(data.message || '수업을 등록하지 못했습니다.');
+  }
+
+  const normalised = toNormalisedClassList(data.data);
+  if (normalised.length > 0) {
+    return normalised[0];
+  }
+
+  const fallback = toNormalisedClassList((data as { classes?: unknown }).classes);
+  if (fallback.length > 0) {
+    return fallback[0];
+  }
+
+  throw new Error('생성된 수업 정보를 확인할 수 없습니다.');
 };
 
 export const getVideos = async () => {
