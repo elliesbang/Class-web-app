@@ -269,10 +269,16 @@ const normaliseClassRecord = (item: unknown): ClassInfo | null => {
   const startDate = parseDateValue(candidate.start_date ?? candidate.startDate);
   const endDate = parseDateValue(candidate.end_date ?? candidate.endDate);
   const assignmentUploadTime = parseAssignmentUploadTime(
-    candidate.assignment_upload_time ?? candidate.assignmentSubmissionTime ?? candidate.assignment_submission_time,
+    candidate.assignment_upload_time ??
+      candidate.assignmentUploadTime ??
+      candidate.assignmentSubmissionTime ??
+      candidate.assignment_submission_time,
   );
   const assignmentUploadDays = parseStringArray(
-    candidate.assignment_upload_days ?? candidate.assignmentSubmissionDays ?? candidate.assignment_submission_days,
+    candidate.assignment_upload_days ??
+      candidate.assignmentUploadDays ??
+      candidate.assignmentSubmissionDays ??
+      candidate.assignment_submission_days,
   );
   const deliveryMethods = parseStringArray(candidate.delivery_methods ?? candidate.deliveryMethods);
   const isActive = parseBooleanValue(candidate.is_active ?? candidate.isActive);
