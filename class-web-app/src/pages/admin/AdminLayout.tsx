@@ -124,6 +124,13 @@ const AdminLayout = () => {
             )}
             <button
               type="button"
+              onClick={() => navigate('/')}
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#f5eee9]"
+            >
+              홈
+            </button>
+            <button
+              type="button"
               onClick={handleLogout}
               className="rounded-full bg-[#ffd331] px-4 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
             >
