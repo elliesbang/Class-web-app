@@ -5,7 +5,7 @@ const categories = [
     title: '캔바',
     accentColor: '#fde767',
     courses: [
-      { name: '캔디마', link: '/courses/candyma' },
+      { name: '캔디마', link: '/courses/candyma', courseId: 'candyma' },
       { name: '나캔디' },
       { name: '캔디수' },
     ],
@@ -14,7 +14,7 @@ const categories = [
     title: '중국어 캘리그라피',
     accentColor: '#ffd57a',
     courses: [
-      { name: '이얼챌', link: '/courses/earlchal' },
+      { name: '이얼챌', link: '/courses/earlchal', courseId: 'earlchal' },
       { name: '글씨체' },
       { name: '응용반' },
     ],
@@ -23,18 +23,18 @@ const categories = [
     title: 'ai창작',
     accentColor: '#ffec8b',
     courses: [
-      { name: '나컬작', link: '/courses/nacoljak' },
-      { name: '나컬작챌', link: '/courses/nacoljakchal' },
-      { name: '에그작', link: '/courses/eggjak' },
-      { name: '에그작챌', link: '/courses/eggjakchal' },
+      { name: '나컬작', link: '/courses/nacoljak', courseId: 'nacoljak' },
+      { name: '나컬작챌', link: '/courses/nacoljakchal', courseId: 'nacoljakchal' },
+      { name: '에그작', link: '/courses/eggjak', courseId: 'eggjak' },
+      { name: '에그작챌', link: '/courses/eggjakchal', courseId: 'eggjakchal' },
     ],
   },
   {
     title: '콘텐츠',
     accentColor: '#ffe26a',
     courses: [
-      { name: '미치나', link: '/internal/michina', linkState: { autoOpen: true } },
-      { name: '미템나', link: '/courses/mitemna' },
+      { name: '미치나', link: '/internal/michina', linkState: { autoOpen: true }, courseId: 'michina' },
+      { name: '미템나', link: '/courses/mitemna', courseId: 'mitemna' },
     ],
   },
 ];
