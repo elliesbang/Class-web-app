@@ -263,7 +263,7 @@ const AdminCourseDetail = () => {
           <button
             type="button"
             className="mt-4 rounded-full bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-all hover:-translate-y-0.5 hover:bg-[#e6bd2c]"
-            onClick={() => navigate('/admin/courses')}
+            onClick={() => navigate('/admin/class')}
           >
             수업 목록으로 이동
           </button>
