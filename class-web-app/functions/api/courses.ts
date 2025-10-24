@@ -17,3 +17,5 @@ export const onRequest: PagesHandler<Env> = (context) =>
   app.fetch(context.request, context.env, context);
 
 export const onRequestPost: PagesHandler<Env> = (context) => onRequest(context);
+
+export default app;
