@@ -6,7 +6,8 @@ import AdminModal from '../../components/admin/AdminModal';
 import Toast, { type ToastVariant } from '../../components/admin/Toast';
 import { useAdminData, type Assignment, type Feedback } from './data/AdminDataContext';
 import type { ClassInfo } from '../../lib/api';
-import { createFeedback, getClasses } from '../../lib/api';
+import { createFeedback } from '../../lib/api';
+import { DEFAULT_CLASS_NAME_BY_ID, DEFAULT_CLASS_NAMES } from '../../lib/default-classes';
 
 type ToastState = {
   message: string;
@@ -156,7 +157,7 @@ const FeedbackFormModal = ({
             required
           >
             <option value="" disabled>
-              수업을 선택하세요
+              선택하기
             </option>
             {classOptions.map((classItem) => (
               <option key={classItem.id} value={classItem.id}>
@@ -216,7 +217,7 @@ const AdminFeedbackManagement = () => {
   const [searchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [courseFilter, setCourseFilter] = useState<string>('전체');
+  const [courseFilter, setCourseFilter] = useState<string>('');
   const [authorFilter, setAuthorFilter] = useState<string>('전체');
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -224,8 +225,6 @@ const AdminFeedbackManagement = () => {
   const [resetCourse, setResetCourse] = useState<string | null>(null);
   const [viewTarget, setViewTarget] = useState<Feedback | null>(null);
   const [formState, setFormState] = useState<FeedbackFormState | null>(null);
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
   const [formClassId, setFormClassId] = useState<number | null>(null);
 
   const viewAssignment = useMemo(() => {
@@ -236,10 +235,10 @@ const AdminFeedbackManagement = () => {
   }, [assignments, viewTarget]);
 
   const courses = useMemo(() => {
-    const courseSet = new Set<string>();
+    const courseSet = new Set<string>(DEFAULT_CLASS_NAMES);
     assignments.forEach((assignment) => courseSet.add(assignment.course));
     feedbacks.forEach((feedback) => courseSet.add(feedback.course));
-    return Array.from(courseSet);
+    return Array.from(courseSet).sort((a, b) => a.localeCompare(b, 'ko-KR'));
   }, [assignments, feedbacks]);
   const authors = useMemo(() => Array.from(new Set(feedbacks.map((feedback) => feedback.author))), [feedbacks]);
 
@@ -259,14 +258,7 @@ const AdminFeedbackManagement = () => {
   }, [assignments, feedbacks]);
 
   const classOptions = useMemo(() => {
-    if (classes.length === 0 && fallbackClasses.length === 0) {
-      return [];
-    }
-
-    const merged = new Map<number, string>();
-    classes.forEach((item) => {
-      merged.set(item.id, item.name);
-    });
+    const merged = new Map<number, string>(DEFAULT_CLASS_NAME_BY_ID);
     fallbackClasses.forEach((item) => {
       if (!merged.has(item.id)) {
         merged.set(item.id, item.name);
@@ -274,23 +266,7 @@ const AdminFeedbackManagement = () => {
     });
 
     return Array.from(merged.entries()).map(([id, name]) => ({ id, name }));
-  }, [classes, fallbackClasses]);
-
-  useEffect(() => {
-    const loadClasses = async () => {
-      try {
-        const fetched = await getClasses();
-        setClasses(fetched);
-      } catch (error) {
-        console.error('Failed to load class list', error);
-        setToast({ message: '수업 목록을 불러오지 못했습니다.', variant: 'error' });
-      } finally {
-        setIsLoadingClasses(false);
-      }
-    };
-
-    void loadClasses();
-  }, []);
+  }, [fallbackClasses]);
 
   const filteredFeedbacks = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -303,7 +279,7 @@ const AdminFeedbackManagement = () => {
           value.toLowerCase().includes(keyword),
         );
 
-      const matchesCourse = courseFilter === '전체' || feedback.course === courseFilter;
+      const matchesCourse = courseFilter === '' || feedback.course === courseFilter;
       const matchesAuthor = authorFilter === '전체' || feedback.author === authorFilter;
 
       const matchesDate = (() => {
@@ -364,7 +340,7 @@ const AdminFeedbackManagement = () => {
       return;
     }
 
-    setFormClassId(classOptions[0]?.id ?? null);
+    setFormClassId(null);
   }, [classOptions, formState]);
 
   const closeFormModal = () => {
@@ -471,7 +447,7 @@ const AdminFeedbackManagement = () => {
             onChange={(event) => setCourseFilter(event.target.value)}
             className="rounded-2xl border border-[#e9dccf] bg-white px-3 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none"
           >
-            <option value="전체">전체 수업</option>
+            <option value="">선택하기</option>
             {courses.map((course) => (
               <option key={course} value={course}>
                 {course}
@@ -680,7 +656,7 @@ const AdminFeedbackManagement = () => {
           classId={formClassId}
           onClassChange={(value) => setFormClassId(value)}
           classOptions={classOptions}
-          isLoading={isLoadingClasses}
+          isLoading={false}
         />
       ) : null}
 

@@ -4,6 +4,7 @@ import CourseResetModal from '../../components/admin/CourseResetModal';
 import AdminModal from '../../components/admin/AdminModal';
 import Toast, { type ToastVariant } from '../../components/admin/Toast';
 import { useAdminData, type Assignment, type AssignmentStatus } from './data/AdminDataContext';
+import { DEFAULT_CLASS_NAMES } from '../../lib/default-classes';
 
 const statusBadgeClassName: Record<AssignmentStatus, string> = {
   미제출: 'bg-[#fff5f5] text-[#c43c3c] border border-[#ffd1d1]',
@@ -97,14 +98,18 @@ const AdminAssignmentsManagement = () => {
   const [searchParams] = useSearchParams();
   const { assignments, feedbacks, deleteAssignment, batchResetCourse } = useAdminData();
   const [searchTerm, setSearchTerm] = useState('');
-  const [courseFilter, setCourseFilter] = useState<string>('전체');
+  const [courseFilter, setCourseFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'전체' | '미제출' | '제출됨' | '피드백 완료'>('전체');
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [resetCourse, setResetCourse] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
-  const courses = useMemo(() => Array.from(new Set(assignments.map((assignment) => assignment.course))), [assignments]);
+  const courses = useMemo(() => {
+    const courseSet = new Set<string>(DEFAULT_CLASS_NAMES);
+    assignments.forEach((assignment) => courseSet.add(assignment.course));
+    return Array.from(courseSet).sort((a, b) => a.localeCompare(b, 'ko-KR'));
+  }, [assignments]);
 
   const filteredAssignments = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -116,7 +121,7 @@ const AdminAssignmentsManagement = () => {
           value.toLowerCase().includes(keyword),
         );
 
-      const matchesCourse = courseFilter === '전체' || assignment.course === courseFilter;
+      const matchesCourse = courseFilter === '' || assignment.course === courseFilter;
       const matchesStatus = statusFilter === '전체' || assignment.status === statusFilter;
 
       return matchesKeyword && matchesCourse && matchesStatus;
@@ -227,7 +232,7 @@ const AdminAssignmentsManagement = () => {
             onChange={(event) => setCourseFilter(event.target.value)}
             className="rounded-2xl border border-[#e9dccf] bg-white px-3 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none"
           >
-            <option value="전체">전체 수업</option>
+            <option value="">선택하기</option>
             {courses.map((course) => (
               <option key={course} value={course}>
                 {course}

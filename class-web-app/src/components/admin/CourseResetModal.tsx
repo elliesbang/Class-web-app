@@ -28,7 +28,7 @@ const CourseResetModal = ({ isOpen, courses, selectedCourse, onSelectCourse, onC
             onChange={(event) => onSelectCourse(event.target.value)}
           >
             <option value="" disabled>
-              기수를 선택하세요
+              선택하기
             </option>
             {courses.map((course) => (
               <option key={course} value={course}>
