@@ -1,6 +1,9 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import Toast, { ToastVariant } from '../../components/admin/Toast';
+import generateCourseCode from '../../lib/course-code';
+
 type CourseType = '강의' | '챌린지' | '특강' | '원데이';
 
 type CourseStatus = '진행 중' | '준비 중' | '종료';
@@ -25,6 +28,7 @@ type Course = {
   startDate: string;
   endDate: string;
   uploadPeriod: string;
+  generation?: string;
   status: CourseStatus;
   manager: string;
   description?: string;
@@ -43,6 +47,8 @@ type UploadRecord = {
 };
 
 type DecompressionStreamCtor = new (format: 'deflate' | 'deflate-raw' | 'gzip') => TransformStream<Uint8Array, Uint8Array>;
+
+type ToastState = { message: string; variant?: ToastVariant };
 
 const statusOrder: CourseStatus[] = ['준비 중', '진행 중', '종료'];
 
@@ -66,12 +72,16 @@ const AdminCourseManagement = () => {
   const [courseForm, setCourseForm] = useState({
     title: '',
     type: '강의' as CourseType,
+    generation: '',
     startDate: '',
     endDate: '',
     uploadPeriod: '',
     manager: '관리자',
     description: '',
   });
+  const [courseCodePreview, setCourseCodePreview] = useState<string | null>(null);
+  const [isSavingCourse, setIsSavingCourse] = useState(false);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   const [selectedCourseIdForUpload, setSelectedCourseIdForUpload] = useState<string>('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -146,6 +156,7 @@ const AdminCourseManagement = () => {
     setCourseForm({
       title: '',
       type: '강의',
+      generation: '',
       startDate: '',
       endDate: '',
       uploadPeriod: '',
@@ -154,36 +165,67 @@ const AdminCourseManagement = () => {
     });
   };
 
-  const handleAddCourse = (event: FormEvent<HTMLFormElement>) => {
+  const handleAddCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!courseForm.title || !courseForm.startDate || !courseForm.endDate || !courseForm.uploadPeriod) {
+    if (!courseForm.title || !courseForm.generation || !courseForm.startDate || !courseForm.endDate) {
+      setToast({ message: '수업명, 기수, 시작일, 종료일을 모두 입력해주세요.', variant: 'error' });
       return;
     }
 
-    const newCourse: Course = {
-      id: Date.now(),
-      title: courseForm.title,
-      type: courseForm.type,
-      startDate: courseForm.startDate,
-      endDate: courseForm.endDate,
-      uploadPeriod: courseForm.uploadPeriod,
-      status: '준비 중',
-      manager: courseForm.manager || '관리자',
-      description: courseForm.description,
-      students: [],
-      createdAt: new Date().toISOString(),
-      metrics: {
-        videos: 0,
-        materials: 0,
-        notices: 0,
-        assignmentSubmissionRate: 0,
-        feedbackCompletionRate: 0,
-      },
-    };
+    try {
+      setIsSavingCourse(true);
+      const response = await fetch('/api/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          course_name: courseForm.title,
+          generation: courseForm.generation,
+          start_date: courseForm.startDate,
+          end_date: courseForm.endDate,
+        }),
+      });
 
-    setCourses((prev) => [newCourse, ...prev]);
-    resetCourseForm();
-    setShowAddForm(false);
+      if (!response.ok) {
+        throw new Error('failed to create course');
+      }
+
+      const data = (await response.json()) as { message?: string; course_code?: string };
+      if (!data.course_code) {
+        throw new Error('missing course code');
+      }
+
+      const newCourse: Course = {
+        id: Date.now(),
+        title: courseForm.title,
+        type: courseForm.type,
+        startDate: courseForm.startDate,
+        endDate: courseForm.endDate,
+        uploadPeriod: courseForm.uploadPeriod,
+        generation: courseForm.generation,
+        status: '준비 중',
+        manager: courseForm.manager || '관리자',
+        description: courseForm.description,
+        students: [],
+        createdAt: new Date().toISOString(),
+        metrics: {
+          videos: 0,
+          materials: 0,
+          notices: 0,
+          assignmentSubmissionRate: 0,
+          feedbackCompletionRate: 0,
+        },
+      };
+
+      setCourses((prev) => [newCourse, ...prev]);
+      setCourseCodePreview(data.course_code);
+      setToast({ message: `새 수업이 생성되었습니다. 코드: ${data.course_code}`, variant: 'success' });
+      resetCourseForm();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: '수업 생성 중 오류가 발생했습니다. 다시 시도해주세요.', variant: 'error' });
+    } finally {
+      setIsSavingCourse(false);
+    }
   };
 
   const handleCourseFormChange = (
@@ -191,6 +233,29 @@ const AdminCourseManagement = () => {
   ) => {
     const { name, value } = event.target;
     setCourseForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleGenerateCourseCodePreview = () => {
+    if (!courseForm.title || !courseForm.generation) {
+      setToast({ message: '수업명과 기수를 입력한 후 코드를 생성하세요.', variant: 'error' });
+      return;
+    }
+    const code = generateCourseCode(courseForm.title, courseForm.generation);
+    setCourseCodePreview(code);
+  };
+
+  const handleCopyCourseCode = async () => {
+    if (!courseCodePreview) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(courseCodePreview);
+      setToast({ message: '코드를 복사했습니다.', variant: 'success' });
+    } catch (error) {
+      console.error(error);
+      setToast({ message: '코드를 복사하지 못했습니다.', variant: 'error' });
+    }
   };
 
   const parseCsv = async (file: File): Promise<Student[]> => {
@@ -460,7 +525,15 @@ const AdminCourseManagement = () => {
           <button
             type="button"
             className="rounded-full bg-[#ffd331] px-5 py-2 font-semibold text-[#404040] shadow-md transition-all hover:-translate-y-0.5 hover:bg-[#e6bd2c]"
-            onClick={() => setShowAddForm((prev) => !prev)}
+            onClick={() => {
+              setShowAddForm((prev) => {
+                if (prev) {
+                  resetCourseForm();
+                  setCourseCodePreview(null);
+                }
+                return !prev;
+              });
+            }}
           >
             + 새 수업 추가
           </button>
@@ -555,6 +628,20 @@ const AdminCourseManagement = () => {
               />
             </div>
             <div>
+              <label className="mb-2 block text-sm font-semibold text-[#404040]" htmlFor="generation">
+                기수
+              </label>
+              <input
+                id="generation"
+                name="generation"
+                value={courseForm.generation}
+                onChange={handleCourseFormChange}
+                placeholder="예: 03"
+                className="w-full rounded-xl border border-[#e9dccf] bg-[#fdf7f0] px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
+                required
+              />
+            </div>
+            <div>
               <label className="mb-2 block text-sm font-semibold text-[#404040]" htmlFor="type">
                 수업 유형
               </label>
@@ -623,7 +710,6 @@ const AdminCourseManagement = () => {
                 onChange={handleCourseFormChange}
                 placeholder="예: 00:00 ~ 23:59"
                 className="w-full rounded-xl border border-[#e9dccf] bg-[#fdf7f0] px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
-                required
               />
             </div>
             <div className="md:col-span-2">
@@ -640,6 +726,33 @@ const AdminCourseManagement = () => {
                 className="w-full rounded-xl border border-[#e9dccf] bg-[#fdf7f0] px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
               />
             </div>
+            <div className="md:col-span-2 rounded-xl bg-yellow-50 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-[#a67c00]">생성된 수업 코드</p>
+                  <p className="font-mono text-lg font-semibold text-[#404040]">
+                    {courseCodePreview ?? '코드를 생성하거나 수업을 저장하면 이곳에 표시됩니다.'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGenerateCourseCodePreview}
+                    className="flex items-center gap-1 rounded-full border border-yellow-300 bg-white px-4 py-2 text-sm font-semibold text-[#a67c00] transition hover:-translate-y-0.5 hover:bg-yellow-100"
+                  >
+                    🔄 새 코드 생성
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyCourseCode}
+                    disabled={!courseCodePreview}
+                    className="flex items-center gap-1 rounded-full border border-yellow-300 bg-white px-4 py-2 text-sm font-semibold text-[#a67c00] transition hover:-translate-y-0.5 hover:bg-yellow-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    📋 복사
+                  </button>
+                </div>
+              </div>
+            </div>
             <div className="md:col-span-2 flex justify-end gap-3">
               <button
                 type="button"
@@ -647,15 +760,17 @@ const AdminCourseManagement = () => {
                 onClick={() => {
                   resetCourseForm();
                   setShowAddForm(false);
+                  setCourseCodePreview(null);
                 }}
               >
                 취소
               </button>
               <button
                 type="submit"
-                className="rounded-full bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-all hover:-translate-y-0.5 hover:bg-[#e6bd2c]"
+                className="rounded-full bg-[#ffd331] px-5 py-2 text-sm font-semibold text-[#404040] shadow-md transition-all hover:-translate-y-0.5 hover:bg-[#e6bd2c] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSavingCourse}
               >
-                등록
+                {isSavingCourse ? '저장 중...' : '저장'}
               </button>
             </div>
           </form>
@@ -899,6 +1014,10 @@ const AdminCourseManagement = () => {
           </div>
         )}
       </section>
+
+      {toast ? (
+        <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
+      ) : null}
 
     </div>
   );
