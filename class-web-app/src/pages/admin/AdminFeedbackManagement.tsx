@@ -74,7 +74,7 @@ const FeedbackFormModal = ({
   onSubmit,
   classId,
   onClassChange,
-  classes,
+  classOptions,
   isLoading,
 }: {
   state: FeedbackFormState;
@@ -82,7 +82,7 @@ const FeedbackFormModal = ({
   onSubmit: (payload: { content: string; author: string; attachmentUrl?: string; classId: number | null }) => Promise<void> | void;
   classId: number | null;
   onClassChange: (value: number) => void;
-  classes: ClassInfo[];
+  classOptions: ClassInfo[];
   isLoading: boolean;
 }) => {
   const isEdit = state.mode === 'edit';
@@ -144,15 +144,21 @@ const FeedbackFormModal = ({
           <label className="block text-sm font-semibold">수업 카테고리</label>
           <select
             value={classId ?? ''}
-            onChange={(event) => onClassChange(Number(event.target.value))}
+            onChange={(event) => {
+              const parsed = Number(event.target.value);
+              if (Number.isNaN(parsed)) {
+                return;
+              }
+              onClassChange(parsed);
+            }}
             className="w-full rounded-xl border border-[#e9dccf] bg-white px-3 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
-            disabled={isLoading || classes.length === 0}
+            disabled={isLoading || classOptions.length === 0}
             required
           >
             <option value="" disabled>
               수업을 선택하세요
             </option>
-            {classes.map((classItem) => (
+            {classOptions.map((classItem) => (
               <option key={classItem.id} value={classItem.id}>
                 {classItem.name}
               </option>
@@ -237,6 +243,39 @@ const AdminFeedbackManagement = () => {
   }, [assignments, feedbacks]);
   const authors = useMemo(() => Array.from(new Set(feedbacks.map((feedback) => feedback.author))), [feedbacks]);
 
+  const fallbackClasses = useMemo(() => {
+    const map = new Map<number, string>();
+    assignments.forEach((assignment) => {
+      if (assignment.classId != null) {
+        map.set(assignment.classId, assignment.course);
+      }
+    });
+    feedbacks.forEach((feedback) => {
+      if (feedback.classId != null) {
+        map.set(feedback.classId, feedback.course);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [assignments, feedbacks]);
+
+  const classOptions = useMemo(() => {
+    if (classes.length === 0 && fallbackClasses.length === 0) {
+      return [];
+    }
+
+    const merged = new Map<number, string>();
+    classes.forEach((item) => {
+      merged.set(item.id, item.name);
+    });
+    fallbackClasses.forEach((item) => {
+      if (!merged.has(item.id)) {
+        merged.set(item.id, item.name);
+      }
+    });
+
+    return Array.from(merged.entries()).map(([id, name]) => ({ id, name }));
+  }, [classes, fallbackClasses]);
+
   useEffect(() => {
     const loadClasses = async () => {
       try {
@@ -312,12 +351,21 @@ const AdminFeedbackManagement = () => {
       return;
     }
 
+    const assignmentClassId = formState.assignment?.classId ?? null;
+
     if (formState.mode === 'edit') {
-      setFormClassId(formState.targetFeedback?.classId ?? classes[0]?.id ?? null);
-    } else {
-      setFormClassId(classes[0]?.id ?? null);
+      const targetClassId = formState.targetFeedback?.classId ?? assignmentClassId;
+      setFormClassId(targetClassId ?? classOptions[0]?.id ?? null);
+      return;
     }
-  }, [classes, formState]);
+
+    if (assignmentClassId != null) {
+      setFormClassId(assignmentClassId);
+      return;
+    }
+
+    setFormClassId(classOptions[0]?.id ?? null);
+  }, [classOptions, formState]);
 
   const closeFormModal = () => {
     setFormState(null);
@@ -343,7 +391,7 @@ const AdminFeedbackManagement = () => {
     }
 
     try {
-      const className = classes.find((classItem) => classItem.id === payload.classId)?.name ?? '선택한 클래스';
+      const className = classOptions.find((classItem) => classItem.id === payload.classId)?.name ?? '선택한 클래스';
       await createFeedback({
         userName: payload.author || '관리자',
         comment: payload.content,
@@ -631,7 +679,7 @@ const AdminFeedbackManagement = () => {
           onSubmit={formState.mode === 'edit' ? handleUpdateFeedback : handleCreateFeedback}
           classId={formClassId}
           onClassChange={(value) => setFormClassId(value)}
-          classes={classes}
+          classOptions={classOptions}
           isLoading={isLoadingClasses}
         />
       ) : null}

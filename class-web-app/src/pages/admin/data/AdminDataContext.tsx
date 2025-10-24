@@ -25,6 +25,7 @@ export type Assignment = {
   submittedAt: string | null;
   status: AssignmentStatus;
   fileType: AssignmentFileType;
+  classId: number | null;
   fileUrl?: string;
   link?: string | null;
 };
@@ -88,6 +89,7 @@ const normaliseAssignment = (assignment: AssignmentListItem): Assignment => {
     submittedAt: assignment.submittedAt || null,
     status,
     fileType,
+    classId: typeof assignment.classId === 'number' ? assignment.classId : null,
     fileUrl: assignment.fileUrl ?? undefined,
     link: assignment.link ?? null,
   };
