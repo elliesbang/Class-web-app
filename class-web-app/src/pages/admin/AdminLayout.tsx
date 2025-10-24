@@ -54,6 +54,7 @@ const AdminLayout = () => {
   const handleLogout = () => {
     localStorage.removeItem('adminAuth');
     localStorage.removeItem('adminInfo');
+    emitAdminAuthChange();
     setIsReady(false);
     setAdminInfo(null);
     navigate('/', { replace: true });
@@ -122,6 +123,13 @@ const AdminLayout = () => {
                 {adminInfo.email && <span className="text-[11px] text-[#7a6f68]">{adminInfo.email}</span>}
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#f5eee9]"
+            >
+              홈
+            </button>
             <button
               type="button"
               onClick={handleLogout}
