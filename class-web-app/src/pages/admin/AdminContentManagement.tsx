@@ -1,4 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Trash2 } from 'lucide-react';
+
+import AdminModal from '../../components/admin/AdminModal';
+import Toast, { ToastVariant } from '../../components/admin/Toast';
 
 const categories = ['전체', '미치나', '캔디마', '나캔디', '캔디수'];
 
@@ -35,6 +39,19 @@ type NoticeContent = {
 };
 
 type TabKey = 'video' | 'file' | 'notice';
+
+type ContentType = 'video' | 'file' | 'notice';
+
+type DeleteTarget = {
+  id: number;
+  type: ContentType;
+  title: string;
+};
+
+type ToastState = {
+  message: string;
+  variant?: ToastVariant;
+};
 
 const initialVideos: VideoContent[] = [
   {
@@ -108,6 +125,8 @@ const AdminContentManagement = () => {
   const [files, setFiles] = useState(initialFiles);
   const [notices, setNotices] = useState(initialNotices);
   const [isMobile, setIsMobile] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   const [videoForm, setVideoForm] = useState({
     title: '',
@@ -233,6 +252,42 @@ const AdminContentManagement = () => {
 
     setNotices((prev) => [newNotice, ...prev]);
     resetNoticeForm();
+  };
+
+  const handleDeleteRequest = (type: ContentType, id: number, title: string) => {
+    setDeleteTarget({ type, id, title });
+  };
+
+  const handleCloseDeleteModal = () => {
+    setDeleteTarget(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === 'video') {
+      setVideos((prev) => prev.filter((video) => video.id !== deleteTarget.id));
+    }
+
+    if (deleteTarget.type === 'file') {
+      setFiles((prev) => prev.filter((file) => file.id !== deleteTarget.id));
+    }
+
+    if (deleteTarget.type === 'notice') {
+      setNotices((prev) => prev.filter((notice) => notice.id !== deleteTarget.id));
+      setNoticeModal((prev) => (prev && prev.id === deleteTarget.id ? null : prev));
+    }
+
+    setToast({ message: '삭제되었습니다.', variant: 'success' });
+    setDeleteTarget(null);
+  };
+
+  const handleToastClose = () => setToast(null);
+
+  const contentTypeLabel: Record<ContentType, string> = {
+    video: '영상',
+    file: '자료',
+    notice: '공지',
   };
 
   return (
@@ -395,11 +450,21 @@ const AdminContentManagement = () => {
                   <div className="overflow-hidden rounded-2xl bg-black/5">
                     <div dangerouslySetInnerHTML={{ __html: video.embedCode }} />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <h4 className="text-base font-semibold text-[#404040]">{video.title}</h4>
-                    <p className="text-sm text-gray-500">{video.category}</p>
-                    <p className="text-xs text-gray-400">등록일 {video.date}</p>
-                    {video.description && <p className="text-sm text-gray-600">{video.description}</p>}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <h4 className="text-base font-semibold text-[#404040]">{video.title}</h4>
+                      <p className="text-sm text-gray-500">{video.category}</p>
+                      <p className="text-xs text-gray-400">등록일 {video.date}</p>
+                      {video.description && <p className="text-sm text-gray-600">{video.description}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
+                      onClick={() => handleDeleteRequest('video', video.id, video.title)}
+                      aria-label={`${video.title} 삭제`}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
                 </article>
               ))}
@@ -501,14 +566,24 @@ const AdminContentManagement = () => {
                   key={file.id}
                   className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-md transition-shadow hover:shadow-lg"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
                       <h4 className="text-base font-semibold text-[#404040]">{file.title}</h4>
                       <p className="text-sm text-gray-500">{file.category}</p>
                     </div>
-                    <span className="rounded-full bg-[#f5eee9] px-3 py-1 text-xs font-semibold text-[#5c5c5c]">
-                      {file.date}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-[#f5eee9] px-3 py-1 text-xs font-semibold text-[#5c5c5c]">
+                        {file.date}
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
+                        onClick={() => handleDeleteRequest('file', file.id, file.title)}
+                        aria-label={`${file.title} 삭제`}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
                   {file.description && <p className="text-sm text-gray-600">{file.description}</p>}
                   <div className="flex items-center justify-between text-sm">
@@ -599,24 +674,36 @@ const AdminContentManagement = () => {
               <h3 className="mb-4 text-lg font-semibold">공지 리스트</h3>
               <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto">
                 {filteredNotices.map((notice) => (
-                  <button
+                  <div
                     key={notice.id}
-                    type="button"
-                    className="flex flex-col gap-2 rounded-xl bg-white p-4 text-left shadow-md transition-shadow hover:shadow-lg"
-                    onClick={() => setNoticeModal(notice)}
+                    className="flex items-start justify-between gap-3 rounded-xl bg-white p-4 shadow-md transition-shadow hover:shadow-lg"
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-base font-semibold text-[#404040]">{notice.title}</h4>
-                        <p className="text-sm text-gray-500">{notice.category}</p>
+                    <button
+                      type="button"
+                      className="flex-1 text-left"
+                      onClick={() => setNoticeModal(notice)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-base font-semibold text-[#404040]">{notice.title}</h4>
+                          <p className="text-sm text-gray-500">{notice.category}</p>
+                        </div>
+                        <div className="text-right text-xs text-gray-400">
+                          <p>등록일 {notice.date}</p>
+                          <p>작성자 {notice.author}</p>
+                        </div>
                       </div>
-                      <div className="text-right text-xs text-gray-400">
-                        <p>등록일 {notice.date}</p>
-                        <p>작성자 {notice.author}</p>
-                      </div>
-                    </div>
-                    <p className="line-clamp-2 text-sm text-gray-600">{notice.content}</p>
-                  </button>
+                      <p className="line-clamp-2 text-sm text-gray-600">{notice.content}</p>
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
+                      onClick={() => handleDeleteRequest('notice', notice.id, notice.title)}
+                      aria-label={`${notice.title} 삭제`}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -651,6 +738,43 @@ const AdminContentManagement = () => {
           </div>
         </div>
       )}
+
+      {deleteTarget ? (
+        <AdminModal
+          title="정말 삭제하시겠습니까?"
+          subtitle={`${contentTypeLabel[deleteTarget.type]} 항목이 즉시 삭제됩니다.`}
+          onClose={handleCloseDeleteModal}
+          footer={
+            <>
+              <button
+                type="button"
+                className="rounded-2xl bg-[#f5eee9] px-5 py-2 text-sm font-semibold text-[#404040] transition-colors hover:bg-[#ffd331]/80"
+                onClick={handleCloseDeleteModal}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className="rounded-2xl bg-[#ff6b6b] px-5 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-[#e75a5a]"
+                onClick={handleConfirmDelete}
+              >
+                삭제
+              </button>
+            </>
+          }
+        >
+          <div className="space-y-3 text-sm leading-relaxed text-[#404040]">
+            <p>
+              선택한 {contentTypeLabel[deleteTarget.type]} 항목 <span className="font-semibold">{deleteTarget.title}</span>을(를) 삭제합니다.
+            </p>
+            <p className="text-xs text-[#7a6f68]">데이터베이스에서 레코드만 제거되며, 연결된 실제 파일이나 영상은 유지됩니다.</p>
+          </div>
+        </AdminModal>
+      ) : null}
+
+      {toast ? (
+        <Toast message={toast.message} variant={toast.variant} onClose={handleToastClose} />
+      ) : null}
     </div>
   );
 };
