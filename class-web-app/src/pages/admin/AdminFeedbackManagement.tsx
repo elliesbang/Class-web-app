@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CourseResetModal from '../../components/admin/CourseResetModal';
 import AdminModal from '../../components/admin/AdminModal';
@@ -520,10 +521,11 @@ const AdminFeedbackManagement = () => {
                           </button>
                           <button
                             type="button"
-                            className="rounded-xl bg-[#f5eee9] px-3 py-2 text-xs font-semibold text-[#c43c3c] shadow hover:bg-[#ffe3e3]"
+                            className="inline-flex items-center justify-center rounded-xl bg-[#f5eee9] p-2 text-[#c43c3c] shadow hover:bg-[#ffe3e3]"
                             onClick={() => handleDeleteFeedback(feedback.id)}
+                            aria-label="피드백 삭제"
                           >
-                            삭제
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
                           </button>
                           <button
                             type="button"
@@ -586,7 +588,10 @@ const AdminFeedbackManagement = () => {
                       className="flex-1 rounded-xl bg-[#ffe3e3] px-3 py-2 text-xs font-semibold text-[#c43c3c] shadow hover:bg-[#ffcccc]"
                       onClick={() => handleDeleteFeedback(feedback.id)}
                     >
-                      삭제
+                      <span className="inline-flex items-center justify-center gap-1">
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        <span>삭제</span>
+                      </span>
                     </button>
                     <button
                       type="button"
