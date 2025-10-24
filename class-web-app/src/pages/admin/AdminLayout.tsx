@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { AdminDataProvider } from './data/AdminDataContext';
 
 const menuItems = [
@@ -13,21 +13,54 @@ const menuItems = [
   { label: '설정', icon: '⚙️', to: '/admin/settings' },
 ];
 
-const checkAdminAuth = async () => {
-  // TODO: integrate with real admin authentication
-  return true;
-};
-
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const [adminInfo, setAdminInfo] = useState<{ name: string; email: string } | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const verifyAdmin = async () => {
-      await checkAdminAuth();
-    };
+    if (typeof window === 'undefined') {
+      return;
+    }
 
-    void verifyAdmin();
-  }, []);
+    const isAuthenticated = localStorage.getItem('adminAuth') === 'true';
+
+    if (!isAuthenticated) {
+      alert('관리자 로그인이 필요합니다.');
+      navigate('/', { replace: true });
+      return;
+    }
+
+    const storedInfo = localStorage.getItem('adminInfo');
+    if (storedInfo) {
+      try {
+        const parsed = JSON.parse(storedInfo) as { name?: string; email?: string };
+        if (parsed && (parsed.name || parsed.email)) {
+          setAdminInfo({
+            name: parsed.name ?? '관리자',
+            email: parsed.email ?? '',
+          });
+        }
+      } catch (error) {
+        console.warn('[admin-auth] 관리자 정보 파싱 실패', error);
+      }
+    }
+
+    setIsReady(true);
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminAuth');
+    localStorage.removeItem('adminInfo');
+    setIsReady(false);
+    setAdminInfo(null);
+    navigate('/', { replace: true });
+  };
+
+  if (!isReady) {
+    return null;
+  }
 
   return (
     <AdminDataProvider>
@@ -80,12 +113,21 @@ const AdminLayout = () => {
             </button>
             <h1 className="text-xl font-bold text-[#404040]">대시보드</h1>
           </div>
-          <a
-            href="/"
-            className="rounded-full bg-[#ffd331] px-4 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
-          >
-            홈으로 돌아가기
-          </a>
+          <div className="flex items-center gap-3">
+            {adminInfo && (
+              <div className="hidden flex-col text-right text-xs font-semibold text-[#5c5c5c] sm:flex">
+                <span>{adminInfo.name}</span>
+                {adminInfo.email && <span className="text-[11px] text-[#7a6f68]">{adminInfo.email}</span>}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-full bg-[#ffd331] px-4 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
+            >
+              로그아웃
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
