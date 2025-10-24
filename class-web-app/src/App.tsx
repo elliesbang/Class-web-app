@@ -1,7 +1,7 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './pages/admin/AdminLayout';
-import AdminCourseManagement from './pages/admin/AdminCourseManagement';
+import AdminClassManagement from './pages/admin/AdminClassManagement';
 import AdminDashboardHome from './pages/admin/AdminDashboardHome';
 import AdminContentManagement from './pages/admin/AdminContentManagement';
 import AdminCourseDetail from './pages/admin/AdminCourseDetail';
@@ -47,7 +47,8 @@ function App() {
 
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboardHome />} />
-        <Route path="courses" element={<AdminCourseManagement />} />
+        <Route path="class" element={<AdminClassManagement />} />
+        <Route path="courses" element={<Navigate to="/admin/class" replace />} />
         <Route path="courses/:id" element={<AdminCourseDetail />} />
         <Route path="students" element={<AdminStudentManagement />} />
         <Route path="assignments" element={<AdminAssignmentsManagement />} />

@@ -5,7 +5,7 @@ import { AdminClassProvider } from './data/AdminClassContext';
 
 const menuItems = [
   { label: '대시보드 홈', icon: '🏠', to: '/admin', end: true },
-  { label: '수업 관리', icon: '📚', to: '/admin/courses' },
+  { label: '수업 관리', icon: '📚', to: '/admin/class' },
   { label: '수강생 관리', icon: '👩‍🎓', to: '/admin/students' },
   { label: '과제 관리', icon: '🖼️', to: '/admin/assignments' },
   { label: '피드백 관리', icon: '💬', to: '/admin/feedback' },

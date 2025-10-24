@@ -8,8 +8,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { ClassInfo } from '../../../lib/api';
-import { createClass as requestCreateClass, getClasses } from '../../../lib/api';
+import type { ClassFormPayload, ClassInfo } from '../../../lib/api';
+import {
+  createClass as requestCreateClass,
+  deleteClass as requestDeleteClass,
+  getClasses,
+  updateClass as requestUpdateClass,
+} from '../../../lib/api';
 
 type AdminClassContextValue = {
   classes: ClassInfo[];
@@ -17,12 +22,15 @@ type AdminClassContextValue = {
   error: string | null;
   hasFetched: boolean;
   refresh: () => Promise<ClassInfo[]>;
-  createClass: (payload: { name: string }) => Promise<ClassInfo>;
+  createClass: (payload: ClassFormPayload) => Promise<ClassInfo>;
+  updateClass: (id: number, payload: ClassFormPayload) => Promise<ClassInfo>;
+  deleteClass: (id: number) => Promise<void>;
 };
 
 const AdminClassContext = createContext<AdminClassContextValue | undefined>(undefined);
 
-const sortClasses = (input: ClassInfo[]) => [...input].sort((a, b) => a.id - b.id);
+const sortClasses = (input: ClassInfo[]) =>
+  [...input].sort((a, b) => a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }));
 
 export const AdminClassProvider = ({ children }: { children: ReactNode }) => {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
@@ -58,16 +66,24 @@ export const AdminClassProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [refresh]);
 
-  const createClass = useCallback(async ({ name }: { name: string }) => {
-    const trimmed = name.trim();
-    if (trimmed.length === 0) {
-      throw new Error('수업명을 입력해주세요.');
-    }
-
-    const created = await requestCreateClass({ name: trimmed });
+  const createClass = useCallback(async (payload: ClassFormPayload) => {
+    const created = await requestCreateClass(payload);
     setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== created.id), created]));
     hasFetchedRef.current = true;
     return created;
+  }, []);
+
+  const updateClass = useCallback(async (id: number, payload: ClassFormPayload) => {
+    const updated = await requestUpdateClass(id, payload);
+    setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== updated.id), updated]));
+    hasFetchedRef.current = true;
+    return updated;
+  }, []);
+
+  const deleteClass = useCallback(async (id: number) => {
+    await requestDeleteClass(id);
+    setClasses((prev) => prev.filter((item) => item.id !== id));
+    hasFetchedRef.current = true;
   }, []);
 
   const value = useMemo<AdminClassContextValue>(
@@ -78,8 +94,10 @@ export const AdminClassProvider = ({ children }: { children: ReactNode }) => {
       hasFetched: hasFetchedRef.current,
       refresh,
       createClass,
+      updateClass,
+      deleteClass,
     }),
-    [classes, createClass, error, isLoading, refresh],
+    [classes, createClass, deleteClass, error, isLoading, refresh, updateClass],
   );
 
   return <AdminClassContext.Provider value={value}>{children}</AdminClassContext.Provider>;
