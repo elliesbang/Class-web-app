@@ -1,28 +1,16 @@
-import app from '../../src/functions/api/class-categories';
+import { Hono } from 'hono'
 
-type Env = {
-  DB: D1Database;
-};
+export const app = new Hono()
 
-type PagesContext<Bindings> = {
-  request: Request;
-  env: Bindings;
-  waitUntil(promise: Promise<unknown>): void;
-  passThroughOnException(): void;
-};
+app.get('/', async (c) => {
+  try {
+    const result = await c.env.DB.prepare('SELECT * FROM class_categories').all()
+    return c.json({ success: true, data: result.results || [] })
+  } catch (err) {
+    console.error('Error fetching categories:', err)
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ success: false, message: '카테고리 불러오기 실패', error: message }, 500)
+  }
+})
 
-type PagesHandler<Bindings> = (context: PagesContext<Bindings>) => Promise<Response> | Response;
-
-const handleRequest: PagesHandler<Env> = (context) => app.fetch(context.request, context.env, context);
-
-export const onRequest: PagesHandler<Env> = (context) => handleRequest(context);
-
-export const onRequestGet: PagesHandler<Env> = (context) => handleRequest(context);
-
-export const onRequestPost: PagesHandler<Env> = (context) => handleRequest(context);
-
-export const onRequestPut: PagesHandler<Env> = (context) => handleRequest(context);
-
-export const onRequestDelete: PagesHandler<Env> = (context) => handleRequest(context);
-
-export const onRequestOptions: PagesHandler<Env> = (context) => handleRequest(context);
+export default app
