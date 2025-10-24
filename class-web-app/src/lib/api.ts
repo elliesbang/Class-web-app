@@ -27,6 +27,11 @@ export type ClassFormPayload = {
   isActive: boolean;
 };
 
+export type Category = {
+  id: number;
+  name: string;
+};
+
 export type VideoPayload = {
   id: number;
   title: string;
@@ -86,6 +91,7 @@ type ApiResponse<T> = {
   message?: string;
   data?: T;
   classes?: ClassInfo[];
+  categories?: Category[];
   videos?: Array<{
     id: number;
     title: string;
@@ -225,6 +231,53 @@ const parseStringArray = (value: unknown): string[] => {
   return [];
 };
 
+const normaliseCategoryRecord = (input: unknown): Category | null => {
+  if (!input || typeof input !== 'object') {
+    return null;
+  }
+
+  const candidate = input as Record<string, unknown>;
+  const id = Number(candidate.id ?? candidate.category_id ?? candidate.categoryId);
+  const rawName = candidate.name ?? candidate.category_name ?? candidate.categoryName;
+  const name = typeof rawName === 'string' ? rawName.trim() : rawName != null ? String(rawName).trim() : '';
+
+  if (Number.isNaN(id) || id <= 0 || name.length === 0) {
+    return null;
+  }
+
+  return { id, name } satisfies Category;
+};
+
+const normaliseCategoryList = (input: unknown): Category[] => {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item) => normaliseCategoryRecord(item))
+    .filter((value): value is Category => value !== null)
+    .sort((a, b) => a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }));
+};
+
+const toNormalisedCategoryList = (input: unknown): Category[] => {
+  if (Array.isArray(input)) {
+    return normaliseCategoryList(input);
+  }
+
+  if (input && typeof input === 'object') {
+    const values = Object.values(input).flatMap((value) =>
+      Array.isArray(value) ? normaliseCategoryList(value) : [],
+    );
+    if (values.length > 0) {
+      return values;
+    }
+    const record = normaliseCategoryRecord(input);
+    return record ? [record] : [];
+  }
+
+  return [];
+};
+
 const parseBooleanValue = (value: unknown): boolean => {
   if (typeof value === 'boolean') {
     return value;
@@ -335,6 +388,32 @@ export const getClasses = async (): Promise<ClassInfo[]> => {
   const fromLegacy = normaliseClassList((data as { classes?: unknown }).classes);
   if (fromLegacy.length > 0) {
     return fromLegacy;
+  }
+
+  return [];
+};
+
+export const getCategories = async (): Promise<Category[]> => {
+  const response = await fetch('/api/categories');
+  await assertResponse(response);
+
+  const payload = await response.json();
+
+  const fromData = toNormalisedCategoryList(payload);
+  if (fromData.length > 0) {
+    return fromData;
+  }
+
+  if (payload && typeof payload === 'object') {
+    const candidates =
+      'data' in payload
+        ? toNormalisedCategoryList((payload as { data?: unknown }).data)
+        : 'categories' in payload
+        ? toNormalisedCategoryList((payload as { categories?: unknown }).categories)
+        : [];
+    if (candidates.length > 0) {
+      return candidates;
+    }
   }
 
   return [];

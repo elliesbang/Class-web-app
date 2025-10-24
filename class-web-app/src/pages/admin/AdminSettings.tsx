@@ -1,4 +1,5 @@
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { useAdminCategories } from './data/AdminCategoryContext';
 
 type UploadFormat = 'image' | 'pdf' | 'link';
 type SubmissionLimit = 'daily' | 'unlimited' | 'perSession';
@@ -52,8 +53,6 @@ type DataManagementState = {
   isExporting: boolean;
 };
 
-const classTypes = ['이얼챌', '미치나', '미템나', '에그작', '에그작챌', '나컬작', '나컬작챌'];
-
 const uploadFormatOptions: { label: string; value: UploadFormat }[] = [
   { label: '이미지', value: 'image' },
   { label: 'PDF', value: 'pdf' },
@@ -100,22 +99,54 @@ const AdminSettings = () => {
 
   const [classPolicies, setClassPolicies] = useState<ClassUploadPolicy[]>([]);
 
-  const [selectedClassType, setSelectedClassType] = useState<string>(classTypes[0]);
-  const [classPolicyForm, setClassPolicyForm] = useState<ClassUploadPolicy>(() => {
-    const existing = classPolicies.find((policy) => policy.classType === classTypes[0]);
-    if (existing) {
-      return { ...existing };
-    }
-    return {
-      classType: classTypes[0],
+  const { categories } = useAdminCategories();
+  const classTypeOptions = useMemo(
+    () => categories.map((category) => category.name.trim()).filter((name) => name.length > 0),
+    [categories],
+  );
+
+  const [selectedClassType, setSelectedClassType] = useState<string>('');
+  const [classPolicyForm, setClassPolicyForm] = useState<ClassUploadPolicy>(
+    () => ({
+      classType: '',
       allowedFormats: globalPolicy.allowedFormats,
       maxFileSize: globalPolicy.maxFileSize,
       uploadStart: globalPolicy.uploadStart,
       uploadEnd: globalPolicy.uploadEnd,
       submissionLimit: 'unlimited',
       autoInherit: true,
-    };
-  });
+    }),
+  );
+
+  useEffect(() => {
+    if (classTypeOptions.length === 0) {
+      setSelectedClassType('');
+      setClassPolicyForm((prev) => ({ ...prev, classType: '' }));
+      return;
+    }
+    setSelectedClassType((prev) => (prev && classTypeOptions.includes(prev) ? prev : classTypeOptions[0]));
+  }, [classTypeOptions]);
+
+  useEffect(() => {
+    if (!selectedClassType) {
+      setClassPolicyForm((prev) => ({ ...prev, classType: '' }));
+      return;
+    }
+    const existing = classPolicies.find((policy) => policy.classType === selectedClassType);
+    if (existing) {
+      setClassPolicyForm({ ...existing });
+      return;
+    }
+    setClassPolicyForm({
+      classType: selectedClassType,
+      allowedFormats: globalPolicy.allowedFormats,
+      maxFileSize: globalPolicy.maxFileSize,
+      uploadStart: globalPolicy.uploadStart,
+      uploadEnd: globalPolicy.uploadEnd,
+      submissionLimit: 'unlimited',
+      autoInherit: true,
+    });
+  }, [classPolicies, globalPolicy.allowedFormats, globalPolicy.maxFileSize, globalPolicy.uploadEnd, globalPolicy.uploadStart, selectedClassType]);
 
   const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>([]);
 
@@ -143,6 +174,16 @@ const AdminSettings = () => {
     isResetting: false,
     isExporting: false,
   });
+
+  useEffect(() => {
+    setBoardPolicy((prev) => {
+      const filtered = prev.selectedClasses.filter((item) => classTypeOptions.includes(item));
+      if (filtered.length === prev.selectedClasses.length) {
+        return prev;
+      }
+      return { ...prev, selectedClasses: filtered };
+    });
+  }, [classTypeOptions]);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -182,25 +223,19 @@ const AdminSettings = () => {
   };
 
   const handleSelectClassType = (classType: string) => {
-    setSelectedClassType(classType);
-    const existing = classPolicies.find((policy) => policy.classType === classType);
-    if (existing) {
-      setClassPolicyForm({ ...existing });
-    } else {
-      setClassPolicyForm({
-        classType,
-        allowedFormats: globalPolicy.allowedFormats,
-        maxFileSize: globalPolicy.maxFileSize,
-        uploadStart: globalPolicy.uploadStart,
-        uploadEnd: globalPolicy.uploadEnd,
-        submissionLimit: 'unlimited',
-        autoInherit: true,
-      });
+    if (!classTypeOptions.includes(classType)) {
+      setSelectedClassType(classTypeOptions[0] ?? '');
+      return;
     }
+    setSelectedClassType(classType);
   };
 
   const handleClassPolicySave = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!classPolicyForm.classType) {
+      setToastMessage('카테고리를 선택해주세요.');
+      return;
+    }
     setClassPolicies((prev) => {
       const exists = prev.some((policy) => policy.classType === classPolicyForm.classType);
       if (exists) {
@@ -214,6 +249,10 @@ const AdminSettings = () => {
   };
 
   const resetClassPolicyToGlobal = () => {
+    if (!classPolicyForm.classType) {
+      setToastMessage('카테고리를 선택해주세요.');
+      return;
+    }
     setClassPolicyForm((prev) => ({
       ...prev,
       allowedFormats: globalPolicy.allowedFormats,
@@ -522,13 +561,18 @@ const AdminSettings = () => {
             <select
               value={selectedClassType}
               onChange={(event) => handleSelectClassType(event.target.value)}
-              className="rounded-lg border border-[#e9dccf] px-3 py-2 focus:border-[#ffd331] focus:outline-none"
+              className="categorySelect rounded-lg border border-[#e9dccf] px-3 py-2 focus:border-[#ffd331] focus:outline-none"
+              disabled={classTypeOptions.length === 0}
             >
-              {classTypes.map((classType) => (
-                <option key={classType} value={classType}>
-                  {classType}
-                </option>
-              ))}
+              {classTypeOptions.length === 0 ? (
+                <option value="">카테고리를 등록해주세요</option>
+              ) : (
+                classTypeOptions.map((classType) => (
+                  <option key={classType} value={classType}>
+                    {classType}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
@@ -920,7 +964,7 @@ const AdminSettings = () => {
                   선택 수업만 표시
                   {boardPolicy.displayMode === 'selected' && (
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-[#6b6b6b]">
-                      {classTypes.map((classType) => {
+                      {classTypeOptions.map((classType) => {
                         const isSelected = boardPolicy.selectedClasses.includes(classType);
                         return (
                           <label

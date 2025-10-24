@@ -7,7 +7,7 @@ import Toast, { type ToastVariant } from '../../components/admin/Toast';
 import { useAdminData, type Assignment, type Feedback } from './data/AdminDataContext';
 import type { ClassInfo } from '../../lib/api';
 import { createFeedback } from '../../lib/api';
-import { DEFAULT_CLASS_NAME_BY_ID, DEFAULT_CLASS_NAMES } from '../../lib/default-classes';
+import { useAdminCategories } from './data/AdminCategoryContext';
 
 type ToastState = {
   message: string;
@@ -152,7 +152,7 @@ const FeedbackFormModal = ({
               }
               onClassChange(parsed);
             }}
-            className="w-full rounded-xl border border-[#e9dccf] bg-white px-3 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+            className="categorySelect w-full rounded-xl border border-[#e9dccf] bg-white px-3 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
             disabled={isLoading || classOptions.length === 0}
             required
           >
@@ -211,6 +211,7 @@ const FeedbackFormModal = ({
 
 const AdminFeedbackManagement = () => {
   const { assignments, feedbacks, addFeedback, updateFeedback, deleteFeedback, batchResetCourse } = useAdminData();
+  const { categories } = useAdminCategories();
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ id?: string }>();
@@ -234,39 +235,66 @@ const AdminFeedbackManagement = () => {
     return assignments.find((item) => item.id === viewTarget.assignmentId) ?? null;
   }, [assignments, viewTarget]);
 
-  const courses = useMemo(() => {
-    const courseSet = new Set<string>(DEFAULT_CLASS_NAMES);
-    assignments.forEach((assignment) => courseSet.add(assignment.course));
-    feedbacks.forEach((feedback) => courseSet.add(feedback.course));
+  const courseOptions = useMemo(() => {
+    const courseSet = new Set<string>();
+    categories.forEach((category) => {
+      const name = category.name.trim();
+      if (name.length > 0) {
+        courseSet.add(name);
+      }
+    });
+    assignments.forEach((assignment) => {
+      const name = assignment.course.trim();
+      if (name.length > 0) {
+        courseSet.add(name);
+      }
+    });
+    feedbacks.forEach((feedback) => {
+      const name = feedback.course.trim();
+      if (name.length > 0) {
+        courseSet.add(name);
+      }
+    });
     return Array.from(courseSet).sort((a, b) => a.localeCompare(b, 'ko-KR'));
-  }, [assignments, feedbacks]);
+  }, [assignments, feedbacks, categories]);
   const authors = useMemo(() => Array.from(new Set(feedbacks.map((feedback) => feedback.author))), [feedbacks]);
 
   const fallbackClasses = useMemo(() => {
     const map = new Map<number, string>();
     assignments.forEach((assignment) => {
       if (assignment.classId != null) {
-        map.set(assignment.classId, assignment.course);
+        const name = assignment.course.trim();
+        if (name.length > 0) {
+          map.set(assignment.classId, name);
+        }
       }
     });
     feedbacks.forEach((feedback) => {
       if (feedback.classId != null) {
-        map.set(feedback.classId, feedback.course);
+        const name = feedback.course.trim();
+        if (name.length > 0 && !map.has(feedback.classId)) {
+          map.set(feedback.classId, name);
+        }
       }
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [assignments, feedbacks]);
 
   const classOptions = useMemo(() => {
-    const merged = new Map<number, string>(DEFAULT_CLASS_NAME_BY_ID);
+    const merged = new Map<number, string>();
+    categories.forEach((category) => {
+      merged.set(category.id, category.name);
+    });
     fallbackClasses.forEach((item) => {
       if (!merged.has(item.id)) {
         merged.set(item.id, item.name);
       }
     });
 
-    return Array.from(merged.entries()).map(([id, name]) => ({ id, name }));
-  }, [fallbackClasses]);
+    return Array.from(merged.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }));
+  }, [categories, fallbackClasses]);
 
   const filteredFeedbacks = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -299,6 +327,21 @@ const AdminFeedbackManagement = () => {
       return matchesKeyword && matchesCourse && matchesAuthor && matchesDate;
     });
   }, [authorFilter, courseFilter, dateFilter, feedbacks, searchTerm]);
+
+  useEffect(() => {
+    if (courseFilter === '') {
+      return;
+    }
+    if (!courseOptions.includes(courseFilter)) {
+      setCourseFilter('');
+    }
+  }, [courseFilter, courseOptions]);
+
+  useEffect(() => {
+    if (resetCourse && !courseOptions.includes(resetCourse)) {
+      setResetCourse(null);
+    }
+  }, [courseOptions, resetCourse]);
 
   useEffect(() => {
     if (location.pathname.endsWith('/new')) {
@@ -445,10 +488,10 @@ const AdminFeedbackManagement = () => {
           <select
             value={courseFilter}
             onChange={(event) => setCourseFilter(event.target.value)}
-            className="rounded-2xl border border-[#e9dccf] bg-white px-3 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none"
+            className="categorySelect rounded-2xl border border-[#e9dccf] bg-white px-3 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none"
           >
             <option value="">선택하기</option>
-            {courses.map((course) => (
+            {courseOptions.map((course) => (
               <option key={course} value={course}>
                 {course}
               </option>
@@ -634,7 +677,7 @@ const AdminFeedbackManagement = () => {
 
       <CourseResetModal
         isOpen={isResetModalOpen}
-        courses={courses}
+        courses={courseOptions}
         selectedCourse={resetCourse}
         onSelectCourse={setResetCourse}
         onConfirm={handleResetConfirm}

@@ -4,7 +4,7 @@ import CourseResetModal from '../../components/admin/CourseResetModal';
 import AdminModal from '../../components/admin/AdminModal';
 import Toast, { type ToastVariant } from '../../components/admin/Toast';
 import { useAdminData, type Assignment, type AssignmentStatus } from './data/AdminDataContext';
-import { DEFAULT_CLASS_NAMES } from '../../lib/default-classes';
+import { useAdminCategories } from './data/AdminCategoryContext';
 
 const statusBadgeClassName: Record<AssignmentStatus, string> = {
   미제출: 'bg-[#fff5f5] text-[#c43c3c] border border-[#ffd1d1]',
@@ -97,6 +97,7 @@ const AdminAssignmentsManagement = () => {
   const { id } = useParams<{ id?: string }>();
   const [searchParams] = useSearchParams();
   const { assignments, feedbacks, deleteAssignment, batchResetCourse } = useAdminData();
+  const { categories } = useAdminCategories();
   const [searchTerm, setSearchTerm] = useState('');
   const [courseFilter, setCourseFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'전체' | '미제출' | '제출됨' | '피드백 완료'>('전체');
@@ -105,11 +106,22 @@ const AdminAssignmentsManagement = () => {
   const [resetCourse, setResetCourse] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
-  const courses = useMemo(() => {
-    const courseSet = new Set<string>(DEFAULT_CLASS_NAMES);
-    assignments.forEach((assignment) => courseSet.add(assignment.course));
+  const courseOptions = useMemo(() => {
+    const courseSet = new Set<string>();
+    categories.forEach((category) => {
+      const name = category.name.trim();
+      if (name.length > 0) {
+        courseSet.add(name);
+      }
+    });
+    assignments.forEach((assignment) => {
+      const name = assignment.course.trim();
+      if (name.length > 0) {
+        courseSet.add(name);
+      }
+    });
     return Array.from(courseSet).sort((a, b) => a.localeCompare(b, 'ko-KR'));
-  }, [assignments]);
+  }, [assignments, categories]);
 
   const filteredAssignments = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -141,6 +153,15 @@ const AdminAssignmentsManagement = () => {
       completionRate,
     };
   }, [assignments]);
+
+  useEffect(() => {
+    if (courseFilter === '') {
+      return;
+    }
+    if (!courseOptions.includes(courseFilter)) {
+      setCourseFilter('');
+    }
+  }, [courseFilter, courseOptions]);
 
   useEffect(() => {
     if (id) {
@@ -230,10 +251,10 @@ const AdminAssignmentsManagement = () => {
           <select
             value={courseFilter}
             onChange={(event) => setCourseFilter(event.target.value)}
-            className="rounded-2xl border border-[#e9dccf] bg-white px-3 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none"
+            className="categorySelect rounded-2xl border border-[#e9dccf] bg-white px-3 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none"
           >
             <option value="">선택하기</option>
-            {courses.map((course) => (
+            {courseOptions.map((course) => (
               <option key={course} value={course}>
                 {course}
               </option>
@@ -419,7 +440,7 @@ const AdminAssignmentsManagement = () => {
 
       <CourseResetModal
         isOpen={isResetModalOpen}
-        courses={courses}
+        courses={courseOptions}
         selectedCourse={resetCourse}
         onSelectCourse={setResetCourse}
         onConfirm={handleResetConfirm}
