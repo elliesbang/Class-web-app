@@ -206,6 +206,8 @@ const AdminContentManagement = () => {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadInitialData = async () => {
       let encounteredError = false;
 
@@ -266,7 +268,11 @@ const AdminContentManagement = () => {
     };
 
     void loadInitialData();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [classes, refreshClasses]);
 
   useEffect(() => {
     if (selectedClassFilter === null) {

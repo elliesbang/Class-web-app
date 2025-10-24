@@ -1,0 +1,94 @@
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import type { ClassInfo } from '../../../lib/api';
+import { createClass as requestCreateClass, getClasses } from '../../../lib/api';
+
+type AdminClassContextValue = {
+  classes: ClassInfo[];
+  isLoading: boolean;
+  error: string | null;
+  hasFetched: boolean;
+  refresh: () => Promise<ClassInfo[]>;
+  createClass: (payload: { name: string }) => Promise<ClassInfo>;
+};
+
+const AdminClassContext = createContext<AdminClassContextValue | undefined>(undefined);
+
+const sortClasses = (input: ClassInfo[]) => [...input].sort((a, b) => a.id - b.id);
+
+export const AdminClassProvider = ({ children }: { children: ReactNode }) => {
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const fetched = await getClasses();
+      const sorted = sortClasses(fetched);
+      setClasses(sorted);
+      hasFetchedRef.current = true;
+      return sorted;
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : '수업 정보를 불러오지 못했습니다.';
+      setError(message);
+      setClasses([]);
+      hasFetchedRef.current = true;
+      throw caught;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasFetchedRef.current) {
+      refresh().catch((caught) => {
+        console.error('[AdminClassProvider] failed to load classes', caught);
+      });
+    }
+  }, [refresh]);
+
+  const createClass = useCallback(async ({ name }: { name: string }) => {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) {
+      throw new Error('수업명을 입력해주세요.');
+    }
+
+    const created = await requestCreateClass({ name: trimmed });
+    setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== created.id), created]));
+    hasFetchedRef.current = true;
+    return created;
+  }, []);
+
+  const value = useMemo<AdminClassContextValue>(
+    () => ({
+      classes,
+      isLoading,
+      error,
+      hasFetched: hasFetchedRef.current,
+      refresh,
+      createClass,
+    }),
+    [classes, createClass, error, isLoading, refresh],
+  );
+
+  return <AdminClassContext.Provider value={value}>{children}</AdminClassContext.Provider>;
+};
+
+export const useAdminClasses = () => {
+  const context = useContext(AdminClassContext);
+  if (!context) {
+    throw new Error('useAdminClasses 훅은 AdminClassProvider 내에서만 사용할 수 있습니다.');
+  }
+  return context;
+};
