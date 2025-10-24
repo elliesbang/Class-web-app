@@ -1,0 +1,195 @@
+export type ClassInfo = {
+  id: number;
+  name: string;
+};
+
+export type VideoPayload = {
+  id: number;
+  title: string;
+  url: string;
+  description?: string | null;
+  classId: number;
+  createdAt: string;
+};
+
+export type MaterialPayload = {
+  id: number;
+  title: string;
+  fileUrl: string;
+  description?: string | null;
+  classId: number;
+  createdAt: string;
+};
+
+export type NoticePayload = {
+  id: number;
+  title: string;
+  content: string;
+  author?: string | null;
+  classId: number;
+  createdAt: string;
+};
+
+export type FeedbackPayload = {
+  id: number;
+  userName: string;
+  comment: string;
+  classId: number;
+  createdAt: string;
+};
+
+type ApiResponse<T> = {
+  classes?: ClassInfo[];
+  videos?: Array<{
+    id: number;
+    title: string;
+    url: string;
+    description?: string | null;
+    classId: number;
+    createdAt: string;
+  }>;
+  video?: {
+    id: number;
+    title: string;
+    url: string;
+    description?: string | null;
+    classId: number;
+    createdAt: string;
+  };
+  materials?: Array<{
+    id: number;
+    title: string;
+    fileUrl: string;
+    description?: string | null;
+    classId: number;
+    createdAt: string;
+  }>;
+  material?: {
+    id: number;
+    title: string;
+    fileUrl: string;
+    description?: string | null;
+    classId: number;
+    createdAt: string;
+  };
+  notices?: Array<{
+    id: number;
+    title: string;
+    content: string;
+    author?: string | null;
+    classId: number;
+    createdAt: string;
+  }>;
+  notice?: {
+    id: number;
+    title: string;
+    content: string;
+    author?: string | null;
+    classId: number;
+    createdAt: string;
+  };
+  feedback?: Array<{
+    id: number;
+    userName: string;
+    comment: string;
+    classId: number;
+    createdAt: string;
+  }> | {
+    id: number;
+    userName: string;
+    comment: string;
+    classId: number;
+    createdAt: string;
+  };
+};
+
+const assertResponse = async (response: Response) => {
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || '요청 처리 중 오류가 발생했습니다.');
+  }
+};
+
+export const getClasses = async (): Promise<ClassInfo[]> => {
+  const response = await fetch('/api/classes');
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  return data.classes ?? [];
+};
+
+export const getVideos = async () => {
+  const response = await fetch('/api/videos');
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  return data.videos ?? [];
+};
+
+export const createVideo = async (payload: { title: string; url: string; description?: string; classId: number }) => {
+  const response = await fetch('/api/videos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  if (!data.video || Array.isArray(data.video)) {
+    throw new Error('영상 정보를 확인할 수 없습니다.');
+  }
+  return data.video;
+};
+
+export const getMaterials = async () => {
+  const response = await fetch('/api/materials');
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  return data.materials ?? [];
+};
+
+export const createMaterial = async (payload: { title: string; fileUrl: string; description?: string; classId: number }) => {
+  const response = await fetch('/api/materials', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  if (!data.material || Array.isArray(data.material)) {
+    throw new Error('자료 정보를 확인할 수 없습니다.');
+  }
+  return data.material;
+};
+
+export const getNotices = async () => {
+  const response = await fetch('/api/notices');
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  return data.notices ?? [];
+};
+
+export const createNotice = async (payload: { title: string; content: string; classId: number; author?: string }) => {
+  const response = await fetch('/api/notices', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  if (!data.notice || Array.isArray(data.notice)) {
+    throw new Error('공지 정보를 확인할 수 없습니다.');
+  }
+  return data.notice;
+};
+
+export const createFeedback = async (payload: { userName: string; comment: string; classId: number }) => {
+  const response = await fetch('/api/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  if (!data.feedback || Array.isArray(data.feedback)) {
+    throw new Error('피드백 정보를 확인할 수 없습니다.');
+  }
+  return data.feedback;
+};

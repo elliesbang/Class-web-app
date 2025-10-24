@@ -36,6 +36,7 @@ export type Feedback = {
   author: string;
   createdAt: string;
   attachmentUrl?: string;
+  classId: number | null;
 };
 
 type AdminDataContextValue = {
@@ -46,6 +47,7 @@ type AdminDataContextValue = {
     content: string;
     author: string;
     attachmentUrl?: string;
+    classId?: number | null;
   }) => void;
   updateFeedback: (feedbackId: number, updates: Partial<Omit<Feedback, 'id' | 'assignmentId' | 'course' | 'student'>>) => void;
   deleteFeedback: (feedbackId: number) => void;
@@ -118,6 +120,7 @@ const initialFeedbacks: Feedback[] = [
     content: '전체적인 구성과 색상 밸런스가 훌륭합니다. 다음 회차에서는 CTA 버튼을 더 강조해보세요.',
     author: '김민지',
     createdAt: '2025-10-22T16:10:00',
+    classId: null,
   },
   {
     id: 502,
@@ -128,6 +131,7 @@ const initialFeedbacks: Feedback[] = [
     author: '관리자',
     createdAt: '2025-10-26T09:00:00',
     attachmentUrl: 'https://example.com/files/michina-guide.pdf',
+    classId: null,
   },
   {
     id: 503,
@@ -137,6 +141,7 @@ const initialFeedbacks: Feedback[] = [
     content: '캘린더에 타겟 고객 이벤트가 빠져있습니다. 11월 셋째 주에 이벤트 추가를 추천합니다.',
     author: '박성우',
     createdAt: '2025-11-01T12:30:00',
+    classId: null,
   },
 ];
 
@@ -147,7 +152,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>(initialFeedbacks);
 
   const addFeedback: AdminDataContextValue['addFeedback'] = useCallback(
-    ({ assignmentId, content, author, attachmentUrl }) => {
+    ({ assignmentId, content, author, attachmentUrl, classId = null }) => {
       let assignmentForFeedback: Assignment | undefined;
 
       setAssignments((prevAssignments) => {
@@ -181,6 +186,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
           createdAt: new Date().toISOString(),
           course: assignmentForFeedback!.course,
           student: assignmentForFeedback!.student,
+          classId,
         };
 
         return [...prevFeedbacks, newFeedback];

@@ -4,6 +4,8 @@ import CourseResetModal from '../../components/admin/CourseResetModal';
 import AdminModal from '../../components/admin/AdminModal';
 import Toast, { type ToastVariant } from '../../components/admin/Toast';
 import { useAdminData, type Assignment, type Feedback } from './data/AdminDataContext';
+import type { ClassInfo } from '../../lib/api';
+import { createFeedback, getClasses } from '../../lib/api';
 
 type ToastState = {
   message: string;
@@ -69,10 +71,18 @@ const FeedbackFormModal = ({
   state,
   onClose,
   onSubmit,
+  classId,
+  onClassChange,
+  classes,
+  isLoading,
 }: {
   state: FeedbackFormState;
   onClose: () => void;
-  onSubmit: (payload: { content: string; author: string; attachmentUrl?: string }) => void;
+  onSubmit: (payload: { content: string; author: string; attachmentUrl?: string; classId: number | null }) => Promise<void> | void;
+  classId: number | null;
+  onClassChange: (value: number) => void;
+  classes: ClassInfo[];
+  isLoading: boolean;
 }) => {
   const isEdit = state.mode === 'edit';
   const [content, setContent] = useState(state.targetFeedback?.content ?? '');
@@ -85,9 +95,14 @@ const FeedbackFormModal = ({
     setAttachmentUrl(state.targetFeedback?.attachmentUrl ?? '');
   }, [state]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSubmit({ content: content.trim(), author: author.trim(), attachmentUrl: attachmentUrl.trim() || undefined });
+    await onSubmit({
+      content: content.trim(),
+      author: author.trim(),
+      attachmentUrl: attachmentUrl.trim() || undefined,
+      classId,
+    });
   };
 
   return (
@@ -122,6 +137,26 @@ const FeedbackFormModal = ({
             className="w-full rounded-xl border border-[#e9dccf] bg-white px-3 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
             required
           />
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold">수업 카테고리</label>
+          <select
+            value={classId ?? ''}
+            onChange={(event) => onClassChange(Number(event.target.value))}
+            className="w-full rounded-xl border border-[#e9dccf] bg-white px-3 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+            disabled={isLoading || classes.length === 0}
+            required
+          >
+            <option value="" disabled>
+              수업을 선택하세요
+            </option>
+            {classes.map((classItem) => (
+              <option key={classItem.id} value={classItem.id}>
+                {classItem.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2">
@@ -182,6 +217,9 @@ const AdminFeedbackManagement = () => {
   const [resetCourse, setResetCourse] = useState<string | null>(null);
   const [viewTarget, setViewTarget] = useState<Feedback | null>(null);
   const [formState, setFormState] = useState<FeedbackFormState | null>(null);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
+  const [formClassId, setFormClassId] = useState<number | null>(null);
 
   const viewAssignment = useMemo(() => {
     if (!viewTarget) {
@@ -197,6 +235,22 @@ const AdminFeedbackManagement = () => {
     return Array.from(courseSet);
   }, [assignments, feedbacks]);
   const authors = useMemo(() => Array.from(new Set(feedbacks.map((feedback) => feedback.author))), [feedbacks]);
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        const fetched = await getClasses();
+        setClasses(fetched);
+      } catch (error) {
+        console.error('Failed to load class list', error);
+        setToast({ message: '수업 목록을 불러오지 못했습니다.', variant: 'error' });
+      } finally {
+        setIsLoadingClasses(false);
+      }
+    };
+
+    void loadClasses();
+  }, []);
 
   const filteredFeedbacks = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -251,6 +305,19 @@ const AdminFeedbackManagement = () => {
     }
   }, [assignments, feedbacks, location.pathname, navigate, params.id, searchParams]);
 
+  useEffect(() => {
+    if (!formState) {
+      setFormClassId(null);
+      return;
+    }
+
+    if (formState.mode === 'edit') {
+      setFormClassId(formState.targetFeedback?.classId ?? classes[0]?.id ?? null);
+    } else {
+      setFormClassId(classes[0]?.id ?? null);
+    }
+  }, [classes, formState]);
+
   const closeFormModal = () => {
     setFormState(null);
     if (location.pathname !== '/admin/feedback') {
@@ -258,7 +325,7 @@ const AdminFeedbackManagement = () => {
     }
   };
 
-  const handleCreateFeedback = (payload: { content: string; author: string; attachmentUrl?: string }) => {
+  const handleCreateFeedback = async (payload: { content: string; author: string; attachmentUrl?: string; classId: number | null }) => {
     if (!formState?.assignment) {
       setToast({ message: '연결된 과제 정보가 필요합니다.', variant: 'error' });
       return;
@@ -269,17 +336,38 @@ const AdminFeedbackManagement = () => {
       return;
     }
 
-    addFeedback({
-      assignmentId: formState.assignment.id,
-      content: payload.content,
-      author: payload.author || '관리자',
-      attachmentUrl: payload.attachmentUrl,
-    });
-    setToast({ message: '피드백이 등록되었습니다.', variant: 'success' });
-    closeFormModal();
+    if (payload.classId === null) {
+      setToast({ message: '수업 카테고리를 선택해주세요.', variant: 'error' });
+      return;
+    }
+
+    try {
+      const className = classes.find((classItem) => classItem.id === payload.classId)?.name ?? '선택한 클래스';
+      await createFeedback({
+        userName: payload.author || '관리자',
+        comment: payload.content,
+        classId: payload.classId,
+      });
+
+      addFeedback({
+        assignmentId: formState.assignment.id,
+        content: payload.content,
+        author: payload.author || '관리자',
+        attachmentUrl: payload.attachmentUrl,
+        classId: payload.classId,
+      });
+      setToast({ message: `선택한 클래스(${className})에 업로드되었습니다.`, variant: 'success' });
+      closeFormModal();
+    } catch (error) {
+      console.error('Failed to create feedback', error);
+      setToast({
+        message: error instanceof Error ? error.message : '피드백 등록 중 오류가 발생했습니다.',
+        variant: 'error',
+      });
+    }
   };
 
-  const handleUpdateFeedback = (payload: { content: string; author: string; attachmentUrl?: string }) => {
+  const handleUpdateFeedback = async (payload: { content: string; author: string; attachmentUrl?: string; classId?: number | null }) => {
     if (!formState?.targetFeedback) {
       return;
     }
@@ -288,6 +376,7 @@ const AdminFeedbackManagement = () => {
       content: payload.content,
       author: payload.author,
       attachmentUrl: payload.attachmentUrl,
+      ...(payload.classId !== undefined ? { classId: payload.classId } : {}),
     });
     setToast({ message: '피드백이 수정되었습니다.', variant: 'success' });
     closeFormModal();
@@ -535,6 +624,10 @@ const AdminFeedbackManagement = () => {
           state={formState}
           onClose={closeFormModal}
           onSubmit={formState.mode === 'edit' ? handleUpdateFeedback : handleCreateFeedback}
+          classId={formClassId}
+          onClassChange={(value) => setFormClassId(value)}
+          classes={classes}
+          isLoading={isLoadingClasses}
         />
       ) : null}
 
