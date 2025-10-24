@@ -180,8 +180,14 @@ export const createMaterial = async (payload: { title: string; fileUrl: string; 
   return data.material;
 };
 
-export const getNotices = async () => {
-  const response = await fetch('/api/notices');
+export const getNotices = async (params: { classId?: number } = {}) => {
+  const searchParams = new URLSearchParams();
+  if (typeof params.classId === 'number') {
+    searchParams.set('classId', String(params.classId));
+  }
+
+  const query = searchParams.toString();
+  const response = await fetch(`/api/notices${query ? `?${query}` : ''}`);
   await assertResponse(response);
   const data = (await response.json()) as ApiResponse<unknown>;
   return data.notices ?? [];
@@ -191,7 +197,12 @@ export const createNotice = async (payload: { title: string; content: string; cl
   const response = await fetch('/api/notices', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      title: payload.title,
+      content: payload.content,
+      author: payload.author,
+      class_id: payload.classId,
+    }),
   });
   await assertResponse(response);
   const data = (await response.json()) as ApiResponse<unknown>;
