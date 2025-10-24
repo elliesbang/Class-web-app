@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { emitAdminAuthChange } from '../lib/auth';
 
 type LoginMode = 'student' | 'admin';
 
@@ -74,6 +75,8 @@ const AdminLogin = () => {
         email: ADMIN_EMAIL,
       })
     );
+
+    emitAdminAuthChange();
 
     setIsLoading(false);
     navigate('/admin', { replace: true });

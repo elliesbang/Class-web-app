@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { AdminDataProvider } from './data/AdminDataContext';
+import { emitAdminAuthChange } from '../../lib/auth';
 
 const menuItems = [
   { label: '대시보드 홈', icon: '🏠', to: '/admin', end: true },
@@ -53,6 +54,7 @@ const AdminLayout = () => {
   const handleLogout = () => {
     localStorage.removeItem('adminAuth');
     localStorage.removeItem('adminInfo');
+    emitAdminAuthChange();
     setIsReady(false);
     setAdminInfo(null);
     navigate('/', { replace: true });
