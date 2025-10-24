@@ -98,26 +98,7 @@ const AdminSettings = () => {
     autoReset: true,
   });
 
-  const [classPolicies, setClassPolicies] = useState<ClassUploadPolicy[]>([
-    {
-      classType: '이얼챌',
-      allowedFormats: ['image'],
-      maxFileSize: 15,
-      uploadStart: '00:00',
-      uploadEnd: '23:59',
-      submissionLimit: 'daily',
-      autoInherit: true,
-    },
-    {
-      classType: '미치나',
-      allowedFormats: ['pdf', 'link'],
-      maxFileSize: 25,
-      uploadStart: '09:00',
-      uploadEnd: '22:00',
-      submissionLimit: 'perSession',
-      autoInherit: true,
-    },
-  ]);
+  const [classPolicies, setClassPolicies] = useState<ClassUploadPolicy[]>([]);
 
   const [selectedClassType, setSelectedClassType] = useState<string>(classTypes[0]);
   const [classPolicyForm, setClassPolicyForm] = useState<ClassUploadPolicy>(() => {
@@ -136,11 +117,7 @@ const AdminSettings = () => {
     };
   });
 
-  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>([
-    { id: 1, name: '김엘리', email: 'admin@elliesbang.com', role: '관리자' },
-    { id: 2, name: '박지원', email: 'support@elliesbang.com', role: '부관리자' },
-    { id: 3, name: '송하늘', email: 'teacher@elliesbang.com', role: '강사' },
-  ]);
+  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>([]);
 
   const [accountForm, setAccountForm] = useState({
     name: '',
@@ -843,26 +820,35 @@ const AdminSettings = () => {
           <div className="space-y-4 rounded-xl border border-[#f0e6db] bg-white p-4">
             <h4 className="text-sm font-semibold text-[#404040]">관리자 목록</h4>
             <div className="space-y-3 text-sm">
-              {adminAccounts.map((account) => (
-                <div key={account.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#f0e6db] px-3 py-2">
-                  <div>
-                    <p className="font-semibold text-[#404040]">{account.name}</p>
-                    <p className="text-xs text-[#6b6b6b]">{account.email}</p>
+              {adminAccounts.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-[#f0e6db] px-3 py-6 text-center text-xs text-[#6b6b6b]">
+                  등록된 관리자 계정이 없습니다. 오른쪽 폼에서 새 계정을 추가하세요.
+                </p>
+              ) : (
+                adminAccounts.map((account) => (
+                  <div
+                    key={account.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-[#f0e6db] px-3 py-2"
+                  >
+                    <div>
+                      <p className="font-semibold text-[#404040]">{account.name}</p>
+                      <p className="text-xs text-[#6b6b6b]">{account.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${roleBadgeColor[account.role]}`}>
+                        {account.role}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeAdminAccount(account.id)}
+                        className="text-xs font-semibold text-red-500 hover:underline"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${roleBadgeColor[account.role]}`}>
-                      {account.role}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeAdminAccount(account.id)}
-                      className="text-xs font-semibold text-red-500 hover:underline"
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
