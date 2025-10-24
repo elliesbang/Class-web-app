@@ -58,6 +58,9 @@ export type AssignmentListItem = {
 };
 
 type ApiResponse<T> = {
+  success?: boolean;
+  message?: string;
+  data?: T;
   classes?: ClassInfo[];
   videos?: Array<{
     id: number;
@@ -131,11 +134,50 @@ const assertResponse = async (response: Response) => {
   }
 };
 
+const normaliseClassList = (input: unknown): ClassInfo[] => {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const candidate = item as { id?: unknown; name?: unknown };
+      const id = Number(candidate.id);
+      const name = typeof candidate.name === 'string' ? candidate.name : candidate.name != null ? String(candidate.name) : '';
+
+      if (Number.isNaN(id) || name.trim().length === 0) {
+        return null;
+      }
+
+      return { id, name: name.trim() } satisfies ClassInfo;
+    })
+    .filter((value): value is ClassInfo => value !== null);
+};
+
 export const getClasses = async (): Promise<ClassInfo[]> => {
   const response = await fetch('/api/classes');
   await assertResponse(response);
-  const data = (await response.json()) as ApiResponse<unknown>;
-  return data.classes ?? [];
+  const data = (await response.json()) as ApiResponse<ClassInfo[]>;
+
+  if (data.success === false) {
+    throw new Error(data.message || '수업 목록을 불러오지 못했습니다.');
+  }
+
+  const fromData = normaliseClassList(data.data);
+  if (fromData.length > 0) {
+    return fromData;
+  }
+
+  const fromLegacy = normaliseClassList((data as { classes?: unknown }).classes);
+  if (fromLegacy.length > 0) {
+    return fromLegacy;
+  }
+
+  return [];
 };
 
 export const getVideos = async () => {

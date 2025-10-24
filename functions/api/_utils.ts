@@ -7,19 +7,6 @@ export type ClassRecord = {
   name: string;
 };
 
-const BASE_CLASSES: ReadonlyArray<ClassRecord> = [
-  { id: 1, name: '미치나' },
-  { id: 2, name: '이얼챌' },
-  { id: 3, name: '캔디마' },
-  { id: 4, name: '나캔디' },
-  { id: 5, name: '캔디수' },
-  { id: 6, name: '나컬작' },
-  { id: 7, name: '에그작' },
-  { id: 8, name: '나컬작챌' },
-  { id: 9, name: '에그작챌' },
-  { id: 10, name: '미템나' },
-];
-
 export const ensureBaseSchema = async (db: D1Database) => {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS classes (
@@ -84,19 +71,8 @@ export const ensureBaseSchema = async (db: D1Database) => {
   `);
 };
 
-export const seedBaseClasses = async (db: D1Database) => {
-  const statements = BASE_CLASSES.map(({ id, name }) =>
-    db.prepare('INSERT OR IGNORE INTO classes (id, name) VALUES (?1, ?2)').bind(id, name),
-  );
-
-  if (statements.length > 0) {
-    await db.batch(statements);
-  }
-};
-
 export const fetchClasses = async (db: D1Database): Promise<ClassRecord[]> => {
   await ensureBaseSchema(db);
-  await seedBaseClasses(db);
   const { results } = await db.prepare('SELECT id, name FROM classes ORDER BY id ASC').all<ClassRecord>();
   return results ?? [];
 };

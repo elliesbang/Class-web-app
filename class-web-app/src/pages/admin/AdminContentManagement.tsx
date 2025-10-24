@@ -63,19 +63,6 @@ type StoredVideoOrder = {
 
 const VIDEO_ORDER_STORAGE_KEY = 'admin-video-order';
 
-const FALLBACK_CLASSES: ClassInfo[] = [
-  { id: 1, name: '미치나' },
-  { id: 2, name: '이얼챌' },
-  { id: 3, name: '캔디마' },
-  { id: 4, name: '나캔디' },
-  { id: 5, name: '캔디수' },
-  { id: 6, name: '나컬작' },
-  { id: 7, name: '에그작' },
-  { id: 8, name: '나컬작챌' },
-  { id: 9, name: '에그작챌' },
-  { id: 10, name: '미템나' },
-];
-
 const formatDate = (value?: string) => {
   if (!value) {
     return new Date().toISOString().split('T')[0];
@@ -220,19 +207,14 @@ const AdminContentManagement = () => {
     const loadInitialData = async () => {
       let encounteredError = false;
 
-      let resolvedClasses: ClassInfo[];
+      let resolvedClasses: ClassInfo[] = [];
       try {
         const fetchedClasses = await getClasses();
-        if (fetchedClasses.length === 0) {
-          encounteredError = true;
-          resolvedClasses = FALLBACK_CLASSES;
-        } else {
-          resolvedClasses = fetchedClasses;
-        }
+        resolvedClasses = fetchedClasses;
       } catch (error) {
         console.error('Failed to load admin classes', error);
         encounteredError = true;
-        resolvedClasses = FALLBACK_CLASSES;
+        resolvedClasses = [];
       }
 
       setClasses(resolvedClasses);
@@ -288,7 +270,7 @@ const AdminContentManagement = () => {
         setFiles(mappedFiles);
         setNotices(sortNotices(mappedNotices));
       if (encounteredError) {
-        setToast({ message: '콘텐츠 정보를 불러오는 중 문제가 발생하여 기본 데이터를 표시합니다.', variant: 'error' });
+        setToast({ message: '콘텐츠 정보를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.', variant: 'error' });
       }
     };
 
