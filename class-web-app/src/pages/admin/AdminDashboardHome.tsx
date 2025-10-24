@@ -30,7 +30,6 @@ const AdminDashboardHome = () => {
   const [sections, setSections] = useState<DashboardSection[]>([]);
   const [toast, setToast] = useState<{ message: string; variant?: ToastVariant } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const sectionDateFormatter = useMemo(
     () =>
@@ -54,7 +53,6 @@ const AdminDashboardHome = () => {
   useEffect(() => {
     const loadDashboardData = async () => {
       setIsLoading(true);
-      setFetchError(null);
 
       try {
         const [classList, videoList, materialList, noticeList] = await Promise.all([
@@ -110,7 +108,6 @@ const AdminDashboardHome = () => {
         console.error('Failed to load admin dashboard data', error);
         setStats([]);
         setSections([]);
-        setFetchError('대시보드 데이터를 불러오는 중 문제가 발생했습니다. 새로고침 후 다시 시도해주세요.');
         setToast({
           message: '대시보드 데이터를 불러오는 중 문제가 발생했습니다.',
           variant: 'error',
@@ -132,11 +129,6 @@ const AdminDashboardHome = () => {
             <p className="text-sm font-semibold text-[#7a6f68]">{formattedDate}</p>
           </div>
         </div>
-        {fetchError ? (
-          <p className="rounded-2xl bg-[#ffecec] px-4 py-3 text-sm font-semibold text-[#d64545] shadow-sm">
-            {fetchError}
-          </p>
-        ) : null}
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

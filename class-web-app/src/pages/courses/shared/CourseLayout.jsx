@@ -24,8 +24,10 @@ function CourseLayout({
 }) {
   const [activeTab, setActiveTab] = useState('video');
 
+  const shouldDisplayMaterialsTab = materials !== undefined;
+
   const tabs = useMemo(() => {
-    if (!materials?.length) {
+    if (!shouldDisplayMaterialsTab) {
       return BASE_TAB_CONFIG;
     }
 
@@ -34,7 +36,7 @@ function CourseLayout({
       { id: 'materials', label: '자료 보기' },
       ...BASE_TAB_CONFIG.slice(1),
     ];
-  }, [materials]);
+  }, [shouldDisplayMaterialsTab]);
 
   const activeContent = useMemo(() => {
     switch (activeTab) {
