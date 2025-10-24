@@ -3,7 +3,7 @@ import { Trash2 } from 'lucide-react';
 
 import AdminModal from '../../components/admin/AdminModal';
 import Toast, { ToastVariant } from '../../components/admin/Toast';
-import type { ClassInfo } from '../../lib/api';
+import type { ClassInfo, NoticePayload } from '../../lib/api';
 import { createMaterial, createNotice, createVideo, getClasses, getMaterials, getNotices, getVideos } from '../../lib/api';
 
 type VideoContent = {
@@ -38,6 +38,7 @@ type NoticeContent = {
   content: string;
   author: string;
   date: string;
+  createdAt: string;
 };
 
 type TabKey = 'video' | 'file' | 'notice';
@@ -74,6 +75,17 @@ const FALLBACK_CLASSES: ClassInfo[] = [
   { id: 9, name: '에그작챌' },
   { id: 10, name: '미템나' },
 ];
+
+const formatDate = (value?: string) => {
+  if (!value) {
+    return new Date().toISOString().split('T')[0];
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date().toISOString().split('T')[0];
+  }
+  return parsed.toISOString().split('T')[0];
+};
 
 const assignSequentialOrder = (list: VideoContent[]): VideoContent[] =>
   list.map((video, index) => ({ ...video, order: index + 1 }));
@@ -138,6 +150,27 @@ const hydrateVideosWithStoredOrder = (baseVideos: VideoContent[]): VideoContent[
     return orderedBase;
   }
 };
+
+const toNoticeContent = (notice: NoticePayload, className: string): NoticeContent => ({
+  id: notice.id,
+  type: 'notice',
+  title: notice.title,
+  classId: notice.classId,
+  className,
+  content: notice.content,
+  author: notice.author ?? '관리자',
+  date: formatDate(notice.createdAt),
+  createdAt: notice.createdAt,
+});
+
+const sortNotices = (list: NoticeContent[]) =>
+  [...list].sort((a, b) => {
+    const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    if (timeDiff !== 0) {
+      return timeDiff;
+    }
+    return b.id - a.id;
+  });
 
 const AdminContentManagement = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('video');
@@ -224,17 +257,6 @@ const AdminContentManagement = () => {
         }),
       ]);
 
-        const formatDate = (value?: string) => {
-          if (!value) {
-            return new Date().toISOString().split('T')[0];
-          }
-          const parsed = new Date(value);
-          if (Number.isNaN(parsed.getTime())) {
-            return new Date().toISOString().split('T')[0];
-          }
-          return parsed.toISOString().split('T')[0];
-        };
-
         const mappedVideos: VideoContent[] = videoList.map((video) => ({
           id: video.id,
           type: 'video',
@@ -258,20 +280,13 @@ const AdminContentManagement = () => {
           date: formatDate(material.createdAt),
         }));
 
-        const mappedNotices: NoticeContent[] = noticeList.map((notice) => ({
-          id: notice.id,
-          type: 'notice',
-          title: notice.title,
-          classId: notice.classId,
-          className: classMap.get(notice.classId) ?? '미지정',
-          content: notice.content,
-          author: notice.author ?? '관리자',
-          date: formatDate(notice.createdAt),
-        }));
+        const mappedNotices: NoticeContent[] = noticeList.map((notice) =>
+          toNoticeContent(notice, classMap.get(notice.classId) ?? '미지정'),
+        );
 
         setVideos(hydrateVideosWithStoredOrder(mappedVideos));
         setFiles(mappedFiles);
-        setNotices(mappedNotices);
+        setNotices(sortNotices(mappedNotices));
       if (encounteredError) {
         setToast({ message: '콘텐츠 정보를 불러오는 중 문제가 발생하여 기본 데이터를 표시합니다.', variant: 'error' });
       }
@@ -294,10 +309,7 @@ const AdminContentManagement = () => {
 
   const classNameById = useMemo(() => new Map(classes.map((item) => [item.id, item.name])), [classes]);
 
-  const getClassName = useCallback(
-    (classId: number) => classNameById.get(classId) ?? '미지정',
-    [classNameById],
-  );
+  const getClassName = useCallback((classId: number) => classNameById.get(classId) ?? '미지정', [classNameById]);
 
   const filteredVideos = useMemo(() => [...videos].sort((a, b) => a.order - b.order), [videos]);
 
@@ -436,18 +448,15 @@ const AdminContentManagement = () => {
       });
 
       const className = getClassName(createdNotice.classId);
-      const newNotice: NoticeContent = {
-        id: createdNotice.id,
-        type: 'notice',
-        title: createdNotice.title,
-        classId: createdNotice.classId,
-        className,
-        content: createdNotice.content,
-        author: createdNotice.author ?? '관리자',
-        date: new Date(createdNotice.createdAt).toISOString().split('T')[0],
-      };
+      const refreshedNotices = await getNotices({ classId: createdNotice.classId });
+      const mappedNotices = refreshedNotices.map((notice) =>
+        toNoticeContent(notice, getClassName(notice.classId)),
+      );
 
-      setNotices((prev) => [newNotice, ...prev]);
+      setNotices((prev) => {
+        const otherNotices = prev.filter((notice) => notice.classId !== createdNotice.classId);
+        return sortNotices([...mappedNotices, ...otherNotices]);
+      });
       setToast({ message: `선택한 클래스(${className})에 업로드되었습니다.`, variant: 'success' });
       resetNoticeForm();
     } catch (error) {
@@ -462,10 +471,11 @@ const AdminContentManagement = () => {
           className,
           content: noticeForm.content,
           author: '관리자',
-          date: new Date().toISOString().split('T')[0],
+          date: formatDate(),
+          createdAt: new Date().toISOString(),
         };
 
-        setNotices((prev) => [fallbackNotice, ...prev]);
+        setNotices((prev) => sortNotices([fallbackNotice, ...prev]));
         setToast({ message: `네트워크 오류로 임시 등록되었습니다. (${className})`, variant: 'info' });
         resetNoticeForm();
         return;
