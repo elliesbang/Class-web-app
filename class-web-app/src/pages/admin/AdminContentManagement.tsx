@@ -62,6 +62,19 @@ type StoredVideoOrder = {
 
 const VIDEO_ORDER_STORAGE_KEY = 'admin-video-order';
 
+const FALLBACK_CLASSES: ClassInfo[] = [
+  { id: 1, name: '미치나' },
+  { id: 2, name: '이얼챌' },
+  { id: 3, name: '캔디마' },
+  { id: 4, name: '나캔디' },
+  { id: 5, name: '캔디수' },
+  { id: 6, name: '나컬작' },
+  { id: 7, name: '에그작' },
+  { id: 8, name: '나컬작챌' },
+  { id: 9, name: '에그작챌' },
+  { id: 10, name: '미템나' },
+];
+
 const assignSequentialOrder = (list: VideoContent[]): VideoContent[] =>
   list.map((video, index) => ({ ...video, order: index + 1 }));
 
@@ -171,17 +184,44 @@ const AdminContentManagement = () => {
 
   useEffect(() => {
     const loadInitialData = async () => {
+      let encounteredError = false;
+
+      let resolvedClasses: ClassInfo[];
       try {
-        const classList = await getClasses();
-        setClasses(classList);
+        const fetchedClasses = await getClasses();
+        if (fetchedClasses.length === 0) {
+          encounteredError = true;
+          resolvedClasses = FALLBACK_CLASSES;
+        } else {
+          resolvedClasses = fetchedClasses;
+        }
+      } catch (error) {
+        console.error('Failed to load admin classes', error);
+        encounteredError = true;
+        resolvedClasses = FALLBACK_CLASSES;
+      }
 
-        const classMap = new Map(classList.map((item) => [item.id, item.name]));
+      setClasses(resolvedClasses);
 
-        const [videoList, materialList, noticeList] = await Promise.all([
-          getVideos(),
-          getMaterials(),
-          getNotices(),
-        ]);
+      const classMap = new Map(resolvedClasses.map((item) => [item.id, item.name]));
+
+      const [videoList, materialList, noticeList] = await Promise.all([
+        getVideos().catch((error) => {
+          console.error('Failed to load admin videos', error);
+          encounteredError = true;
+          return [];
+        }),
+        getMaterials().catch((error) => {
+          console.error('Failed to load admin materials', error);
+          encounteredError = true;
+          return [];
+        }),
+        getNotices().catch((error) => {
+          console.error('Failed to load admin notices', error);
+          encounteredError = true;
+          return [];
+        }),
+      ]);
 
         const formatDate = (value?: string) => {
           if (!value) {
@@ -231,9 +271,8 @@ const AdminContentManagement = () => {
         setVideos(hydrateVideosWithStoredOrder(mappedVideos));
         setFiles(mappedFiles);
         setNotices(mappedNotices);
-      } catch (error) {
-        console.error('Failed to load admin content', error);
-        setToast({ message: '콘텐츠 정보를 불러오지 못했습니다.', variant: 'error' });
+      if (encounteredError) {
+        setToast({ message: '콘텐츠 정보를 불러오는 중 문제가 발생하여 기본 데이터를 표시합니다.', variant: 'error' });
       }
     };
 
