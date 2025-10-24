@@ -4,7 +4,8 @@ import { Trash2 } from 'lucide-react';
 import AdminModal from '../../components/admin/AdminModal';
 import Toast, { ToastVariant } from '../../components/admin/Toast';
 import type { ClassInfo, NoticePayload } from '../../lib/api';
-import { createMaterial, createNotice, createVideo, getClasses, getMaterials, getNotices, getVideos } from '../../lib/api';
+import { createMaterial, createNotice, createVideo, getMaterials, getNotices, getVideos } from '../../lib/api';
+import { DEFAULT_CLASS_LIST, DEFAULT_CLASS_NAME_BY_ID } from '../../lib/default-classes';
 
 type VideoContent = {
   id: number;
@@ -164,11 +165,12 @@ const AdminContentManagement = () => {
   const [videos, setVideos] = useState<VideoContent[]>([]);
   const [files, setFiles] = useState<FileContent[]>([]);
   const [notices, setNotices] = useState<NoticeContent[]>([]);
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const classes = DEFAULT_CLASS_LIST;
   const [isMobile, setIsMobile] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [draggedVideoId, setDraggedVideoId] = useState<number | null>(null);
+  const [selectedClassFilter, setSelectedClassFilter] = useState<number | null>(null);
 
   const [videoForm, setVideoForm] = useState({
     title: '',
@@ -207,18 +209,7 @@ const AdminContentManagement = () => {
     const loadInitialData = async () => {
       let encounteredError = false;
 
-      let resolvedClasses: ClassInfo[] = [];
-      try {
-        const fetchedClasses = await getClasses();
-        resolvedClasses = fetchedClasses;
-      } catch (error) {
-        console.error('Failed to load admin classes', error);
-        encounteredError = true;
-        resolvedClasses = [];
-      }
-
-      setClasses(resolvedClasses);
-
+      const resolvedClasses: ClassInfo[] = DEFAULT_CLASS_LIST;
       const classMap = new Map(resolvedClasses.map((item) => [item.id, item.name]));
 
       const [videoList, materialList, noticeList] = await Promise.all([
@@ -239,36 +230,36 @@ const AdminContentManagement = () => {
         }),
       ]);
 
-        const mappedVideos: VideoContent[] = videoList.map((video) => ({
-          id: video.id,
-          type: 'video',
-          title: video.title,
-          classId: video.classId,
-          className: classMap.get(video.classId) ?? '미지정',
-          url: video.url,
-          description: video.description ?? undefined,
-          date: formatDate(video.createdAt),
-          order: 0,
-        }));
+      const mappedVideos: VideoContent[] = videoList.map((video) => ({
+        id: video.id,
+        type: 'video',
+        title: video.title,
+        classId: video.classId,
+        className: classMap.get(video.classId) ?? '미지정',
+        url: video.url,
+        description: video.description ?? undefined,
+        date: formatDate(video.createdAt),
+        order: 0,
+      }));
 
-        const mappedFiles: FileContent[] = materialList.map((material) => ({
-          id: material.id,
-          type: 'file',
-          title: material.title,
-          classId: material.classId,
-          className: classMap.get(material.classId) ?? '미지정',
-          fileUrl: material.fileUrl,
-          description: material.description ?? undefined,
-          date: formatDate(material.createdAt),
-        }));
+      const mappedFiles: FileContent[] = materialList.map((material) => ({
+        id: material.id,
+        type: 'file',
+        title: material.title,
+        classId: material.classId,
+        className: classMap.get(material.classId) ?? '미지정',
+        fileUrl: material.fileUrl,
+        description: material.description ?? undefined,
+        date: formatDate(material.createdAt),
+      }));
 
-        const mappedNotices: NoticeContent[] = noticeList.map((notice) =>
-          toNoticeContent(notice, classMap.get(notice.classId) ?? '미지정'),
-        );
+      const mappedNotices: NoticeContent[] = noticeList.map((notice) =>
+        toNoticeContent(notice, classMap.get(notice.classId) ?? '미지정'),
+      );
 
-        setVideos(hydrateVideosWithStoredOrder(mappedVideos));
-        setFiles(mappedFiles);
-        setNotices(sortNotices(mappedNotices));
+      setVideos(hydrateVideosWithStoredOrder(mappedVideos));
+      setFiles(mappedFiles);
+      setNotices(sortNotices(mappedNotices));
       if (encounteredError) {
         setToast({ message: '콘텐츠 정보를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.', variant: 'error' });
       }
@@ -277,44 +268,61 @@ const AdminContentManagement = () => {
     void loadInitialData();
   }, []);
 
-  const defaultClassId = classes[0]?.id ?? null;
-
   useEffect(() => {
-    if (defaultClassId === null) {
+    if (selectedClassFilter === null) {
       return;
     }
 
-    setVideoForm((prev) => ({ ...prev, classId: prev.classId ?? defaultClassId }));
-    setFileForm((prev) => ({ ...prev, classId: prev.classId ?? defaultClassId }));
-    setNoticeForm((prev) => ({ ...prev, classId: prev.classId ?? defaultClassId }));
-  }, [defaultClassId]);
+    setVideoForm((prev) => ({ ...prev, classId: prev.classId ?? selectedClassFilter }));
+    setFileForm((prev) => ({ ...prev, classId: prev.classId ?? selectedClassFilter }));
+    setNoticeForm((prev) => ({ ...prev, classId: prev.classId ?? selectedClassFilter }));
+  }, [selectedClassFilter]);
 
-  const classNameById = useMemo(() => new Map(classes.map((item) => [item.id, item.name])), [classes]);
+  const classNameById = useMemo(() => {
+    const map = new Map(DEFAULT_CLASS_NAME_BY_ID);
+    return map;
+  }, []);
 
   const getClassName = useCallback((classId: number) => classNameById.get(classId) ?? '미지정', [classNameById]);
 
-  const filteredVideos = useMemo(() => [...videos].sort((a, b) => a.order - b.order), [videos]);
+  const filteredVideos = useMemo(() => {
+    const sorted = [...videos].sort((a, b) => a.order - b.order);
+    if (selectedClassFilter === null) {
+      return sorted;
+    }
+    return sorted.filter((video) => video.classId === selectedClassFilter);
+  }, [selectedClassFilter, videos]);
 
-  const filteredFiles = useMemo(() => [...files], [files]);
+  const filteredFiles = useMemo(() => {
+    if (selectedClassFilter === null) {
+      return [...files];
+    }
+    return files.filter((file) => file.classId === selectedClassFilter);
+  }, [files, selectedClassFilter]);
 
-  const filteredNotices = useMemo(() => [...notices], [notices]);
+  const filteredNotices = useMemo(() => {
+    if (selectedClassFilter === null) {
+      return [...notices];
+    }
+    return notices.filter((notice) => notice.classId === selectedClassFilter);
+  }, [notices, selectedClassFilter]);
 
   const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
   };
 
   const resetVideoForm = useCallback(() => {
-    setVideoForm({ title: '', classId: defaultClassId, description: '', url: '' });
-  }, [defaultClassId]);
+    setVideoForm({ title: '', classId: selectedClassFilter, description: '', url: '' });
+  }, [selectedClassFilter]);
 
   const resetFileForm = useCallback(() => {
-    setFileForm({ title: '', classId: defaultClassId, description: '', fileName: '' });
+    setFileForm({ title: '', classId: selectedClassFilter, description: '', fileName: '' });
     setFileInputKey((prev) => prev + 1);
-  }, [defaultClassId]);
+  }, [selectedClassFilter]);
 
   const resetNoticeForm = useCallback(() => {
-    setNoticeForm({ title: '', classId: defaultClassId, content: '' });
-  }, [defaultClassId]);
+    setNoticeForm({ title: '', classId: selectedClassFilter, content: '' });
+  }, [selectedClassFilter]);
 
   const handleVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -576,6 +584,28 @@ const AdminContentManagement = () => {
           </p>
         </div>
 
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm font-semibold" htmlFor="classFilter">
+            수업 선택
+          </label>
+          <select
+            id="classFilter"
+            className="rounded-2xl border border-[#e9dccf] bg-white px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+            value={selectedClassFilter !== null ? String(selectedClassFilter) : ''}
+            onChange={(event) => {
+              const { value } = event.target;
+              setSelectedClassFilter(value === '' ? null : Number(value));
+            }}
+          >
+            <option value="">선택하기</option>
+            {classes.map((classItem) => (
+              <option key={classItem.id} value={classItem.id}>
+                {classItem.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="rounded-3xl bg-white/80 p-4 shadow-md">
           {isMobile ? (
             <div className="flex flex-col gap-3">
@@ -652,11 +682,10 @@ const AdminContentManagement = () => {
                     const { value } = event.target;
                     setVideoForm((prev) => ({ ...prev, classId: value === '' ? null : Number(value) }));
                   }}
-                  disabled={classes.length === 0}
                   required
                 >
                   <option value="" disabled>
-                    수업을 선택하세요
+                    선택하기
                   </option>
                   {classes.map((classItem) => (
                     <option key={classItem.id} value={classItem.id}>
@@ -794,11 +823,10 @@ const AdminContentManagement = () => {
                     const { value } = event.target;
                     setFileForm((prev) => ({ ...prev, classId: value === '' ? null : Number(value) }));
                   }}
-                  disabled={classes.length === 0}
                   required
                 >
                   <option value="" disabled>
-                    수업을 선택하세요
+                    선택하기
                   </option>
                   {classes.map((classItem) => (
                     <option key={classItem.id} value={classItem.id}>
@@ -928,11 +956,10 @@ const AdminContentManagement = () => {
                     const { value } = event.target;
                     setNoticeForm((prev) => ({ ...prev, classId: value === '' ? null : Number(value) }));
                   }}
-                  disabled={classes.length === 0}
                   required
                 >
                   <option value="" disabled>
-                    수업을 선택하세요
+                    선택하기
                   </option>
                   {classes.map((classItem) => (
                     <option key={classItem.id} value={classItem.id}>

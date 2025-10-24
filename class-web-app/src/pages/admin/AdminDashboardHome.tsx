@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Toast, { ToastVariant } from '../../components/admin/Toast';
-import { getClasses, getMaterials, getNotices, getVideos } from '../../lib/api';
+import { getMaterials, getNotices, getVideos } from '../../lib/api';
+import { DEFAULT_CLASS_LIST, DEFAULT_CLASS_NAME_BY_ID } from '../../lib/default-classes';
 
 type DashboardStat = {
   title: string;
@@ -55,14 +56,14 @@ const AdminDashboardHome = () => {
       setIsLoading(true);
 
       try {
-        const [classList, videoList, materialList, noticeList] = await Promise.all([
-          getClasses(),
+        const classList = DEFAULT_CLASS_LIST;
+        const [videoList, materialList, noticeList] = await Promise.all([
           getVideos(),
           getMaterials(),
           getNotices(),
         ]);
 
-        const classNameById = new Map(classList.map((item) => [item.id, item.name]));
+        const classNameById = new Map(DEFAULT_CLASS_NAME_BY_ID);
 
         setStats([
           { title: '등록된 수업 수', value: String(classList.length) },
