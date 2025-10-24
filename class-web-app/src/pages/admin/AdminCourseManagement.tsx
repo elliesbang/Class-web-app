@@ -55,80 +55,8 @@ const statusColors: Record<CourseStatus, string> = {
 const typeFilterOptions: Array<'전체' | CourseType> = ['전체', '강의', '챌린지', '특강', '원데이'];
 const statusFilterOptions: Array<'전체' | CourseStatus> = ['전체', '진행 중', '준비 중', '종료'];
 
-const initialCourses: Course[] = [
-  {
-    id: 1,
-    title: '미치나 8기',
-    type: '챌린지',
-    startDate: '2025-11-01',
-    endDate: '2025-11-21',
-    uploadPeriod: '00:00 ~ 23:59',
-    status: '진행 중',
-    manager: '관리자',
-    description: '3주간 미리캔버스 요소 업로드 챌린지',
-    students: [
-      { name: '홍길동', email: 'test@test.com' },
-      { name: '이영희', email: 'lee@test.com' },
-    ],
-    createdAt: '2025-10-15T09:00:00Z',
-    metrics: {
-      videos: 8,
-      materials: 5,
-      notices: 3,
-      assignmentSubmissionRate: 86,
-      feedbackCompletionRate: 72,
-    },
-  },
-  {
-    id: 2,
-    title: '캔디마 2기',
-    type: '강의',
-    startDate: '2025-12-02',
-    endDate: '2025-12-31',
-    uploadPeriod: '06:00 ~ 23:59',
-    status: '준비 중',
-    manager: '김민지',
-    description: '디자인 마케팅 실전 강의 프로그램',
-    students: [
-      { name: '이준호', email: 'leej@example.com' },
-      { name: '정소영', email: 'soyoung@example.com' },
-    ],
-    createdAt: '2025-10-20T04:00:00Z',
-    metrics: {
-      videos: 0,
-      materials: 2,
-      notices: 1,
-      assignmentSubmissionRate: 0,
-      feedbackCompletionRate: 0,
-    },
-  },
-  {
-    id: 3,
-    title: '나캔디 1기 원데이 워크샵',
-    type: '원데이',
-    startDate: '2025-11-05',
-    endDate: '2025-11-05',
-    uploadPeriod: '09:00 ~ 18:00',
-    status: '종료',
-    manager: '관리자',
-    description: '원데이 실습 워크샵',
-    students: [
-      { name: '박서연', email: 'seo@example.com' },
-      { name: '최가영', email: 'gayeong@example.com' },
-    ],
-    createdAt: '2025-09-25T14:00:00Z',
-    metrics: {
-      videos: 4,
-      materials: 6,
-      notices: 2,
-      assignmentSubmissionRate: 92,
-      feedbackCompletionRate: 88,
-    },
-  },
-];
-
 const AdminCourseManagement = () => {
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'전체' | CourseType>('전체');
   const [statusFilter, setStatusFilter] = useState<'전체' | CourseStatus>('전체');
