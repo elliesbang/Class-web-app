@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { DragEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 
 import AdminModal from '../../components/admin/AdminModal';
@@ -16,6 +16,7 @@ type VideoContent = {
   embedCode: string;
   description?: string;
   date: string;
+  order: number;
 };
 
 type FileContent = {
@@ -53,6 +54,77 @@ type ToastState = {
   variant?: ToastVariant;
 };
 
+type StoredVideoOrder = {
+  id: number;
+  order: number;
+};
+
+const VIDEO_ORDER_STORAGE_KEY = 'admin-video-order';
+
+const assignSequentialOrder = (list: VideoContent[]): VideoContent[] =>
+  list.map((video, index) => ({ ...video, order: index + 1 }));
+
+const persistVideoOrder = (list: VideoContent[]) => {
+  if (typeof window === 'undefined') return;
+
+  const payload = list.map((video) => ({ id: video.id, order: video.order }));
+  try {
+    window.localStorage.setItem(VIDEO_ORDER_STORAGE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    console.error('Failed to persist video order', error);
+  }
+};
+
+const hydrateVideosWithStoredOrder = (baseVideos: VideoContent[]): VideoContent[] => {
+  const orderedBase = assignSequentialOrder(baseVideos);
+
+  if (typeof window === 'undefined') {
+    return orderedBase;
+  }
+
+  const storedOrderRaw = window.localStorage.getItem(VIDEO_ORDER_STORAGE_KEY);
+  if (!storedOrderRaw) {
+    return orderedBase;
+  }
+
+  try {
+    const parsed: StoredVideoOrder[] = JSON.parse(storedOrderRaw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return orderedBase;
+    }
+
+    const orderMap = new Map<number, number>();
+    parsed.forEach((item) => {
+      if (typeof item?.id === 'number' && typeof item?.order === 'number') {
+        orderMap.set(item.id, item.order);
+      }
+    });
+
+    if (orderMap.size === 0) {
+      return orderedBase;
+    }
+
+    const sortedByStoredOrder = [...orderedBase].sort((a, b) => {
+      const orderA = orderMap.get(a.id);
+      const orderB = orderMap.get(b.id);
+
+      if (orderA === undefined && orderB === undefined) {
+        return a.order - b.order;
+      }
+
+      if (orderA === undefined) return 1;
+      if (orderB === undefined) return -1;
+      if (orderA === orderB) return a.order - b.order;
+      return orderA - orderB;
+    });
+
+    return assignSequentialOrder(sortedByStoredOrder);
+  } catch (error) {
+    console.error('Failed to parse stored video order', error);
+    return orderedBase;
+  }
+};
+
 const initialVideos: VideoContent[] = [
   {
     id: 1,
@@ -63,6 +135,7 @@ const initialVideos: VideoContent[] = [
       "<iframe class='w-full aspect-video rounded-xl' src='https://www.youtube.com/embed/dQw4w9WgXcQ' title='미치나 8기 OT 영상' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' allowfullscreen></iframe>",
     description: '오리엔테이션 영상',
     date: '2025-10-21',
+    order: 1,
   },
   {
     id: 2,
@@ -73,6 +146,7 @@ const initialVideos: VideoContent[] = [
       "<iframe class='w-full aspect-video rounded-xl' src='https://player.vimeo.com/video/76979871' title='캔디마 2회차 수업 복습' allow='autoplay; fullscreen; picture-in-picture' allowfullscreen></iframe>",
     description: '캔디마 실습 복습용 영상',
     date: '2025-10-18',
+    order: 2,
   },
 ];
 
@@ -121,12 +195,13 @@ const initialNotices: NoticeContent[] = [
 const AdminContentManagement = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('video');
   const [selectedCategory, setSelectedCategory] = useState<Category>('전체');
-  const [videos, setVideos] = useState(initialVideos);
+  const [videos, setVideos] = useState<VideoContent[]>(() => hydrateVideosWithStoredOrder(initialVideos));
   const [files, setFiles] = useState(initialFiles);
   const [notices, setNotices] = useState(initialNotices);
   const [isMobile, setIsMobile] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [draggedVideoId, setDraggedVideoId] = useState<number | null>(null);
 
   const [videoForm, setVideoForm] = useState({
     title: '',
@@ -160,13 +235,14 @@ const AdminContentManagement = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const filteredVideos = useMemo(
-    () =>
+  const filteredVideos = useMemo(() => {
+    const baseList =
       selectedCategory === '전체'
         ? videos
-        : videos.filter((video) => video.category === selectedCategory),
-    [selectedCategory, videos],
-  );
+        : videos.filter((video) => video.category === selectedCategory);
+
+    return [...baseList].sort((a, b) => a.order - b.order);
+  }, [selectedCategory, videos]);
 
   const filteredFiles = useMemo(
     () =>
@@ -212,9 +288,14 @@ const AdminContentManagement = () => {
       embedCode: videoForm.embedCode,
       description: videoForm.description,
       date: new Date().toISOString().split('T')[0],
+      order: 0,
     };
 
-    setVideos((prev) => [newVideo, ...prev]);
+    setVideos((prev) => {
+      const updated = assignSequentialOrder([newVideo, ...prev]);
+      persistVideoOrder(updated);
+      return updated;
+    });
     resetVideoForm();
   };
 
@@ -266,7 +347,12 @@ const AdminContentManagement = () => {
     if (!deleteTarget) return;
 
     if (deleteTarget.type === 'video') {
-      setVideos((prev) => prev.filter((video) => video.id !== deleteTarget.id));
+      setVideos((prev) => {
+        const filtered = prev.filter((video) => video.id !== deleteTarget.id);
+        const updated = assignSequentialOrder(filtered);
+        persistVideoOrder(updated);
+        return updated;
+      });
     }
 
     if (deleteTarget.type === 'file') {
@@ -283,6 +369,61 @@ const AdminContentManagement = () => {
   };
 
   const handleToastClose = () => setToast(null);
+
+  const reorderVideos = (draggedId: number, targetId: number) => {
+    let updatedList: VideoContent[] | null = null;
+
+    setVideos((prev) => {
+      const currentIndex = prev.findIndex((video) => video.id === draggedId);
+      const targetIndex = prev.findIndex((video) => video.id === targetId);
+
+      if (currentIndex === -1 || targetIndex === -1 || currentIndex === targetIndex) {
+        return prev;
+      }
+
+      const reordered = [...prev];
+      const [movedItem] = reordered.splice(currentIndex, 1);
+      reordered.splice(targetIndex, 0, movedItem);
+
+      const sequential = assignSequentialOrder(reordered);
+      updatedList = sequential;
+      return sequential;
+    });
+
+    if (updatedList) {
+      persistVideoOrder(updatedList);
+      setToast({ message: '영상 순서가 변경되었습니다.', variant: 'success' });
+    }
+  };
+
+  const handleVideoDragStart = (event: DragEvent<HTMLElement>, videoId: number) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', videoId.toString());
+    setDraggedVideoId(videoId);
+  };
+
+  const handleVideoDragOver = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleVideoDrop = (event: DragEvent<HTMLElement>, targetId: number) => {
+    event.preventDefault();
+    const draggedIdRaw = event.dataTransfer.getData('text/plain');
+    const draggedId = draggedIdRaw ? Number(draggedIdRaw) : draggedVideoId;
+
+    if (!draggedId) {
+      setDraggedVideoId(null);
+      return;
+    }
+
+    reorderVideos(draggedId, targetId);
+    setDraggedVideoId(null);
+  };
+
+  const handleVideoDragEnd = () => {
+    setDraggedVideoId(null);
+  };
 
   const contentTypeLabel: Record<ContentType, string> = {
     video: '영상',
@@ -444,23 +585,37 @@ const AdminContentManagement = () => {
 
           <div className="rounded-3xl bg-white p-6 shadow-md">
             <h3 className="mb-4 text-lg font-semibold">영상 리스트</h3>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {filteredVideos.map((video) => (
-                <article key={video.id} className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-md">
-                  <div className="overflow-hidden rounded-2xl bg-black/5">
+                <article
+                  key={video.id}
+                  className={`group flex cursor-grab flex-col overflow-hidden rounded-lg bg-[#f9f9f9] shadow-sm transition-transform transition-shadow duration-200 ease-out hover:scale-[1.05] hover:shadow-lg ${
+                    draggedVideoId === video.id ? 'cursor-grabbing ring-2 ring-[#ffd331]' : ''
+                  }`}
+                  draggable
+                  onDragStart={(event) => handleVideoDragStart(event, video.id)}
+                  onDragOver={handleVideoDragOver}
+                  onDrop={(event) => handleVideoDrop(event, video.id)}
+                  onDragEnd={handleVideoDragEnd}
+                  aria-grabbed={draggedVideoId === video.id}
+                >
+                  <div className="relative aspect-video w-full overflow-hidden bg-black/5 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:rounded-md [&_iframe]:border-0 [&_iframe]:pointer-events-none">
                     <div dangerouslySetInnerHTML={{ __html: video.embedCode }} />
                   </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <h4 className="text-base font-semibold text-[#404040]">{video.title}</h4>
-                      <p className="text-sm text-gray-500">{video.category}</p>
-                      <p className="text-xs text-gray-400">등록일 {video.date}</p>
-                      {video.description && <p className="text-sm text-gray-600">{video.description}</p>}
+                  <div className="flex items-start justify-between gap-3 px-4 pb-4 pt-3">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-semibold text-[#404040]">{video.title}</h4>
+                      <p className="text-xs text-gray-500">등록일 {video.date}</p>
                     </div>
                     <button
                       type="button"
-                      className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                      onClick={() => handleDeleteRequest('video', video.id, video.title)}
+                      className="mt-1 rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDeleteRequest('video', video.id, video.title);
+                      }}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onTouchStart={(event) => event.stopPropagation()}
                       aria-label={`${video.title} 삭제`}
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
