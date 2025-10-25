@@ -4,8 +4,8 @@ pages_build_output_dir = "class-web-app/dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "elliesbang_main"
-database_id = "888b8ddb-1f10-4b41-8d47-6c7f06dd1fcb"
+database_name = "elliesbang_class"
+database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
 
 [[functions]]
-directory = "functions"
+directory = "class-web-app/functions"
