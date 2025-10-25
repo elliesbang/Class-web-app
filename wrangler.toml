@@ -3,10 +3,8 @@ compatibility_date = "2025-10-20"
 
 pages_build_output_dir = "class-web-app/dist"
 
-[build]
-command = "npm run build"
-
-[[functions]]
+[pages]
+[[pages.functions]]
 directory = "functions"
 
 [[d1_databases]]
