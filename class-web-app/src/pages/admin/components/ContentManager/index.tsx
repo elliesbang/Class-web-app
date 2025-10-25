@@ -1,14 +1,18 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { GripVertical, Trash2 } from 'lucide-react';
 
 import { useAdminClasses } from '../../data/AdminClassContext';
 import {
   createMaterial,
   createNotice,
   createVideo,
+  deleteMaterial,
+  deleteNotice,
+  deleteVideo,
   getMaterials,
   getNotices,
   getVideos,
+  reorderVideos,
   type MaterialPayload,
   type NoticePayload,
   type VideoPayload,
@@ -23,7 +27,9 @@ const TAB_ITEMS = [
 type TabKey = (typeof TAB_ITEMS)[number]['key'];
 
 type VideoFormState = {
-  code: string;
+  title: string;
+  url: string;
+  description: string;
 };
 
 type NoticeFormState = {
@@ -33,7 +39,8 @@ type NoticeFormState = {
 
 type MaterialFormState = {
   title: string;
-  content: string;
+  description: string;
+  file: File | null;
 };
 
 const createFallbackId = () => Number(new Date());
@@ -45,6 +52,64 @@ const sortByCreatedAtDesc = <T extends { createdAt?: string }>(list: T[]) =>
     return dateB - dateA;
   });
 
+const sortVideosForDisplay = (list: VideoPayload[]) =>
+  [...list].sort((a, b) => {
+    const orderA = typeof a.displayOrder === 'number' ? a.displayOrder : Number.MAX_SAFE_INTEGER;
+    const orderB = typeof b.displayOrder === 'number' ? b.displayOrder : Number.MAX_SAFE_INTEGER;
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
+
+const reorderVideoDisplayOrder = (
+  list: VideoPayload[],
+  classId: number,
+  sourceId: number,
+  targetId: number,
+) => {
+  const classVideos = sortVideosForDisplay(list.filter((item) => item.classId === classId));
+  const sourceIndex = classVideos.findIndex((item) => item.id === sourceId);
+  const targetIndex = classVideos.findIndex((item) => item.id === targetId);
+
+  if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
+    return list;
+  }
+
+  const updatedClassVideos = [...classVideos];
+  const [moved] = updatedClassVideos.splice(sourceIndex, 1);
+  updatedClassVideos.splice(targetIndex, 0, moved);
+
+  const orderMap = new Map<number, number>();
+  updatedClassVideos.forEach((video, index) => {
+    orderMap.set(video.id, index);
+  });
+
+  return list.map((video) =>
+    video.classId === classId && orderMap.has(video.id)
+      ? { ...video, displayOrder: orderMap.get(video.id)! }
+      : video,
+  );
+};
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('파일을 읽는 데 실패했습니다.'));
+      }
+    };
+    reader.onerror = () => {
+      reject(reader.error ?? new Error('파일을 읽는 데 실패했습니다.'));
+    };
+    reader.readAsDataURL(file);
+  });
+
 const ContentManager = () => {
   const { classes } = useAdminClasses();
   const [activeTab, setActiveTab] = useState<TabKey>('video');
@@ -52,9 +117,11 @@ const ContentManager = () => {
   const [videos, setVideos] = useState<VideoPayload[]>([]);
   const [notices, setNotices] = useState<NoticePayload[]>([]);
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
-  const [videoForm, setVideoForm] = useState<VideoFormState>({ code: '' });
+  const [videoForm, setVideoForm] = useState<VideoFormState>({ title: '', url: '', description: '' });
   const [noticeForm, setNoticeForm] = useState<NoticeFormState>({ title: '', content: '' });
-  const [materialForm, setMaterialForm] = useState<MaterialFormState>({ title: '', content: '' });
+  const [materialForm, setMaterialForm] = useState<MaterialFormState>({ title: '', description: '', file: null });
+  const [draggedVideoId, setDraggedVideoId] = useState<number | null>(null);
+  const [isReorderingVideos, setIsReorderingVideos] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -71,7 +138,7 @@ const ContentManager = () => {
           return;
         }
 
-        setVideos(sortByCreatedAtDesc(videoList));
+        setVideos(videoList);
         setNotices(sortByCreatedAtDesc(noticeList));
         setMaterials(sortByCreatedAtDesc(materialList));
       } catch (error) {
@@ -97,35 +164,35 @@ const ContentManager = () => {
     }
   }, [classes, selectedClassId]);
 
-  const filteredVideos = useMemo(
-    () =>
-      selectedClassId == null
-        ? []
-        : videos.filter((video) => video.classId === selectedClassId),
-    [selectedClassId, videos],
-  );
+  const filteredVideos = useMemo(() => {
+    if (selectedClassId == null) {
+      return [] as VideoPayload[];
+    }
 
-  const filteredNotices = useMemo(
-    () =>
-      selectedClassId == null
-        ? []
-        : notices.filter((notice) => notice.classId === selectedClassId),
-    [notices, selectedClassId],
-  );
+    return sortVideosForDisplay(videos.filter((video) => video.classId === selectedClassId));
+  }, [selectedClassId, videos]);
 
-  const filteredMaterials = useMemo(
-    () =>
-      selectedClassId == null
-        ? []
-        : materials.filter((material) => material.classId === selectedClassId),
-    [materials, selectedClassId],
-  );
+  const filteredNotices = useMemo(() => {
+    if (selectedClassId == null) {
+      return [] as NoticePayload[];
+    }
+
+    return sortByCreatedAtDesc(notices.filter((notice) => notice.classId === selectedClassId));
+  }, [notices, selectedClassId]);
+
+  const filteredMaterials = useMemo(() => {
+    if (selectedClassId == null) {
+      return [] as MaterialPayload[];
+    }
+
+    return sortByCreatedAtDesc(materials.filter((material) => material.classId === selectedClassId));
+  }, [materials, selectedClassId]);
 
   const hasClasses = classes.length > 0;
 
-  const resetVideoForm = () => setVideoForm({ code: '' });
+  const resetVideoForm = () => setVideoForm({ title: '', url: '', description: '' });
   const resetNoticeForm = () => setNoticeForm({ title: '', content: '' });
-  const resetMaterialForm = () => setMaterialForm({ title: '', content: '' });
+  const resetMaterialForm = () => setMaterialForm({ title: '', description: '', file: null });
 
   const handleVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -133,30 +200,35 @@ const ContentManager = () => {
       return;
     }
 
-    const trimmedCode = videoForm.code.trim();
-    if (!trimmedCode) {
+    const title = videoForm.title.trim();
+    const url = videoForm.url.trim();
+    const description = videoForm.description.trim();
+
+    if (!title || !url) {
       return;
     }
 
     try {
       const created = await createVideo({
-        title: trimmedCode,
-        url: trimmedCode,
+        title,
+        url,
+        description: description || null,
         classId: selectedClassId,
       });
-      setVideos((prev) => sortByCreatedAtDesc([created, ...prev]));
+      setVideos((prev) => [...prev.filter((item) => item.id !== created.id), created]);
       resetVideoForm();
     } catch (error) {
       console.error('[ContentManager] 영상 저장 실패 – 임시 데이터로 대체합니다.', error);
       const fallback: VideoPayload = {
         id: createFallbackId(),
-        title: trimmedCode,
-        url: trimmedCode,
-        description: null,
+        title,
+        url,
+        description: description || null,
         classId: selectedClassId,
         createdAt: new Date().toISOString(),
+        displayOrder: filteredVideos.length,
       };
-      setVideos((prev) => sortByCreatedAtDesc([fallback, ...prev]));
+      setVideos((prev) => [...prev, fallback]);
       resetVideoForm();
     }
   };
@@ -181,7 +253,7 @@ const ContentManager = () => {
         classId: selectedClassId,
         author: '관리자',
       });
-      setNotices((prev) => sortByCreatedAtDesc([created, ...prev]));
+      setNotices((prev) => sortByCreatedAtDesc([created, ...prev.filter((item) => item.id !== created.id)]));
       resetNoticeForm();
     } catch (error) {
       console.error('[ContentManager] 공지 저장 실패 – 임시 데이터로 대체합니다.', error);
@@ -205,45 +277,112 @@ const ContentManager = () => {
     }
 
     const title = materialForm.title.trim();
-    const content = materialForm.content.trim();
+    const description = materialForm.description.trim();
+    const file = materialForm.file;
 
-    if (!title || !content) {
+    if (!title || !file) {
       return;
     }
 
     try {
+      const fileUrl = await readFileAsDataUrl(file);
       const created = await createMaterial({
         title,
-        fileUrl: content,
+        description: description || null,
+        fileUrl,
         classId: selectedClassId,
+        fileName: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
       });
-      setMaterials((prev) => sortByCreatedAtDesc([created, ...prev]));
+      setMaterials((prev) => sortByCreatedAtDesc([created, ...prev.filter((item) => item.id !== created.id)]));
       resetMaterialForm();
     } catch (error) {
       console.error('[ContentManager] 자료 저장 실패 – 임시 데이터로 대체합니다.', error);
+      if (!file) {
+        return;
+      }
       const fallback: MaterialPayload = {
         id: createFallbackId(),
         title,
-        fileUrl: content,
-        description: null,
+        description: description || null,
+        fileUrl: URL.createObjectURL(file),
         classId: selectedClassId,
         createdAt: new Date().toISOString(),
+        fileName: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
       };
       setMaterials((prev) => sortByCreatedAtDesc([fallback, ...prev]));
       resetMaterialForm();
     }
   };
 
-  const handleDeleteVideo = (id: number) => {
+  const handleDeleteVideo = async (id: number) => {
+    try {
+      await deleteVideo(id);
+    } catch (error) {
+      console.error('[ContentManager] 영상 삭제 중 문제가 발생했습니다.', error);
+    }
     setVideos((prev) => prev.filter((video) => video.id !== id));
   };
 
-  const handleDeleteNotice = (id: number) => {
+  const handleDeleteNotice = async (id: number) => {
+    try {
+      await deleteNotice(id);
+    } catch (error) {
+      console.error('[ContentManager] 공지 삭제 중 문제가 발생했습니다.', error);
+    }
     setNotices((prev) => prev.filter((notice) => notice.id !== id));
   };
 
-  const handleDeleteMaterial = (id: number) => {
+  const handleDeleteMaterial = async (id: number) => {
+    try {
+      await deleteMaterial(id);
+    } catch (error) {
+      console.error('[ContentManager] 자료 삭제 중 문제가 발생했습니다.', error);
+    }
     setMaterials((prev) => prev.filter((material) => material.id !== id));
+  };
+
+  const handleVideoDrop = async (targetId: number) => {
+    if (selectedClassId == null || draggedVideoId == null || draggedVideoId === targetId) {
+      return;
+    }
+
+    const locallyUpdated = reorderVideoDisplayOrder(videos, selectedClassId, draggedVideoId, targetId);
+    setVideos(locallyUpdated);
+    setIsReorderingVideos(true);
+
+    const orderedIds = sortVideosForDisplay(
+      locallyUpdated.filter((video) => video.classId === selectedClassId),
+    ).map((video) => video.id);
+
+    try {
+      const updated = await reorderVideos({ classId: selectedClassId, orderedIds });
+      setVideos((prev) => {
+        const others = prev.filter((video) => video.classId !== selectedClassId);
+        return [...others, ...updated];
+      });
+    } catch (error) {
+      console.error('[ContentManager] 영상 순서를 저장하지 못했습니다.', error);
+    } finally {
+      setIsReorderingVideos(false);
+      setDraggedVideoId(null);
+    }
+  };
+
+  const handleVideoDragStart = (id: number) => () => {
+    setDraggedVideoId(id);
+  };
+
+  const handleVideoDragEnd = () => {
+    setDraggedVideoId(null);
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setMaterialForm((prev) => ({ ...prev, file }));
   };
 
   return (
@@ -251,8 +390,8 @@ const ContentManager = () => {
       <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-md">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <h2 className="text-xl font-bold text-[#404040]">콘텐츠 관리</h2>
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="classSelect">
+          <div className="flex flex-col gap-2 text-sm text-[#7a6f68] md:flex-row md:items-center md:gap-3">
+            <label className="font-semibold text-[#5c5c5c]" htmlFor="classSelect">
               수업 선택
             </label>
             <select
@@ -266,9 +405,7 @@ const ContentManager = () => {
               disabled={!hasClasses}
             >
               {!hasClasses && (
-                <option value="">
-                  수업이 없습니다
-                </option>
+                <option value="">수업이 없습니다</option>
               )}
               {classes.map((classItem) => (
                 <option key={classItem.id} value={classItem.id}>
@@ -300,23 +437,53 @@ const ContentManager = () => {
       {activeTab === 'video' && (
         <section className="flex flex-col gap-6">
           <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleVideoSubmit}>
-            <h3 className="mb-4 text-lg font-semibold text-[#404040]">비메오 코드 등록</h3>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="videoCode">
-                비메오 코드
-              </label>
-              <input
-                id="videoCode"
-                type="text"
-                className="flex-1 rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
-                placeholder="예: https://vimeo.com/... 또는 iframe 코드"
-                value={videoForm.code}
-                onChange={(event) => setVideoForm({ code: event.target.value })}
-                disabled={!hasClasses}
-              />
+            <h3 className="mb-4 text-lg font-semibold text-[#404040]">영상 등록</h3>
+            <div className="grid gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="videoTitle">
+                  영상 제목
+                </label>
+                <input
+                  id="videoTitle"
+                  type="text"
+                  className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="예: 1주차 오리엔테이션"
+                  value={videoForm.title}
+                  onChange={(event) => setVideoForm((prev) => ({ ...prev, title: event.target.value }))}
+                  disabled={!hasClasses}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="videoUrl">
+                  링크 또는 임베드 코드
+                </label>
+                <textarea
+                  id="videoUrl"
+                  className="min-h-[80px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="https://vimeo.com/... 혹은 &lt;iframe&gt; 코드"
+                  value={videoForm.url}
+                  onChange={(event) => setVideoForm((prev) => ({ ...prev, url: event.target.value }))}
+                  disabled={!hasClasses}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="videoDescription">
+                  설명 (선택)
+                </label>
+                <textarea
+                  id="videoDescription"
+                  className="min-h-[80px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="영상에 대한 간단한 설명을 남겨주세요."
+                  value={videoForm.description}
+                  onChange={(event) => setVideoForm((prev) => ({ ...prev, description: event.target.value }))}
+                  disabled={!hasClasses}
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end">
               <button
                 type="submit"
-                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
+                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c] disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!hasClasses}
               >
                 저장
@@ -325,13 +492,44 @@ const ContentManager = () => {
           </form>
 
           <div className="rounded-3xl bg-white p-6 shadow-md">
-            <h3 className="mb-4 text-lg font-semibold text-[#404040]">업로드된 영상</h3>
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-lg font-semibold text-[#404040]">업로드된 영상</h3>
+              {isReorderingVideos && (
+                <span className="text-xs text-[#7a6f68]">순서를 저장하는 중입니다...</span>
+              )}
+            </div>
             {filteredVideos.length === 0 ? (
               <p className="text-sm text-[#7a6f68]">표시할 콘텐츠가 없습니다.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {filteredVideos.map((video) => (
-                  <article key={video.id} className="flex flex-col gap-3 rounded-2xl bg-[#f9f5f1] p-4 shadow-sm">
+                  <article
+                    key={video.id}
+                    className={`flex flex-col gap-3 rounded-2xl bg-[#f9f5f1] p-4 shadow-sm transition ring-offset-2 ${
+                      draggedVideoId === video.id ? 'ring-2 ring-[#ffd331]' : 'hover:ring-1 hover:ring-[#ffd331]'
+                    }`}
+                    draggable
+                    onDragStart={handleVideoDragStart(video.id)}
+                    onDragEnd={handleVideoDragEnd}
+                    onDragOver={(event: DragEvent<HTMLElement>) => {
+                      event.preventDefault();
+                    }}
+                    onDrop={(event: DragEvent<HTMLElement>) => {
+                      event.preventDefault();
+                      handleVideoDrop(video.id).catch((error) => {
+                        console.error('[ContentManager] 드래그 중 오류가 발생했습니다.', error);
+                      });
+                    }}
+                  >
+                    <div className="flex items-center justify-between text-[#7a6f68]">
+                      <span className="flex items-center gap-2 text-xs">
+                        <GripVertical className="h-4 w-4" aria-hidden="true" />
+                        드래그로 순서 변경
+                      </span>
+                      <span className="text-xs font-semibold">
+                        #{typeof video.displayOrder === 'number' ? video.displayOrder + 1 : '-'}
+                      </span>
+                    </div>
                     <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black/5">
                       {video.url.trim().startsWith('<') ? (
                         <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: video.url }} />
@@ -344,9 +542,12 @@ const ContentManager = () => {
                         />
                       )}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-[#404040]">{video.title || 'Vimeo'}</span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-semibold text-[#404040]">{video.title || '영상'}</span>
+                        {video.description && (
+                          <p className="text-xs text-[#5c5c5c]">{video.description}</p>
+                        )}
                         <span className="text-xs text-[#7a6f68]">
                           {new Date(video.createdAt ?? Date.now()).toLocaleDateString()}
                         </span>
@@ -354,7 +555,11 @@ const ContentManager = () => {
                       <button
                         type="button"
                         className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => handleDeleteVideo(video.id)}
+                        onClick={() => {
+                          handleDeleteVideo(video.id).catch((error) => {
+                            console.error('[ContentManager] 영상 삭제 실패', error);
+                          });
+                        }}
                         aria-label="영상 삭제"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -402,7 +607,7 @@ const ContentManager = () => {
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"
-                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
+                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c] disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!hasClasses}
               >
                 업로드
@@ -429,7 +634,11 @@ const ContentManager = () => {
                       <button
                         type="button"
                         className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => handleDeleteNotice(notice.id)}
+                        onClick={() => {
+                          handleDeleteNotice(notice.id).catch((error) => {
+                            console.error('[ContentManager] 공지 삭제 실패', error);
+                          });
+                        }}
                         aria-label="공지 삭제"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -462,22 +671,38 @@ const ContentManager = () => {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="materialContent">
-                  내용
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="materialDescription">
+                  설명
                 </label>
                 <textarea
-                  id="materialContent"
+                  id="materialDescription"
                   className="min-h-[120px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
-                  value={materialForm.content}
-                  onChange={(event) => setMaterialForm((prev) => ({ ...prev, content: event.target.value }))}
+                  value={materialForm.description}
+                  onChange={(event) => setMaterialForm((prev) => ({ ...prev, description: event.target.value }))}
                   disabled={!hasClasses}
                 />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="materialFile">
+                  파일 (PDF, 이미지 등)
+                </label>
+                <input
+                  id="materialFile"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.gif,.heic,.bmp,.ppt,.pptx,.doc,.docx,.zip"
+                  className="rounded-2xl border border-dashed border-[#e9dccf] px-4 py-3 text-sm focus:border-[#ffd331] focus:outline-none"
+                  onChange={handleFileChange}
+                  disabled={!hasClasses}
+                />
+                {materialForm.file && (
+                  <p className="text-xs text-[#7a6f68]">선택된 파일: {materialForm.file.name}</p>
+                )}
               </div>
             </div>
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"
-                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
+                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c] disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!hasClasses}
               >
                 업로드
@@ -493,18 +718,37 @@ const ContentManager = () => {
               <ul className="space-y-4">
                 {filteredMaterials.map((material) => (
                   <li key={material.id} className="rounded-2xl bg-[#f9f5f1] p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex-1">
                         <h4 className="text-sm font-semibold text-[#404040]">{material.title}</h4>
-                        <p className="mt-2 break-words text-sm text-[#5c5c5c]">{material.fileUrl}</p>
-                        <p className="mt-2 text-xs text-[#7a6f68]">
-                          {new Date(material.createdAt ?? Date.now()).toLocaleDateString()}
-                        </p>
+                        {material.description && (
+                          <p className="mt-2 whitespace-pre-wrap text-sm text-[#5c5c5c]">{material.description}</p>
+                        )}
+                        <div className="mt-3 flex flex-col gap-2 text-xs text-[#7a6f68] sm:flex-row sm:items-center sm:gap-4">
+                          <span>
+                            업로드일: {new Date(material.createdAt ?? Date.now()).toLocaleDateString()}
+                          </span>
+                          {material.fileUrl && (
+                            <a
+                              href={material.fileUrl}
+                              download={material.fileName ?? undefined}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-semibold text-[#404040] underline-offset-2 hover:underline"
+                            >
+                              {material.fileName ?? '파일 열기'}
+                            </a>
+                          )}
+                        </div>
                       </div>
                       <button
                         type="button"
-                        className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => handleDeleteMaterial(material.id)}
+                        className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
+                        onClick={() => {
+                          handleDeleteMaterial(material.id).catch((error) => {
+                            console.error('[ContentManager] 자료 삭제 실패', error);
+                          });
+                        }}
                         aria-label="자료 삭제"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />

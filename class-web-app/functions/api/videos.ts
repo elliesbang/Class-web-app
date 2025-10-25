@@ -1,133 +1,151 @@
 import { Hono } from 'hono';
 
+import { ensureBaseSchema, normaliseDate } from './_utils';
+
 interface Env {
   DB: D1Database;
 }
 
-const TABLE_CONFIG = {
-  videos: {
-    schema: `
-      CREATE TABLE IF NOT EXISTS videos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        url TEXT NOT NULL,
-        class_id INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `,
-    columns: ['title', 'url', 'class_id'] as const,
-  },
-  materials: {
-    schema: `
-      CREATE TABLE IF NOT EXISTS materials (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        link TEXT NOT NULL,
-        class_id INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `,
-    columns: ['title', 'link', 'class_id'] as const,
-  },
-  notices: {
-    schema: `
-      CREATE TABLE IF NOT EXISTS notices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        class_id INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `,
-    columns: ['title', 'content', 'class_id'] as const,
-  },
-  feedback: {
-    schema: `
-      CREATE TABLE IF NOT EXISTS feedback (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        class_id INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `,
-    columns: ['title', 'content', 'class_id'] as const,
-  },
+type VideoRow = {
+  id: number;
+  title: string;
+  url: string;
+  description: string | null;
+  class_id: number;
+  created_at: string;
+  display_order: number | null;
 };
 
-type TableName = keyof typeof TABLE_CONFIG;
-
-const getTableName = (path: string): TableName => {
-  const [, , table] = path.split('/');
-  if (!table || !(table in TABLE_CONFIG)) {
-    throw new Error('유효하지 않은 테이블입니다.');
-  }
-  return table as TableName;
-};
-
-const ensureTable = async (db: D1Database, table: TableName) => {
-  await db.exec(TABLE_CONFIG[table].schema);
-};
+const toVideoPayload = (row: VideoRow) => ({
+  id: row.id,
+  title: row.title,
+  url: row.url,
+  description: row.description,
+  classId: row.class_id,
+  createdAt: normaliseDate(row.created_at),
+  displayOrder: row.display_order,
+});
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.post('/', async (c) => {
-  try {
-    const table = getTableName(c.req.path);
-    await ensureTable(c.env.DB, table);
-
-    const body = await c.req.json();
-    const config = TABLE_CONFIG[table];
-    const values = config.columns.map((column) => body[column]);
-
-    const placeholders = values.map(() => '?').join(', ');
-    const query = `INSERT INTO ${table} (${config.columns.join(', ')}) VALUES (${placeholders})`;
-    await c.env.DB.prepare(query).bind(...values).run();
-
-    return c.json({ success: true, message: '등록 성공' });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ success: false, message }, 500);
-  }
-});
-
 app.get('/', async (c) => {
-  try {
-    const table = getTableName(c.req.path);
-    await ensureTable(c.env.DB, table);
+  await ensureBaseSchema(c.env.DB);
 
-    const classId = c.req.query('class_id');
-    const query = classId
-      ? `SELECT * FROM ${table} WHERE class_id = ? ORDER BY created_at DESC`
-      : `SELECT * FROM ${table} ORDER BY created_at DESC`;
+  const classIdParam = c.req.query('classId') ?? c.req.query('class_id');
+  const classId = classIdParam ? Number(classIdParam) : null;
 
-    const { results } = classId
-      ? await c.env.DB.prepare(query).bind(classId).all()
-      : await c.env.DB.prepare(query).all();
+  const statement = classId
+    ? c.env.DB.prepare(
+        'SELECT * FROM videos WHERE class_id = ? ORDER BY display_order ASC, created_at DESC',
+      ).bind(classId)
+    : c.env.DB.prepare('SELECT * FROM videos ORDER BY class_id ASC, display_order ASC, created_at DESC');
 
-    return c.json({ success: true, data: results ?? [] });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ success: false, message }, 500);
-  }
+  const { results } = await statement.all<VideoRow>();
+  const videos = (results ?? []).map(toVideoPayload);
+
+  return c.json({ success: true, videos });
 });
 
-app.delete('/', async (c) => {
-  try {
-    const table = getTableName(c.req.path);
-    await ensureTable(c.env.DB, table);
+app.post('/', async (c) => {
+  await ensureBaseSchema(c.env.DB);
 
-    const id = c.req.query('id');
-    if (!id) {
-      throw new Error('id는 필수 값입니다.');
-    }
+  const body = await c.req.json<{
+    title?: string;
+    url?: string;
+    description?: string | null;
+    classId?: number;
+  }>();
 
-    await c.env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
-    return c.json({ success: true, message: '삭제 완료' });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ success: false, message }, 500);
+  const title = body.title?.trim();
+  const url = body.url?.trim();
+  const description = body.description?.trim() ?? null;
+  const classId = body.classId;
+
+  if (!title) {
+    return c.json({ success: false, message: '영상 제목은 필수입니다.' }, 400);
   }
+
+  if (!url) {
+    return c.json({ success: false, message: '영상 주소 또는 코드를 입력해주세요.' }, 400);
+  }
+
+  if (typeof classId !== 'number') {
+    return c.json({ success: false, message: '수업 정보를 찾을 수 없습니다.' }, 400);
+  }
+
+  const { results: orderResult } = await c.env.DB
+    .prepare('SELECT COALESCE(MAX(display_order), -1) as maxOrder FROM videos WHERE class_id = ?')
+    .bind(classId)
+    .all<{ maxOrder: number }>();
+
+  const nextOrder = (orderResult?.[0]?.maxOrder ?? -1) + 1;
+
+  const insertResult = await c.env.DB
+    .prepare(
+      'INSERT INTO videos (title, url, description, class_id, display_order) VALUES (?, ?, ?, ?, ?)',
+    )
+    .bind(title, url, description, classId, nextOrder)
+    .run();
+
+  const insertedId = insertResult.meta.last_row_id;
+
+  const inserted = await c.env.DB
+    .prepare('SELECT * FROM videos WHERE id = ?')
+    .bind(insertedId)
+    .first<VideoRow>();
+
+  if (!inserted) {
+    return c.json({ success: false, message: '저장된 영상을 찾을 수 없습니다.' }, 500);
+  }
+
+  return c.json({ success: true, video: toVideoPayload(inserted) });
+});
+
+app.put('/order', async (c) => {
+  await ensureBaseSchema(c.env.DB);
+
+  const body = await c.req.json<{ classId?: number; orderedIds?: number[] }>();
+  const classId = body.classId;
+  const orderedIds = body.orderedIds;
+
+  if (typeof classId !== 'number' || !Array.isArray(orderedIds)) {
+    return c.json({ success: false, message: '정렬 정보를 확인할 수 없습니다.' }, 400);
+  }
+
+  const updateStatements = orderedIds.map((id, index) =>
+    c.env.DB.prepare('UPDATE videos SET display_order = ? WHERE id = ? AND class_id = ?').bind(
+      index,
+      id,
+      classId,
+    ),
+  );
+
+  for (const statement of updateStatements) {
+    await statement.run();
+  }
+
+  const { results } = await c.env.DB
+    .prepare('SELECT * FROM videos WHERE class_id = ? ORDER BY display_order ASC, created_at DESC')
+    .bind(classId)
+    .all<VideoRow>();
+
+  const videos = (results ?? []).map(toVideoPayload);
+
+  return c.json({ success: true, videos });
+});
+
+app.delete('/:id', async (c) => {
+  await ensureBaseSchema(c.env.DB);
+
+  const id = Number(c.req.param('id'));
+
+  if (Number.isNaN(id)) {
+    return c.json({ success: false, message: '삭제할 영상을 찾을 수 없습니다.' }, 400);
+  }
+
+  await c.env.DB.prepare('DELETE FROM videos WHERE id = ?').bind(id).run();
+
+  return c.json({ success: true });
 });
 
 export default app;
