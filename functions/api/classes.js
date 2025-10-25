@@ -198,18 +198,57 @@ const getClassTableColumns = async (db) => {
   return columns;
 };
 
+const hasColumn = (columns, candidate) => columns.has(candidate.toLowerCase());
+
+const resolveColumnName = (columns, ...candidates) => {
+  for (const candidate of candidates) {
+    if (candidate && hasColumn(columns, candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
+const findIdColumn = (columns) => resolveColumnName(columns, 'id', 'class_id', 'classId', 'classID');
+
+const buildOrderByClause = (columns, tableAlias = '') => {
+  const prefix = tableAlias ? `${tableAlias}.` : '';
+  const orderBy = [];
+
+  const createdColumn = resolveColumnName(columns, 'created_at', 'createdAt');
+  if (createdColumn) {
+    orderBy.push(`${prefix}${createdColumn} DESC`);
+  }
+
+  const updatedColumn = resolveColumnName(columns, 'updated_at', 'updatedAt');
+  if (updatedColumn) {
+    orderBy.push(`${prefix}${updatedColumn} DESC`);
+  }
+
+  const idColumn = findIdColumn(columns);
+  if (idColumn) {
+    orderBy.push(`${prefix}${idColumn} DESC`);
+  }
+
+  if (orderBy.length === 0) {
+    return '';
+  }
+
+  return ` ORDER BY ${orderBy.join(', ')}`;
+};
+
 const trySelectWithCategory = async (db, columns) => {
-  if (!columns.has('category_id')) {
+  if (!hasColumn(columns, 'category_id')) {
     return null;
   }
 
   try {
+    const orderBy = buildOrderByClause(columns, 'c');
     const { results } = await db
       .prepare(
         `SELECT c.*, cat.name AS category_name
          FROM classes c
-         LEFT JOIN categories cat ON c.category_id = cat.id
-         ORDER BY c.created_at DESC, c.updated_at DESC, c.id DESC`,
+         LEFT JOIN categories cat ON c.category_id = cat.id${orderBy}`,
       )
       .all();
 
@@ -226,9 +265,9 @@ const fetchClassRows = async (db, columns) => {
     return joined;
   }
 
-  const { results } = await db
-    .prepare('SELECT * FROM classes ORDER BY created_at DESC, updated_at DESC, id DESC')
-    .all();
+  const orderBy = buildOrderByClause(columns);
+  const query = `SELECT * FROM classes${orderBy}`;
+  const { results } = await db.prepare(query).all();
 
   return results ?? [];
 };
@@ -286,16 +325,25 @@ const getRowValue = (row, ...keys) => {
 };
 
 const toClassPayload = (row) => {
-  const id = Number(row.id);
-  const name = toNonEmptyString(row.name) ?? '';
+  const rawId = getRowValue(row, 'id', 'class_id', 'classId', 'classID');
+  const id = Number(rawId);
+  const name = toNonEmptyString(getRowValue(row, 'name', 'class_name', 'className')) ?? '';
 
-  const code = parseStringColumn(row, 'code', 'class_code');
-  const category = parseStringColumn(row, 'category', 'category_name', 'categoryName');
+  const code = parseStringColumn(row, 'code', 'class_code', 'classCode');
+  const category = parseStringColumn(row, 'category', 'class_category', 'category_name', 'categoryName');
   const startDate = parseDateColumn(row, 'start_date', 'startDate');
   const endDate = parseDateColumn(row, 'end_date', 'endDate');
 
   const assignmentUploadTime = normaliseAssignmentUploadTime(
-    getRowValue(row, 'assignment_upload_time', 'assignmentUploadTime', 'upload_limit', 'uploadLimit'),
+    getRowValue(
+      row,
+      'assignment_upload_time',
+      'assignmentUploadTime',
+      'assignment_submission_time',
+      'assignmentSubmissionTime',
+      'upload_limit',
+      'uploadLimit',
+    ),
     'all_day',
   );
 
@@ -313,7 +361,9 @@ const toClassPayload = (row) => {
     ),
   );
 
-  const deliveryMethods = parseStoredArray(getRowValue(row, 'delivery_methods', 'deliveryMethods'));
+  const deliveryMethods = parseStoredArray(
+    getRowValue(row, 'delivery_methods', 'delivery_method', 'deliveryMethods', 'deliveryMethod'),
+  );
 
   const isActive = parseBooleanFlag(getRowValue(row, 'is_active', 'isActive', 'active', 'status'), true);
 
@@ -337,7 +387,12 @@ const toClassPayload = (row) => {
 };
 
 const buildInsertStatement = async (db, columns, payload) => {
-  const fields = ['name'];
+  const nameColumn = resolveColumnName(columns, 'name', 'class_name', 'className');
+  if (!nameColumn) {
+    throw new Error("classes 테이블에 'name' 또는 'class_name' 컬럼이 필요합니다.");
+  }
+
+  const fields = [nameColumn];
   const placeholders = ['?'];
   const values = [payload.name];
 
@@ -347,54 +402,88 @@ const buildInsertStatement = async (db, columns, payload) => {
     values.push(value);
   };
 
-  if (columns.has('code')) {
-    pushField('code', payload.code);
+  const codeColumn = resolveColumnName(columns, 'code', 'class_code', 'classCode');
+  if (codeColumn) {
+    pushField(codeColumn, payload.code);
   }
 
-  if (columns.has('category')) {
-    pushField('category', payload.category);
+  const categoryColumn = resolveColumnName(columns, 'category', 'class_category', 'classCategory');
+  if (categoryColumn) {
+    pushField(categoryColumn, payload.category);
   }
 
-  if (columns.has('category_id')) {
+  const categoryIdColumn = resolveColumnName(columns, 'category_id', 'categoryId');
+  if (categoryIdColumn) {
     const categoryId = await resolveCategoryId(db, payload.category);
-    pushField('category_id', categoryId);
+    pushField(categoryIdColumn, categoryId);
   }
 
-  if (columns.has('start_date')) {
-    pushField('start_date', payload.startDate);
+  const startDateColumn = resolveColumnName(columns, 'start_date', 'startDate');
+  if (startDateColumn) {
+    pushField(startDateColumn, payload.startDate);
   }
 
-  if (columns.has('end_date')) {
-    pushField('end_date', payload.endDate);
+  const endDateColumn = resolveColumnName(columns, 'end_date', 'endDate');
+  if (endDateColumn) {
+    pushField(endDateColumn, payload.endDate);
   }
 
-  if (columns.has('assignment_upload_time')) {
-    pushField('assignment_upload_time', payload.assignmentUploadTime);
-  } else if (columns.has('upload_limit')) {
-    pushField('upload_limit', payload.assignmentUploadTime);
+  const assignmentTimeColumn = resolveColumnName(
+    columns,
+    'assignment_upload_time',
+    'assignmentUploadTime',
+    'assignment_submission_time',
+    'assignmentSubmissionTime',
+  );
+  if (assignmentTimeColumn) {
+    pushField(assignmentTimeColumn, payload.assignmentUploadTime);
+  } else {
+    const uploadLimitColumn = resolveColumnName(columns, 'upload_limit', 'uploadLimit');
+    if (uploadLimitColumn) {
+      pushField(uploadLimitColumn, payload.assignmentUploadTime);
+    }
   }
 
   const daysJson = JSON.stringify(payload.assignmentUploadDays);
-  if (columns.has('assignment_upload_days')) {
-    pushField('assignment_upload_days', daysJson);
-  } else if (columns.has('upload_day')) {
-    pushField('upload_day', payload.assignmentUploadDays.join(','));
+  const assignmentDaysColumn = resolveColumnName(
+    columns,
+    'assignment_upload_days',
+    'assignmentUploadDays',
+    'assignment_submission_days',
+    'assignmentSubmissionDays',
+  );
+  if (assignmentDaysColumn) {
+    pushField(assignmentDaysColumn, daysJson);
+  } else {
+    const uploadDayColumn = resolveColumnName(columns, 'upload_day', 'uploadDay');
+    if (uploadDayColumn) {
+      pushField(uploadDayColumn, payload.assignmentUploadDays.join(','));
+    }
   }
 
-  if (columns.has('delivery_methods')) {
-    pushField('delivery_methods', JSON.stringify(payload.deliveryMethods));
+  const deliveryListColumn = resolveColumnName(columns, 'delivery_methods', 'deliveryMethods');
+  if (deliveryListColumn) {
+    pushField(deliveryListColumn, JSON.stringify(payload.deliveryMethods));
+  } else {
+    const deliveryColumn = resolveColumnName(columns, 'delivery_method', 'deliveryMethod');
+    if (deliveryColumn) {
+      pushField(deliveryColumn, payload.deliveryMethods.join(','));
+    }
   }
 
-  if (columns.has('is_active')) {
-    pushField('is_active', payload.isActive ? 1 : 0);
+  const activeColumn = resolveColumnName(columns, 'is_active', 'isActive', 'active', 'status');
+  if (activeColumn) {
+    pushField(activeColumn, payload.isActive ? 1 : 0);
   }
 
   const now = new Date().toISOString();
-  if (columns.has('created_at')) {
-    pushField('created_at', now);
+  const createdColumn = resolveColumnName(columns, 'created_at', 'createdAt');
+  if (createdColumn) {
+    pushField(createdColumn, now);
   }
-  if (columns.has('updated_at')) {
-    pushField('updated_at', now);
+  const updatedColumn = resolveColumnName(columns, 'updated_at', 'updatedAt');
+  if (updatedColumn) {
+    pushField(updatedColumn, now);
   }
 
   const sql = `INSERT INTO classes (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`;
@@ -403,7 +492,12 @@ const buildInsertStatement = async (db, columns, payload) => {
 };
 
 const buildUpdateStatement = async (db, columns, id, payload) => {
-  const setClauses = ['name = ?'];
+  const nameColumn = resolveColumnName(columns, 'name', 'class_name', 'className');
+  if (!nameColumn) {
+    throw new Error("classes 테이블에 'name' 또는 'class_name' 컬럼이 필요합니다.");
+  }
+
+  const setClauses = [`${nameColumn} = ?`];
   const values = [payload.name];
 
   const pushSet = (column, value) => {
@@ -411,54 +505,88 @@ const buildUpdateStatement = async (db, columns, id, payload) => {
     values.push(value);
   };
 
-  if (columns.has('code')) {
-    pushSet('code', payload.code);
+  const codeColumn = resolveColumnName(columns, 'code', 'class_code', 'classCode');
+  if (codeColumn) {
+    pushSet(codeColumn, payload.code);
   }
 
-  if (columns.has('category')) {
-    pushSet('category', payload.category);
+  const categoryColumn = resolveColumnName(columns, 'category', 'class_category', 'classCategory');
+  if (categoryColumn) {
+    pushSet(categoryColumn, payload.category);
   }
 
-  if (columns.has('category_id')) {
+  const categoryIdColumn = resolveColumnName(columns, 'category_id', 'categoryId');
+  if (categoryIdColumn) {
     const categoryId = await resolveCategoryId(db, payload.category);
-    pushSet('category_id', categoryId);
+    pushSet(categoryIdColumn, categoryId);
   }
 
-  if (columns.has('start_date')) {
-    pushSet('start_date', payload.startDate);
+  const startDateColumn = resolveColumnName(columns, 'start_date', 'startDate');
+  if (startDateColumn) {
+    pushSet(startDateColumn, payload.startDate);
   }
 
-  if (columns.has('end_date')) {
-    pushSet('end_date', payload.endDate);
+  const endDateColumn = resolveColumnName(columns, 'end_date', 'endDate');
+  if (endDateColumn) {
+    pushSet(endDateColumn, payload.endDate);
   }
 
-  if (columns.has('assignment_upload_time')) {
-    pushSet('assignment_upload_time', payload.assignmentUploadTime);
-  } else if (columns.has('upload_limit')) {
-    pushSet('upload_limit', payload.assignmentUploadTime);
+  const assignmentTimeColumn = resolveColumnName(
+    columns,
+    'assignment_upload_time',
+    'assignmentUploadTime',
+    'assignment_submission_time',
+    'assignmentSubmissionTime',
+  );
+  if (assignmentTimeColumn) {
+    pushSet(assignmentTimeColumn, payload.assignmentUploadTime);
+  } else {
+    const uploadLimitColumn = resolveColumnName(columns, 'upload_limit', 'uploadLimit');
+    if (uploadLimitColumn) {
+      pushSet(uploadLimitColumn, payload.assignmentUploadTime);
+    }
   }
 
   const daysJson = JSON.stringify(payload.assignmentUploadDays);
-  if (columns.has('assignment_upload_days')) {
-    pushSet('assignment_upload_days', daysJson);
-  } else if (columns.has('upload_day')) {
-    pushSet('upload_day', payload.assignmentUploadDays.join(','));
+  const assignmentDaysColumn = resolveColumnName(
+    columns,
+    'assignment_upload_days',
+    'assignmentUploadDays',
+    'assignment_submission_days',
+    'assignmentSubmissionDays',
+  );
+  if (assignmentDaysColumn) {
+    pushSet(assignmentDaysColumn, daysJson);
+  } else {
+    const uploadDayColumn = resolveColumnName(columns, 'upload_day', 'uploadDay');
+    if (uploadDayColumn) {
+      pushSet(uploadDayColumn, payload.assignmentUploadDays.join(','));
+    }
   }
 
-  if (columns.has('delivery_methods')) {
-    pushSet('delivery_methods', JSON.stringify(payload.deliveryMethods));
+  const deliveryListColumn = resolveColumnName(columns, 'delivery_methods', 'deliveryMethods');
+  if (deliveryListColumn) {
+    pushSet(deliveryListColumn, JSON.stringify(payload.deliveryMethods));
+  } else {
+    const deliveryColumn = resolveColumnName(columns, 'delivery_method', 'deliveryMethod');
+    if (deliveryColumn) {
+      pushSet(deliveryColumn, payload.deliveryMethods.join(','));
+    }
   }
 
-  if (columns.has('is_active')) {
-    pushSet('is_active', payload.isActive ? 1 : 0);
+  const activeColumn = resolveColumnName(columns, 'is_active', 'isActive', 'active', 'status');
+  if (activeColumn) {
+    pushSet(activeColumn, payload.isActive ? 1 : 0);
   }
 
   const now = new Date().toISOString();
-  if (columns.has('updated_at')) {
-    pushSet('updated_at', now);
+  const updatedColumn = resolveColumnName(columns, 'updated_at', 'updatedAt');
+  if (updatedColumn) {
+    pushSet(updatedColumn, now);
   }
 
-  const sql = `UPDATE classes SET ${setClauses.join(', ')} WHERE id = ?`;
+  const idColumn = findIdColumn(columns) ?? 'id';
+  const sql = `UPDATE classes SET ${setClauses.join(', ')} WHERE ${idColumn} = ?`;
   values.push(id);
 
   return { sql, values };
@@ -506,6 +634,7 @@ app.post('/', async (c) => {
     const isActive = parseBooleanFlag(payload.isActive, true);
 
     const columns = await getClassTableColumns(c.env.DB);
+    const idColumn = findIdColumn(columns) ?? 'id';
     const { sql, values } = await buildInsertStatement(c.env.DB, columns, {
       name,
       code,
@@ -521,10 +650,19 @@ app.post('/', async (c) => {
     const insertResult = await c.env.DB.prepare(sql).bind(...values).run();
     const insertedId = insertResult?.meta?.last_row_id;
 
-    const inserted = await c.env.DB
-      .prepare('SELECT * FROM classes WHERE id = ?')
-      .bind(insertedId)
-      .first();
+    let inserted = null;
+    if (insertedId != null) {
+      inserted = await c.env.DB
+        .prepare(`SELECT * FROM classes WHERE ${idColumn} = ?`)
+        .bind(insertedId)
+        .first();
+    }
+
+    if (!inserted) {
+      const orderBy = buildOrderByClause(columns);
+      const fallbackQuery = `SELECT * FROM classes${orderBy} LIMIT 1`;
+      inserted = await c.env.DB.prepare(fallbackQuery).first();
+    }
 
     if (!inserted) {
       return c.json({ success: false, message: '생성된 수업 정보를 찾을 수 없습니다.' }, 500);
@@ -545,8 +683,11 @@ app.put('/:id', async (c) => {
       return c.json({ success: false, message: '수정할 수업을 찾을 수 없습니다.' }, 400);
     }
 
+    const columns = await getClassTableColumns(c.env.DB);
+    const idColumn = findIdColumn(columns) ?? 'id';
+
     const existing = await c.env.DB
-      .prepare('SELECT * FROM classes WHERE id = ?')
+      .prepare(`SELECT * FROM classes WHERE ${idColumn} = ?`)
       .bind(id)
       .first();
 
@@ -561,15 +702,21 @@ app.put('/:id', async (c) => {
       return c.json({ success: false, message: '유효한 JSON 본문이 필요합니다.' }, 400);
     }
 
-    const existingName = toNonEmptyString(existing.name) ?? '';
+    const existingName = toNonEmptyString(getRowValue(existing, 'name', 'class_name', 'className')) ?? '';
     const name = toNonEmptyString(payload.name) ?? existingName;
 
-    const existingCode = parseStringColumn(existing, 'code', 'class_code');
+    const existingCode = parseStringColumn(existing, 'code', 'class_code', 'classCode');
     const code = Object.prototype.hasOwnProperty.call(payload, 'code')
       ? toNullableString(payload.code)
       : existingCode;
 
-    const existingCategory = parseStringColumn(existing, 'category', 'category_name', 'categoryName');
+    const existingCategory = parseStringColumn(
+      existing,
+      'category',
+      'class_category',
+      'category_name',
+      'categoryName',
+    );
     const category = Object.prototype.hasOwnProperty.call(payload, 'category')
       ? toNullableString(payload.category)
       : existingCategory;
@@ -606,15 +753,21 @@ app.put('/:id', async (c) => {
       existing,
       'assignment_upload_time',
       'assignmentUploadTime',
+      'assignment_submission_time',
+      'assignmentSubmissionTime',
       'upload_limit',
       'uploadLimit',
     );
     const assignmentUploadTime = normaliseAssignmentUploadTime(
-      Object.prototype.hasOwnProperty.call(payload, 'assignmentUploadTime') ? payload.assignmentUploadTime : existingUploadTime,
+      Object.prototype.hasOwnProperty.call(payload, 'assignmentUploadTime')
+        ? payload.assignmentUploadTime
+        : existingUploadTime,
       normaliseAssignmentUploadTime(existingUploadTime, 'all_day'),
     );
 
-    const existingDeliveryMethods = parseStoredArray(getRowValue(existing, 'delivery_methods', 'deliveryMethods'));
+    const existingDeliveryMethods = parseStoredArray(
+      getRowValue(existing, 'delivery_methods', 'delivery_method', 'deliveryMethods', 'deliveryMethod'),
+    );
     const deliveryMethods = normaliseDeliveryMethods(
       Object.prototype.hasOwnProperty.call(payload, 'deliveryMethods') ? payload.deliveryMethods : undefined,
       existingDeliveryMethods.length > 0 ? existingDeliveryMethods : ['영상보기'],
@@ -629,7 +782,6 @@ app.put('/:id', async (c) => {
       existingIsActive,
     );
 
-    const columns = await getClassTableColumns(c.env.DB);
     const { sql, values } = await buildUpdateStatement(c.env.DB, columns, id, {
       name,
       code,
@@ -645,7 +797,7 @@ app.put('/:id', async (c) => {
     await c.env.DB.prepare(sql).bind(...values).run();
 
     const updated = await c.env.DB
-      .prepare('SELECT * FROM classes WHERE id = ?')
+      .prepare(`SELECT * FROM classes WHERE ${idColumn} = ?`)
       .bind(id)
       .first();
 
@@ -668,8 +820,11 @@ app.delete('/:id', async (c) => {
       return c.json({ success: false, message: '삭제할 수업을 찾을 수 없습니다.' }, 400);
     }
 
+    const columns = await getClassTableColumns(c.env.DB);
+    const idColumn = findIdColumn(columns) ?? 'id';
+
     const existing = await c.env.DB
-      .prepare('SELECT id FROM classes WHERE id = ?')
+      .prepare(`SELECT ${idColumn} FROM classes WHERE ${idColumn} = ?`)
       .bind(id)
       .first();
 
@@ -677,7 +832,7 @@ app.delete('/:id', async (c) => {
       return c.json({ success: false, message: '수업 정보를 찾을 수 없습니다.' }, 404);
     }
 
-    await c.env.DB.prepare('DELETE FROM classes WHERE id = ?').bind(id).run();
+    await c.env.DB.prepare(`DELETE FROM classes WHERE ${idColumn} = ?`).bind(id).run();
 
     return c.json({ success: true });
   } catch (error) {
