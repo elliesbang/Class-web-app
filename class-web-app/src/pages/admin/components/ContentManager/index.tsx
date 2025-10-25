@@ -257,7 +257,7 @@ const ContentManager = () => {
             </label>
             <select
               id="classSelect"
-              className="rounded-2xl border border-[#e9dccf] bg-white px-4 py-2 text-sm font-semibold text-[#404040] focus:border-[#ffd331] focus:outline-none"
+              className="categorySelect rounded-2xl border border-[#e9dccf] bg-white px-4 py-2 text-sm font-semibold text-[#404040] focus:border-[#ffd331] focus:outline-none"
               value={selectedClassId ?? ''}
               onChange={(event) => {
                 const value = event.target.value;

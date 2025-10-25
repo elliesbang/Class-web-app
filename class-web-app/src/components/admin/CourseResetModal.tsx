@@ -23,7 +23,7 @@ const CourseResetModal = ({ isOpen, courses, selectedCourse, onSelectCourse, onC
           </label>
           <select
             id="course-select"
-            className="mt-2 w-full rounded-xl border border-[#e9dccf] bg-[#fdf8f2] px-3 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none"
+            className="categorySelect mt-2 w-full rounded-xl border border-[#e9dccf] bg-[#fdf8f2] px-3 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none"
             value={selectedCourse ?? ''}
             onChange={(event) => onSelectCourse(event.target.value)}
           >

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { AdminDataProvider } from './data/AdminDataContext';
 import { AdminClassProvider } from './data/AdminClassContext';
+import { AdminCategoryProvider } from './data/AdminCategoryContext';
 
 const menuItems = [
   { label: '대시보드 홈', icon: '🏠', to: '/admin', end: true },
@@ -65,9 +66,10 @@ const AdminLayout = () => {
   }
 
   return (
-    <AdminClassProvider>
-      <AdminDataProvider>
-        <div className="flex min-h-screen bg-[#f5eee9] text-gray-800">
+    <AdminCategoryProvider>
+      <AdminClassProvider>
+        <AdminDataProvider>
+          <div className="flex min-h-screen bg-[#f5eee9] text-gray-800">
         <div
           className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-white/80 p-6 shadow-xl transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
@@ -145,8 +147,9 @@ const AdminLayout = () => {
         </main>
       </div>
     </div>
-      </AdminDataProvider>
-    </AdminClassProvider>
+        </AdminDataProvider>
+      </AdminClassProvider>
+    </AdminCategoryProvider>
   );
 };
 

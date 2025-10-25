@@ -1,8 +1,8 @@
-import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import type { AssignmentUploadTimeOption, ClassFormPayload, ClassInfo } from '../../lib/api';
 import { useAdminClasses } from './data/AdminClassContext';
+import { useAdminCategories } from './data/AdminCategoryContext';
 
-const CATEGORY_OPTIONS = ['이얼챌', '캔디마', '나캔디', '캔디수', '미치나', '나컬작'];
 const DELIVERY_METHOD_OPTIONS = ['영상보기', '과제업로드', '피드백보기', '공지보기', '자료보기'];
 const WEEKDAY_OPTIONS = ['월', '화', '수', '목', '금', '토', '일'];
 const ASSIGNMENT_UPLOAD_TIME_LABELS: Record<AssignmentUploadTimeOption, string> = {
@@ -44,10 +44,10 @@ const toDateInputValue = (value: string | null) => {
   return value.slice(0, 10);
 };
 
-const createInitialFormState = (): ClassFormState => ({
+const createInitialFormState = (defaultCategory: string): ClassFormState => ({
   name: '',
   code: generateClassCode(),
-  category: CATEGORY_OPTIONS[0],
+  category: defaultCategory,
   startDate: '',
   endDate: '',
   assignmentUploadTime: 'all_day',
@@ -63,15 +63,45 @@ const normaliseDays = (input: string[]) => {
 
 const AdminClassManagement = () => {
   const { classes, isLoading, error, refresh, createClass, updateClass, deleteClass } = useAdminClasses();
+  const { categories } = useAdminCategories();
   const [filters, setFilters] = useState({ name: '', code: '', category: '전체' });
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formState, setFormState] = useState<ClassFormState>(createInitialFormState);
+  const categoryOptions = useMemo(
+    () => categories.map((category) => category.name).filter((name) => name.length > 0),
+    [categories],
+  );
+  const defaultCategory = categoryOptions[0] ?? '';
+  const [formState, setFormState] = useState<ClassFormState>(() => createInitialFormState(defaultCategory));
   const [editingClass, setEditingClass] = useState<ClassInfo | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ClassInfo | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setFilters((prev) => {
+      if (prev.category === '전체') {
+        return prev;
+      }
+      if (!categoryOptions.includes(prev.category)) {
+        return { ...prev, category: '전체' };
+      }
+      return prev;
+    });
+  }, [categoryOptions]);
+
+  useEffect(() => {
+    setFormState((prev) => {
+      if (categoryOptions.length === 0) {
+        return prev.category === '' ? prev : { ...prev, category: '' };
+      }
+      if (prev.category && categoryOptions.includes(prev.category)) {
+        return prev;
+      }
+      return { ...prev, category: categoryOptions[0] };
+    });
+  }, [categoryOptions]);
 
   const filteredClasses = useMemo(() => {
     const keywordName = filters.name.trim().toLowerCase();
@@ -89,7 +119,7 @@ const AdminClassManagement = () => {
   const allDaysSelected = formState.assignmentUploadDays.length === WEEKDAY_OPTIONS.length;
 
   const resetForm = () => {
-    setFormState(createInitialFormState());
+    setFormState(createInitialFormState(defaultCategory));
     setFormError(null);
     setEditingClass(null);
   };
@@ -101,10 +131,12 @@ const AdminClassManagement = () => {
 
   const openEditModal = (target: ClassInfo) => {
     setEditingClass(target);
+    const resolvedCategory = target.category && target.category.trim().length > 0 ? target.category : defaultCategory;
+    const categoryForForm = categoryOptions.includes(resolvedCategory) ? resolvedCategory : defaultCategory;
     setFormState({
       name: target.name,
       code: target.code || generateClassCode(),
-      category: target.category || CATEGORY_OPTIONS[0],
+      category: categoryForForm,
       startDate: toDateInputValue(target.startDate),
       endDate: toDateInputValue(target.endDate),
       assignmentUploadTime: target.assignmentUploadTime ?? 'all_day',
@@ -196,6 +228,10 @@ const AdminClassManagement = () => {
     }
     if (!formState.code.trim()) {
       setFormError('수업 코드를 입력해주세요.');
+      return;
+    }
+    if (!formState.category.trim()) {
+      setFormError('카테고리를 선택해주세요.');
       return;
     }
     if (formState.deliveryMethods.length === 0) {
@@ -350,10 +386,10 @@ const formatAssignmentTime = (value: AssignmentUploadTimeOption | string | undef
               name="category"
               value={filters.category}
               onChange={handleFilterChange}
-              className="rounded-xl border border-[#e9dccf] bg-[#fdf7f0] px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
+              className="categorySelect rounded-xl border border-[#e9dccf] bg-[#fdf7f0] px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
             >
               <option value="전체">전체</option>
-              {CATEGORY_OPTIONS.map((option) => (
+              {categoryOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -494,13 +530,18 @@ const formatAssignmentTime = (value: AssignmentUploadTimeOption | string | undef
                       name="category"
                       value={formState.category}
                       onChange={handleInputChange}
-                      className="rounded-xl border border-[#e9dccf] bg-white px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
+                      className="categorySelect rounded-xl border border-[#e9dccf] bg-white px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
+                      disabled={categoryOptions.length === 0}
                     >
-                      {CATEGORY_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
+                      {categoryOptions.length === 0 ? (
+                        <option value="">카테고리를 등록해주세요</option>
+                      ) : (
+                        categoryOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))
+                      )}
                     </select>
                   </label>
 

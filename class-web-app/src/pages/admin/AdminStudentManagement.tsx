@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useAdminCategories } from './data/AdminCategoryContext';
 
 type StudentStatus = '수강 중' | '완료' | '중단';
 
@@ -52,7 +53,7 @@ const statusBadgeClassNames: Record<StudentStatus, string> = {
   중단: 'bg-red-100 text-red-700 border border-red-200',
 };
 
- const AdminStudentManagement = () => {
+const AdminStudentManagement = () => {
   // TODO: Replace with D1 DB integration and sync with course upload pipeline.
   const [students] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,11 +61,34 @@ const statusBadgeClassNames: Record<StudentStatus, string> = {
   const [statusFilter, setStatusFilter] = useState<'전체' | StudentStatus>('전체');
   const [showOnlyMissingAssignments, setShowOnlyMissingAssignments] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const { categories } = useAdminCategories();
 
   const courseOptions = useMemo(() => {
-    const uniqueCourses = Array.from(new Set(students.map((student) => student.course)));
-    return ['전체', ...uniqueCourses];
-  }, [students]);
+    const uniqueCourses = new Set<string>();
+    categories.forEach((category) => {
+      const name = category.name.trim();
+      if (name.length > 0) {
+        uniqueCourses.add(name);
+      }
+    });
+    students.forEach((student) => {
+      const name = student.course.trim();
+      if (name.length > 0) {
+        uniqueCourses.add(name);
+      }
+    });
+    const sorted = Array.from(uniqueCourses).sort((a, b) => a.localeCompare(b, 'ko', { sensitivity: 'base' }));
+    return ['전체', ...sorted];
+  }, [categories, students]);
+
+  useEffect(() => {
+    if (courseFilter === '전체') {
+      return;
+    }
+    if (!courseOptions.includes(courseFilter)) {
+      setCourseFilter('전체');
+    }
+  }, [courseFilter, courseOptions]);
 
   const filteredStudents = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -157,7 +181,7 @@ const statusBadgeClassNames: Record<StudentStatus, string> = {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <select
-                className="rounded-full border border-[#e9dccf] bg-white px-4 py-2 text-sm text-[#404040] shadow-sm focus:border-[#ffd331] focus:outline-none"
+                className="categorySelect rounded-full border border-[#e9dccf] bg-white px-4 py-2 text-sm text-[#404040] shadow-sm focus:border-[#ffd331] focus:outline-none"
                 value={courseFilter}
                 onChange={(event) => setCourseFilter(event.target.value)}
               >

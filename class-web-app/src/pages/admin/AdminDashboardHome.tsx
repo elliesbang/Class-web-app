@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Toast, { ToastVariant } from '../../components/admin/Toast';
 import { getMaterials, getNotices, getVideos } from '../../lib/api';
-import { DEFAULT_CLASS_LIST, DEFAULT_CLASS_NAME_BY_ID } from '../../lib/default-classes';
+import { useAdminCategories } from './data/AdminCategoryContext';
 
 type DashboardStat = {
   title: string;
@@ -31,6 +31,7 @@ const AdminDashboardHome = () => {
   const [sections, setSections] = useState<DashboardSection[]>([]);
   const [toast, setToast] = useState<{ message: string; variant?: ToastVariant } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { categories } = useAdminCategories();
 
   const sectionDateFormatter = useMemo(
     () =>
@@ -56,17 +57,16 @@ const AdminDashboardHome = () => {
       setIsLoading(true);
 
       try {
-        const classList = DEFAULT_CLASS_LIST;
         const [videoList, materialList, noticeList] = await Promise.all([
           getVideos(),
           getMaterials(),
           getNotices(),
         ]);
 
-        const classNameById = new Map(DEFAULT_CLASS_NAME_BY_ID);
+        const classNameById = new Map(categories.map((category) => [category.id, category.name] as const));
 
         setStats([
-          { title: '등록된 수업 수', value: String(classList.length) },
+          { title: '등록된 수업 수', value: String(categories.length) },
           { title: '등록된 영상 수', value: String(videoList.length) },
           { title: '등록된 자료 수', value: String(materialList.length) },
           { title: '등록된 공지 수', value: String(noticeList.length) },
@@ -119,7 +119,7 @@ const AdminDashboardHome = () => {
     };
 
     void loadDashboardData();
-  }, [formatSectionDate]);
+  }, [categories, formatSectionDate]);
 
   return (
     <div className="space-y-8">
