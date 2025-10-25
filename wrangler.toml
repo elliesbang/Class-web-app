@@ -1,11 +1,14 @@
 name = "elliesbang-class"
-compatibility_date = "2025-10-25"
-pages_build_output_dir = "class-web-app/dist"
+compatibility_date = "2025-10-25
+
+[site]
+bucket = "./dist"
+
+[pages]
+build_output_dir = "dist"
+functions = "./functions"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_class"
 database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
-
-[[functions]]
-directory = "class-web-app/functions_local"
