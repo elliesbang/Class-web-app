@@ -1,7 +1,5 @@
 import { Hono } from 'hono';
 
-import { ensureBaseSchema } from './_utils';
-
 interface Env {
   DB: D1Database;
 }
@@ -10,20 +8,7 @@ type AssignmentUploadTime = 'all_day' | 'same_day';
 
 const VALID_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
 
-type ClassRow = {
-  id: number;
-  name: string;
-  code: string | null;
-  category: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  assignment_upload_time: string | null;
-  assignment_upload_days: string | null;
-  delivery_methods: string | null;
-  is_active: number | null;
-  created_at: string | null;
-  updated_at: string | null;
-};
+type ClassRow = Record<string, unknown>;
 
 type ClassRequestBody = {
   name?: string | null;
@@ -52,6 +37,11 @@ const toNullableString = (value: unknown): string | null => {
   if (typeof value === 'string') {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    const stringified = String(value).trim();
+    return stringified.length > 0 ? stringified : null;
   }
 
   return null;
@@ -104,13 +94,11 @@ const toStringArray = (value: unknown): string[] => {
     for (const item of value) {
       const normalised =
         typeof item === 'string' ? item.trim() : item == null ? '' : String(item).trim();
-      if (normalised.length === 0) {
+      if (normalised.length === 0 || seen.has(normalised)) {
         continue;
       }
-      if (!seen.has(normalised)) {
-        seen.add(normalised);
-        filtered.push(normalised);
-      }
+      seen.add(normalised);
+      filtered.push(normalised);
     }
 
     return filtered;
@@ -137,21 +125,31 @@ const toStringArray = (value: unknown): string[] => {
       .filter((item) => item.length > 0);
   }
 
-  return [];
-};
-
-const parseStoredArray = (value: string | null | undefined): string[] => {
   if (value == null) {
     return [];
   }
 
-  try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) {
-      return toStringArray(parsed);
+  return toStringArray(String(value));
+};
+
+const parseStoredArray = (value: unknown): string[] => {
+  if (value == null) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return toStringArray(value);
+  }
+
+  if (typeof value === 'object') {
+    try {
+      const parsed = JSON.parse(JSON.stringify(value));
+      if (Array.isArray(parsed)) {
+        return toStringArray(parsed);
+      }
+    } catch {
+      // ignore
     }
-  } catch {
-    // ignore JSON parse errors and fallback to comma separated values
   }
 
   return toStringArray(value);
@@ -177,7 +175,8 @@ const normaliseAssignmentDays = (value: unknown, fallback: string[]): string[] =
     return [...fallback];
   }
 
-  return filterValidDays(toStringArray(value));
+  const parsed = filterValidDays(toStringArray(value));
+  return parsed.length > 0 ? parsed : [...fallback];
 };
 
 const normaliseDeliveryMethods = (value: unknown, fallback: string[]): string[] => {
@@ -203,42 +202,332 @@ const normaliseAssignmentUploadTime = (
     }
   }
 
+  if (value === 'same_day') {
+    return 'same_day';
+  }
+
   return fallback;
 };
 
+const getClassTableColumns = async (db: D1Database): Promise<Set<string>> => {
+  const { results } = await db
+    .prepare("PRAGMA table_info('classes')")
+    .all<{ name: string }>();
+
+  const columns = new Set<string>();
+  for (const row of results ?? []) {
+    if (row && typeof row.name === 'string') {
+      columns.add(row.name.toLowerCase());
+    }
+  }
+
+  return columns;
+};
+
+const trySelectWithCategory = async (db: D1Database, columns: Set<string>) => {
+  if (!columns.has('category_id')) {
+    return null;
+  }
+
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT c.*, cat.name AS category_name
+         FROM classes c
+         LEFT JOIN categories cat ON c.category_id = cat.id
+         ORDER BY c.created_at DESC, c.updated_at DESC, c.id DESC`,
+      )
+      .all<ClassRow>();
+
+    return results ?? [];
+  } catch (error) {
+    console.warn('[classes] Failed to join categories table:', error);
+    return null;
+  }
+};
+
+const fetchClassRows = async (db: D1Database, columns: Set<string>) => {
+  const joined = await trySelectWithCategory(db, columns);
+  if (joined) {
+    return joined;
+  }
+
+  const { results } = await db
+    .prepare('SELECT * FROM classes ORDER BY created_at DESC, updated_at DESC, id DESC')
+    .all<ClassRow>();
+
+  return results ?? [];
+};
+
+const resolveCategoryId = async (db: D1Database, name: string | null | undefined) => {
+  if (!name) {
+    return null;
+  }
+
+  try {
+    const row = await db
+      .prepare('SELECT id FROM categories WHERE name = ? LIMIT 1')
+      .bind(name)
+      .first<{ id: number }>();
+    return row?.id ?? null;
+  } catch (error) {
+    console.warn('[classes] Failed to resolve category id:', error);
+    return null;
+  }
+};
+
+const parseDateColumn = (row: ClassRow, ...keys: string[]) => {
+  for (const key of keys) {
+    if (!(key in row)) {
+      continue;
+    }
+    const parsed = toNullableDate(row[key]);
+    if (parsed) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
+const parseStringColumn = (row: ClassRow, ...keys: string[]) => {
+  for (const key of keys) {
+    if (!(key in row)) {
+      continue;
+    }
+    const parsed = toNullableString(row[key]);
+    if (parsed !== null) {
+      return parsed;
+    }
+  }
+  return '';
+};
+
+const getRowValue = (row: ClassRow, ...keys: string[]) => {
+  for (const key of keys) {
+    if (key in row) {
+      return row[key];
+    }
+  }
+  return undefined;
+};
+
 const toClassPayload = (row: ClassRow) => {
-  const assignmentDays = filterValidDays(parseStoredArray(row.assignment_upload_days));
-  const deliveryMethods = parseStoredArray(row.delivery_methods);
+  const id = Number(row.id);
+  const name = toNonEmptyString(row.name) ?? '';
+
+  const code = parseStringColumn(row, 'code', 'class_code');
+  const category = parseStringColumn(row, 'category', 'category_name', 'categoryName');
+  const startDate = parseDateColumn(row, 'start_date', 'startDate');
+  const endDate = parseDateColumn(row, 'end_date', 'endDate');
+
+  const assignmentUploadTime = normaliseAssignmentUploadTime(
+    getRowValue(row, 'assignment_upload_time', 'assignmentUploadTime', 'upload_limit', 'uploadLimit'),
+    'all_day',
+  );
+
+  const assignmentDays = filterValidDays(
+    parseStoredArray(
+      getRowValue(
+        row,
+        'assignment_upload_days',
+        'assignmentUploadDays',
+        'assignment_submission_days',
+        'assignmentSubmissionDays',
+        'upload_day',
+        'uploadDay',
+      ),
+    ),
+  );
+
+  const deliveryMethods = parseStoredArray(getRowValue(row, 'delivery_methods', 'deliveryMethods'));
+
+  const isActive = parseBooleanFlag(getRowValue(row, 'is_active', 'isActive', 'active', 'status'), true);
+
+  const createdAt = parseDateColumn(row, 'created_at', 'createdAt');
+  const updatedAt = parseDateColumn(row, 'updated_at', 'updatedAt');
 
   return {
-    id: row.id,
-    name: row.name,
-    code: toNullableString(row.code) ?? '',
-    category: toNullableString(row.category) ?? '',
-    startDate: toNullableDate(row.start_date),
-    endDate: toNullableDate(row.end_date),
-    assignmentUploadTime: normaliseAssignmentUploadTime(row.assignment_upload_time, 'all_day'),
+    id,
+    name,
+    code: code ?? '',
+    category: category ?? '',
+    startDate,
+    endDate,
+    assignmentUploadTime,
     assignmentUploadDays: assignmentDays.length > 0 ? assignmentDays : [...VALID_WEEKDAYS],
     deliveryMethods: deliveryMethods.length > 0 ? deliveryMethods : ['영상보기'],
-    isActive: parseBooleanFlag(row.is_active, true),
-    createdAt: toNullableDate(row.created_at),
-    updatedAt: toNullableDate(row.updated_at),
+    isActive,
+    createdAt,
+    updatedAt,
   };
+};
+
+const buildInsertStatement = async (
+  db: D1Database,
+  columns: Set<string>,
+  payload: {
+    name: string;
+    code: string | null;
+    category: string | null;
+    startDate: string | null;
+    endDate: string | null;
+    assignmentUploadTime: AssignmentUploadTime;
+    assignmentUploadDays: string[];
+    deliveryMethods: string[];
+    isActive: boolean;
+  },
+) => {
+  const fields: string[] = ['name'];
+  const placeholders: string[] = ['?'];
+  const values: unknown[] = [payload.name];
+
+  const pushField = (column: string, value: unknown) => {
+    fields.push(column);
+    placeholders.push('?');
+    values.push(value);
+  };
+
+  if (columns.has('code')) {
+    pushField('code', payload.code);
+  }
+
+  if (columns.has('category')) {
+    pushField('category', payload.category);
+  }
+
+  if (columns.has('category_id')) {
+    const categoryId = await resolveCategoryId(db, payload.category);
+    pushField('category_id', categoryId);
+  }
+
+  if (columns.has('start_date')) {
+    pushField('start_date', payload.startDate);
+  }
+
+  if (columns.has('end_date')) {
+    pushField('end_date', payload.endDate);
+  }
+
+  if (columns.has('assignment_upload_time')) {
+    pushField('assignment_upload_time', payload.assignmentUploadTime);
+  } else if (columns.has('upload_limit')) {
+    pushField('upload_limit', payload.assignmentUploadTime);
+  }
+
+  const daysJson = JSON.stringify(payload.assignmentUploadDays);
+  if (columns.has('assignment_upload_days')) {
+    pushField('assignment_upload_days', daysJson);
+  } else if (columns.has('upload_day')) {
+    pushField('upload_day', payload.assignmentUploadDays.join(','));
+  }
+
+  if (columns.has('delivery_methods')) {
+    pushField('delivery_methods', JSON.stringify(payload.deliveryMethods));
+  }
+
+  if (columns.has('is_active')) {
+    pushField('is_active', payload.isActive ? 1 : 0);
+  }
+
+  const now = new Date().toISOString();
+  if (columns.has('created_at')) {
+    pushField('created_at', now);
+  }
+  if (columns.has('updated_at')) {
+    pushField('updated_at', now);
+  }
+
+  const sql = `INSERT INTO classes (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`;
+
+  return { sql, values };
+};
+
+const buildUpdateStatement = async (
+  db: D1Database,
+  columns: Set<string>,
+  id: number,
+  payload: {
+    name: string;
+    code: string | null;
+    category: string | null;
+    startDate: string | null;
+    endDate: string | null;
+    assignmentUploadTime: AssignmentUploadTime;
+    assignmentUploadDays: string[];
+    deliveryMethods: string[];
+    isActive: boolean;
+  },
+) => {
+  const setClauses: string[] = ['name = ?'];
+  const values: unknown[] = [payload.name];
+
+  const pushSet = (column: string, value: unknown) => {
+    setClauses.push(`${column} = ?`);
+    values.push(value);
+  };
+
+  if (columns.has('code')) {
+    pushSet('code', payload.code);
+  }
+
+  if (columns.has('category')) {
+    pushSet('category', payload.category);
+  }
+
+  if (columns.has('category_id')) {
+    const categoryId = await resolveCategoryId(db, payload.category);
+    pushSet('category_id', categoryId);
+  }
+
+  if (columns.has('start_date')) {
+    pushSet('start_date', payload.startDate);
+  }
+
+  if (columns.has('end_date')) {
+    pushSet('end_date', payload.endDate);
+  }
+
+  if (columns.has('assignment_upload_time')) {
+    pushSet('assignment_upload_time', payload.assignmentUploadTime);
+  } else if (columns.has('upload_limit')) {
+    pushSet('upload_limit', payload.assignmentUploadTime);
+  }
+
+  const daysJson = JSON.stringify(payload.assignmentUploadDays);
+  if (columns.has('assignment_upload_days')) {
+    pushSet('assignment_upload_days', daysJson);
+  } else if (columns.has('upload_day')) {
+    pushSet('upload_day', payload.assignmentUploadDays.join(','));
+  }
+
+  if (columns.has('delivery_methods')) {
+    pushSet('delivery_methods', JSON.stringify(payload.deliveryMethods));
+  }
+
+  if (columns.has('is_active')) {
+    pushSet('is_active', payload.isActive ? 1 : 0);
+  }
+
+  const now = new Date().toISOString();
+  if (columns.has('updated_at')) {
+    pushSet('updated_at', now);
+  }
+
+  const sql = `UPDATE classes SET ${setClauses.join(', ')} WHERE id = ?`;
+  values.push(id);
+
+  return { sql, values };
 };
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.get('/', async (c) => {
   try {
-    await ensureBaseSchema(c.env.DB);
-
-    const { results } = await c.env.DB
-      .prepare(
-        'SELECT * FROM classes ORDER BY created_at DESC, updated_at DESC, id DESC',
-      )
-      .all<ClassRow>();
-
-    const classes = (results ?? []).map(toClassPayload);
+    const columns = await getClassTableColumns(c.env.DB);
+    const rows = await fetchClassRows(c.env.DB, columns);
+    const classes = rows
+      .map(toClassPayload)
+      .filter((item) => !Number.isNaN(item.id) && item.name.length > 0);
 
     return c.json({ success: true, data: classes });
   } catch (error) {
@@ -250,8 +539,6 @@ app.get('/', async (c) => {
 
 app.post('/', async (c) => {
   try {
-    await ensureBaseSchema(c.env.DB);
-
     let payload: ClassRequestBody;
     try {
       payload = (await c.req.json<ClassRequestBody>()) ?? {};
@@ -279,35 +566,20 @@ app.post('/', async (c) => {
     const deliveryMethods = normaliseDeliveryMethods(payload.deliveryMethods, ['영상보기']);
     const isActive = parseBooleanFlag(payload.isActive, true);
 
-    const insertResult = await c.env.DB
-      .prepare(
-        `INSERT INTO classes (
-          name,
-          code,
-          category,
-          start_date,
-          end_date,
-          assignment_upload_time,
-          assignment_upload_days,
-          delivery_methods,
-          is_active,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-      )
-      .bind(
-        name,
-        code,
-        category,
-        startDate,
-        endDate,
-        assignmentUploadTime,
-        JSON.stringify(assignmentUploadDays),
-        JSON.stringify(deliveryMethods),
-        isActive ? 1 : 0,
-      )
-      .run();
+    const columns = await getClassTableColumns(c.env.DB);
+    const { sql, values } = await buildInsertStatement(c.env.DB, columns, {
+      name,
+      code,
+      category,
+      startDate,
+      endDate,
+      assignmentUploadTime,
+      assignmentUploadDays,
+      deliveryMethods,
+      isActive,
+    });
 
+    const insertResult = await c.env.DB.prepare(sql).bind(...values).run();
     const insertedId = insertResult.meta.last_row_id;
 
     const inserted = await c.env.DB
@@ -329,8 +601,6 @@ app.post('/', async (c) => {
 
 app.put('/:id', async (c) => {
   try {
-    await ensureBaseSchema(c.env.DB);
-
     const id = Number(c.req.param('id'));
     if (Number.isNaN(id)) {
       return c.json({ success: false, message: '수정할 수업을 찾을 수 없습니다.' }, 400);
@@ -352,78 +622,94 @@ app.put('/:id', async (c) => {
       return c.json({ success: false, message: '유효한 JSON 본문이 필요합니다.' }, 400);
     }
 
-    const name = toNonEmptyString(payload.name) ?? existing.name;
-    const code =
-      Object.prototype.hasOwnProperty.call(payload, 'code')
-        ? toNullableString(payload.code)
-        : existing.code;
-    const category =
-      Object.prototype.hasOwnProperty.call(payload, 'category')
-        ? toNullableString(payload.category)
-        : existing.category;
-    const startDate =
-      Object.prototype.hasOwnProperty.call(payload, 'startDate')
-        ? toNullableDate(payload.startDate)
-        : existing.start_date;
-    const endDate =
-      Object.prototype.hasOwnProperty.call(payload, 'endDate')
-        ? toNullableDate(payload.endDate)
-        : existing.end_date;
-    const existingDays = filterValidDays(parseStoredArray(existing.assignment_upload_days));
+    const existingName = toNonEmptyString(existing.name) ?? '';
+    const name = toNonEmptyString(payload.name) ?? existingName;
+
+    const existingCode = parseStringColumn(existing, 'code', 'class_code');
+    const code = Object.prototype.hasOwnProperty.call(payload, 'code')
+      ? toNullableString(payload.code)
+      : existingCode;
+
+    const existingCategory = parseStringColumn(existing, 'category', 'category_name', 'categoryName');
+    const category = Object.prototype.hasOwnProperty.call(payload, 'category')
+      ? toNullableString(payload.category)
+      : existingCategory;
+
+    const existingStartDate = parseDateColumn(existing, 'start_date', 'startDate');
+    const startDate = Object.prototype.hasOwnProperty.call(payload, 'startDate')
+      ? toNullableDate(payload.startDate)
+      : existingStartDate;
+
+    const existingEndDate = parseDateColumn(existing, 'end_date', 'endDate');
+    const endDate = Object.prototype.hasOwnProperty.call(payload, 'endDate')
+      ? toNullableDate(payload.endDate)
+      : existingEndDate;
+
+    const existingDays = filterValidDays(
+      parseStoredArray(
+        getRowValue(
+          existing,
+          'assignment_upload_days',
+          'assignmentUploadDays',
+          'assignment_submission_days',
+          'assignmentSubmissionDays',
+          'upload_day',
+          'uploadDay',
+        ),
+      ),
+    );
     const assignmentUploadDays = normaliseAssignmentDays(
       Object.prototype.hasOwnProperty.call(payload, 'assignmentUploadDays')
         ? payload.assignmentUploadDays
         : undefined,
       existingDays,
     );
+
+    const existingUploadTime = getRowValue(
+      existing,
+      'assignment_upload_time',
+      'assignmentUploadTime',
+      'upload_limit',
+      'uploadLimit',
+    );
     const assignmentUploadTime = normaliseAssignmentUploadTime(
       Object.prototype.hasOwnProperty.call(payload, 'assignmentUploadTime')
         ? payload.assignmentUploadTime
-        : existing.assignment_upload_time,
-      normaliseAssignmentUploadTime(existing.assignment_upload_time, 'all_day'),
+        : existingUploadTime,
+      normaliseAssignmentUploadTime(existingUploadTime, 'all_day'),
     );
-    const existingDeliveryMethods = parseStoredArray(existing.delivery_methods);
+
+    const existingDeliveryMethods = parseStoredArray(getRowValue(existing, 'delivery_methods', 'deliveryMethods'));
     const deliveryMethods = normaliseDeliveryMethods(
       Object.prototype.hasOwnProperty.call(payload, 'deliveryMethods')
         ? payload.deliveryMethods
         : undefined,
       existingDeliveryMethods.length > 0 ? existingDeliveryMethods : ['영상보기'],
     );
+
+    const existingIsActive = parseBooleanFlag(
+      getRowValue(existing, 'is_active', 'isActive', 'active', 'status'),
+      true,
+    );
     const isActive = parseBooleanFlag(
-      Object.prototype.hasOwnProperty.call(payload, 'isActive')
-        ? payload.isActive
-        : (existing.is_active ?? 1) !== 0,
-      (existing.is_active ?? 1) !== 0,
+      Object.prototype.hasOwnProperty.call(payload, 'isActive') ? payload.isActive : existingIsActive,
+      existingIsActive,
     );
 
-    await c.env.DB
-      .prepare(
-        `UPDATE classes SET
-          name = ?,
-          code = ?,
-          category = ?,
-          start_date = ?,
-          end_date = ?,
-          assignment_upload_time = ?,
-          assignment_upload_days = ?,
-          delivery_methods = ?,
-          is_active = ?,
-          updated_at = datetime('now')
-        WHERE id = ?`,
-      )
-      .bind(
-        name,
-        code,
-        category,
-        startDate,
-        endDate,
-        assignmentUploadTime,
-        JSON.stringify(assignmentUploadDays),
-        JSON.stringify(deliveryMethods),
-        isActive ? 1 : 0,
-        id,
-      )
-      .run();
+    const columns = await getClassTableColumns(c.env.DB);
+    const { sql, values } = await buildUpdateStatement(c.env.DB, columns, id, {
+      name,
+      code,
+      category,
+      startDate,
+      endDate,
+      assignmentUploadTime,
+      assignmentUploadDays,
+      deliveryMethods,
+      isActive,
+    });
+
+    await c.env.DB.prepare(sql).bind(...values).run();
 
     const updated = await c.env.DB
       .prepare('SELECT * FROM classes WHERE id = ?')
@@ -444,8 +730,6 @@ app.put('/:id', async (c) => {
 
 app.delete('/:id', async (c) => {
   try {
-    await ensureBaseSchema(c.env.DB);
-
     const id = Number(c.req.param('id'));
     if (Number.isNaN(id)) {
       return c.json({ success: false, message: '삭제할 수업을 찾을 수 없습니다.' }, 400);
