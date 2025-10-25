@@ -2,9 +2,6 @@ name = "elliesbang-class"
 compatibility_date = "2025-10-25"
 pages_build_output_dir = "class-web-app/dist"
 
-[observability]
-enabled = true
-
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_main"
