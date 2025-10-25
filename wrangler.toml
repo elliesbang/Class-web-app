@@ -2,8 +2,6 @@ name = "elliesbang-class"
 compatibility_date = "2025-10-20"
 
 pages_build_output_dir = "class-web-app/dist"
-
-[pages]
 functions = "class-web-app/functions"
 
 [[d1_databases]]
