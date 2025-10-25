@@ -38,14 +38,22 @@ const toOptionValue = (value) => {
   return typeof value === "number" ? String(value) : String(value ?? "");
 };
 
-const ClassSelector = ({ value, onChange = noop, className = "" }) => {
+const ClassSelector = ({
+  value,
+  onChange = noop,
+  className = "",
+  selectedCategory = "",
+}) => {
   const [classes, setClasses] = useState([]);
   const [internalValue, setInternalValue] = useState("");
 
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const response = await fetch("/api/classes");
+        const url = selectedCategory
+          ? `/api/classes?category_id=${selectedCategory}`
+          : "/api/classes";
+        const response = await fetch(url);
         if (!response.ok) throw new Error("수업 목록 불러오기 실패");
         const data = await response.json();
         console.log("📦 불러온 수업 목록:", data);
@@ -63,7 +71,7 @@ const ClassSelector = ({ value, onChange = noop, className = "" }) => {
       }
     };
     fetchClasses();
-  }, []);
+  }, [selectedCategory]);
 
   useEffect(() => {
     setInternalValue(toOptionValue(value));
