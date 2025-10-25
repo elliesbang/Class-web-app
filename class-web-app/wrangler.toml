@@ -1,6 +1,14 @@
 name = "elliesbang-class"
 compatibility_date = "2025-10-20"
-pages_build_output_dir = "dist"
+
+[site]
+bucket = "./dist"
+
+[pages]
+build_output_dir = "dist"
+
+[functions]
+directory = "functions"
 
 [[d1_databases]]
 binding = "DB"
