@@ -1,8 +1,7 @@
-import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import type { AssignmentUploadTimeOption, ClassFormPayload, ClassInfo } from '../../lib/api';
 import { useAdminClasses } from './data/AdminClassContext';
 
-const CATEGORY_OPTIONS = ['이얼챌', '캔디마', '나캔디', '캔디수', '미치나', '나컬작'];
 const DELIVERY_METHOD_OPTIONS = ['영상보기', '과제업로드', '피드백보기', '공지보기', '자료보기'];
 const WEEKDAY_OPTIONS = ['월', '화', '수', '목', '금', '토', '일'];
 const ASSIGNMENT_UPLOAD_TIME_LABELS: Record<AssignmentUploadTimeOption, string> = {
@@ -44,10 +43,10 @@ const toDateInputValue = (value: string | null) => {
   return value.slice(0, 10);
 };
 
-const createInitialFormState = (): ClassFormState => ({
+const createInitialFormState = (defaultCategory: string): ClassFormState => ({
   name: '',
   code: generateClassCode(),
-  category: CATEGORY_OPTIONS[0],
+  category: defaultCategory,
   startDate: '',
   endDate: '',
   assignmentUploadTime: 'all_day',
@@ -65,13 +64,85 @@ const AdminClassManagement = () => {
   const { classes, isLoading, error, refresh, createClass, updateClass, deleteClass } = useAdminClasses();
   const [filters, setFilters] = useState({ name: '', code: '', category: '전체' });
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formState, setFormState] = useState<ClassFormState>(createInitialFormState);
+  const [formState, setFormState] = useState<ClassFormState>(() => createInitialFormState(''));
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [editingClass, setEditingClass] = useState<ClassInfo | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ClassInfo | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+    categoryOptions.forEach((item) => {
+      const value = item.trim();
+      if (value.length > 0) {
+        set.add(value);
+      }
+    });
+    classes.forEach((item) => {
+      if (item.category && item.category.trim().length > 0) {
+        set.add(item.category.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ko', { sensitivity: 'base' }));
+  }, [categoryOptions, classes]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadCategories = async () => {
+      try {
+        const response = await fetch('/api/class-categories', { signal: controller.signal });
+        if (!response.ok) {
+          throw new Error('failed to fetch categories');
+        }
+
+        const payload = await response.json();
+        const rawList = Array.isArray(payload)
+          ? payload
+          : Array.isArray((payload as { data?: unknown }).data)
+          ? ((payload as { data?: unknown }).data as unknown[])
+          : Array.isArray((payload as { results?: unknown }).results)
+          ? ((payload as { results?: unknown }).results as unknown[])
+          : [];
+
+        const names = rawList
+          .map((item) => {
+            if (item && typeof item === 'object' && 'name' in item) {
+              const value = (item as { name: unknown }).name;
+              if (typeof value === 'string') {
+                return value.trim();
+              }
+              if (value == null) {
+                return '';
+              }
+              return String(value).trim();
+            }
+            if (typeof item === 'string') {
+              return item.trim();
+            }
+            return '';
+          })
+          .filter((name): name is string => name.length > 0);
+
+        const unique = Array.from(new Set(names));
+        setCategoryOptions(unique);
+      } catch (caught) {
+        if ((caught as Error)?.name === 'AbortError') {
+          return;
+        }
+        console.error('[admin-class] failed to load categories', caught);
+      }
+    };
+
+    loadCategories();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   const filteredClasses = useMemo(() => {
     const keywordName = filters.name.trim().toLowerCase();
@@ -81,7 +152,10 @@ const AdminClassManagement = () => {
     return classes.filter((item) => {
       const matchesName = keywordName.length === 0 || item.name.toLowerCase().includes(keywordName);
       const matchesCode = keywordCode.length === 0 || item.code.toLowerCase().includes(keywordCode);
-      const matchesCategory = categoryFilter === '전체' || item.category === categoryFilter;
+      const normalisedCategory = item.category ? item.category.trim() : '';
+      const matchesCategory =
+        categoryFilter === '전체' ||
+        (categoryFilter === '' ? normalisedCategory.length === 0 : normalisedCategory === categoryFilter);
       return matchesName && matchesCode && matchesCategory;
     });
   }, [classes, filters]);
@@ -89,7 +163,7 @@ const AdminClassManagement = () => {
   const allDaysSelected = formState.assignmentUploadDays.length === WEEKDAY_OPTIONS.length;
 
   const resetForm = () => {
-    setFormState(createInitialFormState());
+    setFormState(createInitialFormState(availableCategories[0] ?? ''));
     setFormError(null);
     setEditingClass(null);
     setIsSaving(false);
@@ -106,7 +180,7 @@ const AdminClassManagement = () => {
     setFormState({
       name: target.name,
       code: target.code || generateClassCode(),
-      category: target.category || CATEGORY_OPTIONS[0],
+      category: target.category || availableCategories[0] || '',
       startDate: toDateInputValue(target.startDate),
       endDate: toDateInputValue(target.endDate),
       assignmentUploadTime: target.assignmentUploadTime ?? 'all_day',
@@ -293,6 +367,61 @@ const formatAssignmentTime = (value: AssignmentUploadTimeOption | string | undef
   return ASSIGNMENT_UPLOAD_TIME_LABELS.all_day;
 };
 
+const formatDateOnly = (value: string | null | undefined) => {
+  if (!value) {
+    return '-';
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '-';
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const match = trimmed.replace('T', ' ').match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) {
+    return match[1];
+  }
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    const yyyy = parsed.getFullYear();
+    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+    const dd = String(parsed.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return trimmed;
+};
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return '-';
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '-';
+  }
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(trimmed)) {
+    return trimmed.slice(0, 16).replace('T', ' ');
+  }
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    const yyyy = parsed.getFullYear();
+    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+    const dd = String(parsed.getDate()).padStart(2, '0');
+    const hh = String(parsed.getHours()).padStart(2, '0');
+    const min = String(parsed.getMinutes()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+  }
+  const dateMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateMatch) {
+    return `${dateMatch[1]} 00:00`;
+  }
+  return trimmed;
+};
+
   const statusLabel = (isActive: boolean) => (isActive ? '진행중' : '종료');
   const statusClassName = (isActive: boolean) =>
     isActive ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-100 text-gray-500 border border-gray-300';
@@ -355,7 +484,8 @@ const formatAssignmentTime = (value: AssignmentUploadTimeOption | string | undef
               className="rounded-xl border border-[#e9dccf] bg-[#fdf7f0] px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
             >
               <option value="전체">전체</option>
-              {CATEGORY_OPTIONS.map((option) => (
+              <option value="">카테고리 없음</option>
+              {availableCategories.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -389,10 +519,14 @@ const formatAssignmentTime = (value: AssignmentUploadTimeOption | string | undef
                   <th className="px-4 py-3 text-left font-semibold">수업명</th>
                   <th className="px-4 py-3 text-left font-semibold">수업 코드</th>
                   <th className="px-4 py-3 text-left font-semibold">카테고리</th>
+                  <th className="px-4 py-3 text-left font-semibold">시작일</th>
+                  <th className="px-4 py-3 text-left font-semibold">종료일</th>
                   <th className="px-4 py-3 text-left font-semibold">과제 업로드 시간</th>
                   <th className="px-4 py-3 text-left font-semibold">과제 업로드 요일</th>
                   <th className="px-4 py-3 text-left font-semibold">수강방식</th>
                   <th className="px-4 py-3 text-left font-semibold">상태</th>
+                  <th className="px-4 py-3 text-left font-semibold">생성일</th>
+                  <th className="px-4 py-3 text-left font-semibold">수정일</th>
                   <th className="px-4 py-3 text-left font-semibold">수정</th>
                   <th className="px-4 py-3 text-left font-semibold">삭제</th>
                 </tr>
@@ -403,6 +537,8 @@ const formatAssignmentTime = (value: AssignmentUploadTimeOption | string | undef
                     <td className="px-4 py-3 font-semibold text-[#404040]">{classItem.name}</td>
                     <td className="px-4 py-3 text-[#5c5c5c]">{classItem.code}</td>
                     <td className="px-4 py-3 text-[#5c5c5c]">{classItem.category}</td>
+                    <td className="px-4 py-3 text-[#5c5c5c]">{formatDateOnly(classItem.startDate)}</td>
+                    <td className="px-4 py-3 text-[#5c5c5c]">{formatDateOnly(classItem.endDate)}</td>
                     <td className="px-4 py-3 text-[#5c5c5c]">{formatAssignmentTime(classItem.assignmentUploadTime)}</td>
                     <td className="px-4 py-3 text-[#5c5c5c]">{formatAssignmentDays(classItem.assignmentUploadDays)}</td>
                     <td className="px-4 py-3 text-[#5c5c5c]">{formatDeliveryMethods(classItem.deliveryMethods)}</td>
@@ -411,6 +547,8 @@ const formatAssignmentTime = (value: AssignmentUploadTimeOption | string | undef
                         {statusLabel(classItem.isActive)}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-[#5c5c5c]">{formatDateTime(classItem.createdAt)}</td>
+                    <td className="px-4 py-3 text-[#5c5c5c]">{formatDateTime(classItem.updatedAt)}</td>
                     <td className="px-4 py-3">
                       <button
                         type="button"
@@ -498,7 +636,8 @@ const formatAssignmentTime = (value: AssignmentUploadTimeOption | string | undef
                       onChange={handleInputChange}
                       className="rounded-xl border border-[#e9dccf] bg-white px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
                     >
-                      {CATEGORY_OPTIONS.map((option) => (
+                      <option value="">카테고리 없음</option>
+                      {availableCategories.map((option) => (
                         <option key={option} value={option}>
                           {option}
                         </option>

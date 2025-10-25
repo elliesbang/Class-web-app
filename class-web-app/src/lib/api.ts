@@ -221,7 +221,11 @@ const normaliseClassRecord = (item: unknown): ClassInfo | null => {
   const rawCode = candidate.code ?? candidate.class_code;
   const code = typeof rawCode === 'string' ? rawCode.trim() : rawCode != null ? String(rawCode).trim() : '';
 
-  const rawCategory = candidate.category ?? candidate.class_category;
+  const rawCategory =
+    candidate.category ??
+    candidate.class_category ??
+    candidate.category_name ??
+    candidate.categoryName;
   const category = typeof rawCategory === 'string'
     ? rawCategory.trim()
     : rawCategory != null
@@ -232,18 +236,29 @@ const normaliseClassRecord = (item: unknown): ClassInfo | null => {
   const endDate = parseDateValue(candidate.end_date ?? candidate.endDate);
   const assignmentUploadTime = parseAssignmentUploadTime(
     candidate.assignment_upload_time ??
-      candidate.assignmentUploadTime ??
+    candidate.assignmentUploadTime ??
       candidate.assignmentSubmissionTime ??
-      candidate.assignment_submission_time,
+      candidate.assignment_submission_time ??
+      candidate.upload_limit ??
+      candidate.uploadLimit,
   );
   const assignmentUploadDays = parseStringArray(
     candidate.assignment_upload_days ??
       candidate.assignmentUploadDays ??
       candidate.assignmentSubmissionDays ??
-      candidate.assignment_submission_days,
+      candidate.assignment_submission_days ??
+      candidate.upload_day ??
+      candidate.uploadDay,
   );
-  const deliveryMethods = parseStringArray(candidate.delivery_methods ?? candidate.deliveryMethods);
-  const isActive = parseBooleanValue(candidate.is_active ?? candidate.isActive);
+  const deliveryMethods = parseStringArray(
+    candidate.delivery_methods ??
+      candidate.deliveryMethods ??
+      candidate.delivery_method ??
+      candidate.deliveryMethod,
+  );
+  const isActive = parseBooleanValue(
+    candidate.is_active ?? candidate.isActive ?? candidate.active ?? candidate.status,
+  );
 
   const createdAt = parseDateValue(candidate.created_at ?? candidate.createdAt);
   const updatedAt = parseDateValue(candidate.updated_at ?? candidate.updatedAt);
