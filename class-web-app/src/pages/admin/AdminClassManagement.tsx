@@ -61,7 +61,15 @@ const normaliseDays = (input: string[]) => {
 };
 
 const AdminClassManagement = () => {
-  const { classes, isLoading, error, refresh, createClass, updateClass, deleteClass } = useAdminClasses();
+  const {
+    classes,
+    isLoading: isClassListLoading,
+    error,
+    refresh,
+    createClass,
+    updateClass,
+    deleteClass,
+  } = useAdminClasses();
   const [filters, setFilters] = useState({ name: '', code: '', category: '전체' });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formState, setFormState] = useState<ClassFormState>(() => createInitialFormState(''));
@@ -72,6 +80,7 @@ const AdminClassManagement = () => {
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ClassInfo | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const availableCategories = useMemo(() => {
     const set = new Set<string>();
@@ -196,6 +205,7 @@ const AdminClassManagement = () => {
     setIsModalOpen(false);
     setFormError(null);
     setIsSaving(false);
+    setIsLoading(false);
     setEditingClass(null);
   };
 
@@ -284,6 +294,7 @@ const AdminClassManagement = () => {
     }
 
     setIsSaving(true);
+    setIsLoading(true);
     setFormError(null);
 
     try {
@@ -303,6 +314,7 @@ const AdminClassManagement = () => {
       setFormError(message);
     } finally {
       setIsSaving(false);
+      setIsLoading(false);
     }
   };
 
@@ -321,6 +333,7 @@ const AdminClassManagement = () => {
     }
 
     setIsDeleting(true);
+    setIsLoading(true);
     try {
       await deleteClass(deleteTarget.id);
       setFeedbackMessage(`‘${deleteTarget.name}’ 수업이 삭제되었습니다.`);
@@ -330,6 +343,7 @@ const AdminClassManagement = () => {
       alert(caught instanceof Error ? caught.message : '수업 삭제에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsDeleting(false);
+      setIsLoading(false);
     }
   };
 
@@ -503,7 +517,7 @@ const formatDateTime = (value: string | null | undefined) => {
       <section className="rounded-2xl bg-white p-6 shadow-md">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xl font-semibold text-[#404040]">수업 목록</h3>
-          {isLoading && <span className="text-sm text-[#5c5c5c]">불러오는 중...</span>}
+          {isClassListLoading && <span className="text-sm text-[#5c5c5c]">불러오는 중...</span>}
         </div>
 
         {filteredClasses.length === 0 ? (
@@ -782,14 +796,14 @@ const formatDateTime = (value: string | null | undefined) => {
                     }
                   }}
                   className="rounded-full border border-[#e9dccf] px-5 py-2 text-sm font-semibold text-[#7a6f68] transition-colors hover:bg-[#f5eee9]"
-                  disabled={isSaving}
+                  disabled={isLoading || isSaving}
                 >
                   취소
                 </button>
                 <button
                   type="submit"
                   className="rounded-full bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c] disabled:cursor-not-allowed disabled:opacity-70"
-                  disabled={isSaving}
+                  disabled={isLoading || isSaving}
                 >
                   {isSaving ? '저장 중...' : '저장'}
                 </button>
@@ -812,7 +826,7 @@ const formatDateTime = (value: string | null | undefined) => {
                 type="button"
                 onClick={() => setDeleteTarget(null)}
                 className="rounded-full border border-[#e9dccf] px-5 py-2 text-sm font-semibold text-[#7a6f68] transition-colors hover:bg-[#f5eee9]"
-                disabled={isDeleting}
+                disabled={isLoading || isDeleting}
               >
                 취소
               </button>
@@ -820,7 +834,7 @@ const formatDateTime = (value: string | null | undefined) => {
                 type="button"
                 onClick={handleDelete}
                 className="rounded-full bg-red-500 px-6 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-70"
-                disabled={isDeleting}
+                disabled={isLoading || isDeleting}
               >
                 {isDeleting ? '삭제 중...' : '삭제'}
               </button>
