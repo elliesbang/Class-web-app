@@ -1,11 +1,17 @@
 name = "elliesbang-class"
-compatibility_date = "2025-10-20"
-
+compatibility_date = "2025-10-25"
 pages_build_output_dir = "class-web-app/dist"
 
-functions = "class-web-app/functions"
+[observability]
+enabled = true
 
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_main"
-database_id = "888b8ddb-1f10-4b41-8d2f-6c7f06dd1fcb"
+database_id = "888b8ddb-1f10-4b41-8d47-6c7f06dd1fcb"
+
+[build]
+command = "npm run build"
+
+[[functions]]
+directory = "class-web-app/functions"
