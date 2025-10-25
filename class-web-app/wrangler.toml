@@ -8,7 +8,7 @@ bucket = "./dist"
 build_output_dir = "dist"
 
 [functions]
-directory = "functions"
+directory = "functions_local"
 
 [[d1_databases]]
 binding = "DB"
