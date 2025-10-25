@@ -3,6 +3,32 @@ import { z } from 'zod';
 
 const app = new Hono();
 
+// 🔐 관리자 토큰 검증 미들웨어
+app.use('/api/courses', async (c, next) => {
+  try {
+    const method = c.req.method.toUpperCase();
+    if (!['POST', 'PUT', 'DELETE'].includes(method)) {
+      await next();
+      return;
+    }
+
+    const token = c.req.header('Authorization');
+    const adminToken = c.env?.ADMIN_TOKEN;
+    if (!token || !adminToken || token !== `Bearer ${adminToken}`) {
+      return c.json(
+        { success: false, message: '관리자 토큰이 유효하지 않습니다.' },
+        401,
+      );
+    }
+
+    await next();
+    return;
+  } catch (error) {
+    console.error('토큰 검증 오류:', error);
+    return c.json({ success: false, message: '토큰 검증 중 오류가 발생했습니다.' }, 500);
+  }
+});
+
 const optionalTextSchema = z
   .preprocess((value) => {
     if (value == null) {
@@ -78,25 +104,22 @@ const normaliseCourseRow = (row) => {
   };
 };
 
-const requireAdmin = (c) => {
-  const token = c.req.header('Authorization');
-  if (!c.env?.ADMIN_TOKEN || token !== `Bearer ${c.env.ADMIN_TOKEN}`) {
-    return c.json({ success: false, message: 'Invalid token' }, 401);
-  }
-  return null;
-};
-
 const fetchCourseById = async (db, id) => {
-  const row = await db
-    .prepare(
-      `SELECT c.id, c.name, c.category_id, c.type, c.upload_limit, cat.name AS category_name
-       FROM courses c
-       LEFT JOIN categories cat ON c.category_id = cat.id
-       WHERE c.id = ?`,
-    )
-    .bind(id)
-    .first();
-  return normaliseCourseRow(row);
+  try {
+    const row = await db
+      .prepare(
+        `SELECT c.id, c.name, c.category_id, c.type, c.upload_limit, cat.name AS category_name
+         FROM courses c
+         LEFT JOIN categories cat ON c.category_id = cat.id
+         WHERE c.id = ?`,
+      )
+      .bind(id)
+      .first();
+    return normaliseCourseRow(row);
+  } catch (error) {
+    console.error('[courses] Failed to fetch course by id', error);
+    throw error;
+  }
 };
 
 app.get('/api/courses', async (c) => {
@@ -142,11 +165,6 @@ app.get('/api/courses/:id', async (c) => {
 
 app.post('/api/courses', async (c) => {
   try {
-    const authError = requireAdmin(c);
-    if (authError) {
-      return authError;
-    }
-
     let payload;
     try {
       payload = await c.req.json();
@@ -177,9 +195,7 @@ app.post('/api/courses', async (c) => {
       return c.json({ success: false, message: 'Failed to create course' }, 500);
     }
 
-    const course = await fetchCourseById(c.env.DB, insertedId);
-
-    return c.json({ success: true, data: course, id: insertedId });
+    return c.json({ success: true, id: insertedId, message: '수업이 생성되었습니다.' });
   } catch (error) {
     console.error('[courses] Failed to create course', error);
     const message = error instanceof Error ? error.message : 'Failed to create course';
@@ -189,11 +205,6 @@ app.post('/api/courses', async (c) => {
 
 app.put('/api/courses/:id', async (c) => {
   try {
-    const authError = requireAdmin(c);
-    if (authError) {
-      return authError;
-    }
-
     const id = Number(c.req.param('id'));
     if (Number.isNaN(id)) {
       return c.json({ success: false, message: 'Invalid course id' }, 400);
@@ -228,9 +239,7 @@ app.put('/api/courses/:id', async (c) => {
       .bind(parsed.name, parsed.category_id, parsed.type ?? null, parsed.upload_limit ?? null, id)
       .run();
 
-    const course = await fetchCourseById(c.env.DB, id);
-
-    return c.json({ success: true, data: course });
+    return c.json({ success: true, message: '수업이 수정되었습니다.' });
   } catch (error) {
     console.error('[courses] Failed to update course', error);
     const message = error instanceof Error ? error.message : 'Failed to update course';
@@ -240,11 +249,6 @@ app.put('/api/courses/:id', async (c) => {
 
 app.delete('/api/courses/:id', async (c) => {
   try {
-    const authError = requireAdmin(c);
-    if (authError) {
-      return authError;
-    }
-
     const id = Number(c.req.param('id'));
     if (Number.isNaN(id)) {
       return c.json({ success: false, message: 'Invalid course id' }, 400);
@@ -261,7 +265,7 @@ app.delete('/api/courses/:id', async (c) => {
 
     await c.env.DB.prepare('DELETE FROM courses WHERE id = ?').bind(id).run();
 
-    return c.json({ success: true });
+    return c.json({ success: true, message: '수업이 삭제되었습니다.' });
   } catch (error) {
     console.error('[courses] Failed to delete course', error);
     const message = error instanceof Error ? error.message : 'Failed to delete course';
