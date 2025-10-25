@@ -1,26 +1,61 @@
 import { Hono } from "hono";
+import { z } from "zod";
+
+const addClassSchema = z
+  .object({
+    classCode: z
+      .string({
+        required_error: "classCode is required",
+        invalid_type_error: "classCode must be a string",
+      })
+      .transform((value) => value.trim())
+      .refine((value) => value.length > 0, {
+        message: "classCode cannot be empty",
+      }),
+    category: z
+      .union([z.string(), z.undefined(), z.null()])
+      .transform((value) => {
+        if (typeof value !== "string") {
+          return undefined;
+        }
+
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+      }),
+  })
+  .passthrough();
 
 export const classes = new Hono();
 
 classes.post("/add", async (c) => {
   try {
-    const db = c.env.DB;
-    const { name, uploadOption, uploadTime, uploadDays, uploadPeriod, classTitle, categoryId, } =
-      await c.req.json();
+    const parseResult = addClassSchema.safeParse(await c.req.json());
 
+    if (!parseResult.success) {
+      return c.json(
+        {
+          success: false,
+          errors: parseResult.error.flatten(),
+        },
+        400,
+      );
+    }
+
+    const body = parseResult.data as Record<string, unknown>;
     const db = c.env.DB;
 
-    await db.prepare(
-      "INSERT INTO classes (name, uploadOption, uploadTime, uploadDays, uploadPeriod, classTitle, categoryId) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    )
+    await db
+      .prepare(
+        "INSERT INTO classes (name, uploadOption, uploadTime, uploadDays, uploadPeriod, classTitle, categoryId) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      )
       .bind(
-        name,
-        uploadOption,
-        uploadTime,
-        uploadDays,
-        uploadPeriod,
-        classTitle,
-        categoryId,
+        body.name as string,
+        body.uploadOption,
+        body.uploadTime,
+        body.uploadDays,
+        body.uploadPeriod,
+        body.classTitle,
+        body.categoryId,
       )
       .run();
 
