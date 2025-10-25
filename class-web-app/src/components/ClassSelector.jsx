@@ -12,7 +12,7 @@ export default function ClassSelector() {
     async function fetchCategories() {
       setLoading((prev) => ({ ...prev, categories: true }));
       try {
-        const res = await fetch("/_functions/api/class_categories");
+        const res = await fetch("/api/class_categories");
         if (!res.ok) {
           throw new Error(`Failed to fetch categories: ${res.status}`);
         }
@@ -33,7 +33,7 @@ export default function ClassSelector() {
     async function fetchClasses() {
       setLoading((prev) => ({ ...prev, classes: true }));
       try {
-        const res = await fetch("/_functions/api/classes");
+        const res = await fetch("/api/classes");
         if (!res.ok) {
           throw new Error(`Failed to fetch classes: ${res.status}`);
         }
