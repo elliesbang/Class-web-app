@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 
 const formatFileSize = (bytes) => {
   if (!bytes && bytes !== 0) return '';
@@ -64,6 +65,10 @@ function AssignmentTab({ courseId, courseName }) {
     }, 300);
   };
 
+  const handleDeleteUploadedFile = (id) => {
+    setUploadedFiles((prev) => prev.filter((file) => file.id !== id));
+  };
+
   const handleLinkSubmit = (event) => {
     event.preventDefault();
     if (isSubmitting) return;
@@ -92,6 +97,10 @@ function AssignmentTab({ courseId, courseName }) {
       setLinkUrl('');
       setIsSubmitting(false);
     }, 300);
+  };
+
+  const handleDeleteSubmittedLink = (id) => {
+    setSubmittedLinks((prev) => prev.filter((item) => item.id !== id));
   };
 
   if (isFileUpload) {
@@ -156,11 +165,24 @@ function AssignmentTab({ courseId, courseName }) {
           {uploadedFiles.length > 0 ? (
             <ul className="space-y-2 text-sm text-ellieGray">
               {uploadedFiles.map((file) => (
-                <li key={file.id} className="rounded-xl bg-white/70 px-3 py-2">
-                  <p className="font-semibold">{file.name}</p>
-                  <p className="text-xs text-ellieGray/70">
-                    {formatFileSize(file.size)} · {formatSubmittedAt(file.submittedAt)} 제출
-                  </p>
+                <li
+                  key={file.id}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-white/70 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{file.name}</p>
+                    <p className="text-xs text-ellieGray/70">
+                      {formatFileSize(file.size)} · {formatSubmittedAt(file.submittedAt)} 제출
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteUploadedFile(file.id)}
+                    className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full border border-transparent text-ellieGray/70 transition-colors duration-200 hover:border-ellieGray/20 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ellieYellow/60"
+                    aria-label={`${file.name} 제출 기록 삭제`}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
                 </li>
               ))}
             </ul>
@@ -233,16 +255,29 @@ function AssignmentTab({ courseId, courseName }) {
         {submittedLinks.length > 0 ? (
           <ul className="space-y-2 text-sm text-ellieGray">
             {submittedLinks.map((item) => (
-              <li key={item.id} className="rounded-xl bg-white/70 px-3 py-2">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-semibold underline underline-offset-2"
+              <li
+                key={item.id}
+                className="flex items-center justify-between gap-3 rounded-xl bg-white/70 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block truncate font-semibold underline underline-offset-2"
+                  >
+                    {item.url}
+                  </a>
+                  <p className="text-xs text-ellieGray/70">{formatSubmittedAt(item.submittedAt)} 제출</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSubmittedLink(item.id)}
+                  className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full border border-transparent text-ellieGray/70 transition-colors duration-200 hover:border-ellieGray/20 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ellieYellow/60"
+                  aria-label={`${item.url} 제출 기록 삭제`}
                 >
-                  {item.url}
-                </a>
-                <p className="text-xs text-ellieGray/70">{formatSubmittedAt(item.submittedAt)} 제출</p>
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </button>
               </li>
             ))}
           </ul>
