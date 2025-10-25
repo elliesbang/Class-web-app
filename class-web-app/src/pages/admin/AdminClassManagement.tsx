@@ -92,6 +92,7 @@ const AdminClassManagement = () => {
     setFormState(createInitialFormState());
     setFormError(null);
     setEditingClass(null);
+    setIsSaving(false);
   };
 
   const openCreateModal = () => {
@@ -100,6 +101,7 @@ const AdminClassManagement = () => {
   };
 
   const openEditModal = (target: ClassInfo) => {
+    setIsSaving(false);
     setEditingClass(target);
     setFormState({
       name: target.name,
