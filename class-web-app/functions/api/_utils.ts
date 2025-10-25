@@ -95,6 +95,17 @@ export const ensureBaseSchema = async (db: D1Database) => {
     );
   `);
 
+  await ensureColumn(db, 'classes', 'code TEXT');
+  await ensureColumn(db, 'classes', 'category TEXT');
+  await ensureColumn(db, 'classes', 'start_date TEXT');
+  await ensureColumn(db, 'classes', 'end_date TEXT');
+  await ensureColumn(db, 'classes', 'assignment_upload_time TEXT');
+  await ensureColumn(db, 'classes', 'assignment_upload_days TEXT');
+  await ensureColumn(db, 'classes', 'delivery_methods TEXT');
+  await ensureColumn(db, 'classes', 'is_active INTEGER NOT NULL DEFAULT 1');
+  await ensureColumn(db, 'classes', "created_at TEXT NOT NULL DEFAULT (datetime('now'))");
+  await ensureColumn(db, 'classes', "updated_at TEXT NOT NULL DEFAULT (datetime('now'))");
+
   await ensureColumn(db, 'videos', "display_order INTEGER NOT NULL DEFAULT 0");
   await ensureColumn(db, 'materials', 'file_name TEXT');
   await ensureColumn(db, 'materials', 'mime_type TEXT');
