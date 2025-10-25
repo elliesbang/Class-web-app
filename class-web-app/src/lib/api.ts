@@ -34,6 +34,7 @@ export type VideoPayload = {
   description?: string | null;
   classId: number;
   createdAt: string;
+  displayOrder?: number | null;
 };
 
 export type MaterialPayload = {
@@ -43,6 +44,9 @@ export type MaterialPayload = {
   description?: string | null;
   classId: number;
   createdAt: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+  fileSize?: number | null;
 };
 
 export type NoticePayload = {
@@ -86,54 +90,12 @@ type ApiResponse<T> = {
   message?: string;
   data?: T;
   classes?: ClassInfo[];
-  videos?: Array<{
-    id: number;
-    title: string;
-    url: string;
-    description?: string | null;
-    classId: number;
-    createdAt: string;
-  }>;
-  video?: {
-    id: number;
-    title: string;
-    url: string;
-    description?: string | null;
-    classId: number;
-    createdAt: string;
-  };
-  materials?: Array<{
-    id: number;
-    title: string;
-    fileUrl: string;
-    description?: string | null;
-    classId: number;
-    createdAt: string;
-  }>;
-  material?: {
-    id: number;
-    title: string;
-    fileUrl: string;
-    description?: string | null;
-    classId: number;
-    createdAt: string;
-  };
-  notices?: Array<{
-    id: number;
-    title: string;
-    content: string;
-    author?: string | null;
-    classId: number;
-    createdAt: string;
-  }>;
-  notice?: {
-    id: number;
-    title: string;
-    content: string;
-    author?: string | null;
-    classId: number;
-    createdAt: string;
-  };
+  videos?: VideoPayload[];
+  video?: VideoPayload;
+  materials?: MaterialPayload[];
+  material?: MaterialPayload;
+  notices?: NoticePayload[];
+  notice?: NoticePayload;
   feedback?: Array<{
     id: number;
     userName: string;
@@ -419,14 +381,20 @@ export const deleteClass = async (id: number): Promise<void> => {
   await assertResponse(response);
 };
 
-export const getVideos = async () => {
-  const response = await fetch('/api/videos');
+export const getVideos = async (params: { classId?: number } = {}) => {
+  const searchParams = new URLSearchParams();
+  if (typeof params.classId === 'number') {
+    searchParams.set('classId', String(params.classId));
+  }
+
+  const query = searchParams.toString();
+  const response = await fetch(`/api/videos${query ? `?${query}` : ''}`);
   await assertResponse(response);
   const data = (await response.json()) as ApiResponse<unknown>;
   return data.videos ?? [];
 };
 
-export const createVideo = async (payload: { title: string; url: string; description?: string; classId: number }) => {
+export const createVideo = async (payload: { title: string; url: string; description?: string | null; classId: number }) => {
   const response = await fetch('/api/videos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -440,6 +408,24 @@ export const createVideo = async (payload: { title: string; url: string; descrip
   return data.video;
 };
 
+export const reorderVideos = async (payload: { classId: number; orderedIds: number[] }) => {
+  const response = await fetch('/api/videos/order', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await assertResponse(response);
+  const data = (await response.json()) as ApiResponse<unknown>;
+  return data.videos ?? [];
+};
+
+export const deleteVideo = async (id: number) => {
+  const response = await fetch(`/api/videos/${id}`, {
+    method: 'DELETE',
+  });
+  await assertResponse(response);
+};
+
 export const getMaterials = async () => {
   const response = await fetch('/api/materials');
   await assertResponse(response);
@@ -447,7 +433,15 @@ export const getMaterials = async () => {
   return data.materials ?? [];
 };
 
-export const createMaterial = async (payload: { title: string; fileUrl: string; description?: string; classId: number }) => {
+export const createMaterial = async (payload: {
+  title: string;
+  fileUrl: string;
+  description?: string | null;
+  classId: number;
+  fileName?: string | null;
+  mimeType?: string | null;
+  fileSize?: number | null;
+}) => {
   const response = await fetch('/api/materials', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -459,6 +453,13 @@ export const createMaterial = async (payload: { title: string; fileUrl: string; 
     throw new Error('자료 정보를 확인할 수 없습니다.');
   }
   return data.material;
+};
+
+export const deleteMaterial = async (id: number) => {
+  const response = await fetch(`/api/materials/${id}`, {
+    method: 'DELETE',
+  });
+  await assertResponse(response);
 };
 
 export const getNotices = async (params: { classId?: number } = {}) => {
@@ -482,7 +483,7 @@ export const createNotice = async (payload: { title: string; content: string; cl
       title: payload.title,
       content: payload.content,
       author: payload.author,
-      class_id: payload.classId,
+      classId: payload.classId,
     }),
   });
   await assertResponse(response);
@@ -491,6 +492,13 @@ export const createNotice = async (payload: { title: string; content: string; cl
     throw new Error('공지 정보를 확인할 수 없습니다.');
   }
   return data.notice;
+};
+
+export const deleteNotice = async (id: number) => {
+  const response = await fetch(`/api/notices/${id}`, {
+    method: 'DELETE',
+  });
+  await assertResponse(response);
 };
 
 export const createFeedback = async (payload: { userName: string; comment: string; classId: number }) => {

@@ -9,6 +9,17 @@ export type ClassRecord = {
   name: string;
 };
 
+const ensureColumn = async (db: D1Database, table: string, definition: string) => {
+  try {
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition};`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (!/duplicate column name/i.test(message)) {
+      throw error;
+    }
+  }
+};
+
 export const ensureBaseSchema = async (db: D1Database) => {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS classes (
@@ -30,6 +41,7 @@ export const ensureBaseSchema = async (db: D1Database) => {
       url TEXT NOT NULL,
       description TEXT,
       class_id INTEGER NOT NULL,
+      display_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (class_id) REFERENCES classes(id)
     );
@@ -39,6 +51,9 @@ export const ensureBaseSchema = async (db: D1Database) => {
       title TEXT NOT NULL,
       file_url TEXT NOT NULL,
       description TEXT,
+      file_name TEXT,
+      mime_type TEXT,
+      file_size INTEGER,
       class_id INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (class_id) REFERENCES classes(id)
@@ -79,6 +94,11 @@ export const ensureBaseSchema = async (db: D1Database) => {
       FOREIGN KEY (class_id) REFERENCES classes(id)
     );
   `);
+
+  await ensureColumn(db, 'videos', "display_order INTEGER NOT NULL DEFAULT 0");
+  await ensureColumn(db, 'materials', 'file_name TEXT');
+  await ensureColumn(db, 'materials', 'mime_type TEXT');
+  await ensureColumn(db, 'materials', 'file_size INTEGER');
 };
 
 export const fetchClasses = async (db: D1Database): Promise<ClassRecord[]> => {

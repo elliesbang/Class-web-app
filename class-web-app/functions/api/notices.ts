@@ -1,133 +1,105 @@
 import { Hono } from 'hono';
 
+import { ensureBaseSchema, normaliseDate } from './_utils';
+
 interface Env {
   DB: D1Database;
 }
 
-const TABLE_CONFIG = {
-  videos: {
-    schema: `
-      CREATE TABLE IF NOT EXISTS videos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        url TEXT NOT NULL,
-        class_id INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `,
-    columns: ['title', 'url', 'class_id'] as const,
-  },
-  materials: {
-    schema: `
-      CREATE TABLE IF NOT EXISTS materials (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        link TEXT NOT NULL,
-        class_id INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `,
-    columns: ['title', 'link', 'class_id'] as const,
-  },
-  notices: {
-    schema: `
-      CREATE TABLE IF NOT EXISTS notices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        class_id INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `,
-    columns: ['title', 'content', 'class_id'] as const,
-  },
-  feedback: {
-    schema: `
-      CREATE TABLE IF NOT EXISTS feedback (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        class_id INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `,
-    columns: ['title', 'content', 'class_id'] as const,
-  },
+type NoticeRow = {
+  id: number;
+  title: string;
+  content: string;
+  author: string | null;
+  class_id: number;
+  created_at: string;
 };
 
-type TableName = keyof typeof TABLE_CONFIG;
-
-const getTableName = (path: string): TableName => {
-  const [, , table] = path.split('/');
-  if (!table || !(table in TABLE_CONFIG)) {
-    throw new Error('유효하지 않은 테이블입니다.');
-  }
-  return table as TableName;
-};
-
-const ensureTable = async (db: D1Database, table: TableName) => {
-  await db.exec(TABLE_CONFIG[table].schema);
-};
+const toNoticePayload = (row: NoticeRow) => ({
+  id: row.id,
+  title: row.title,
+  content: row.content,
+  author: row.author,
+  classId: row.class_id,
+  createdAt: normaliseDate(row.created_at),
+});
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.post('/', async (c) => {
-  try {
-    const table = getTableName(c.req.path);
-    await ensureTable(c.env.DB, table);
-
-    const body = await c.req.json();
-    const config = TABLE_CONFIG[table];
-    const values = config.columns.map((column) => body[column]);
-
-    const placeholders = values.map(() => '?').join(', ');
-    const query = `INSERT INTO ${table} (${config.columns.join(', ')}) VALUES (${placeholders})`;
-    await c.env.DB.prepare(query).bind(...values).run();
-
-    return c.json({ success: true, message: '등록 성공' });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ success: false, message }, 500);
-  }
-});
-
 app.get('/', async (c) => {
-  try {
-    const table = getTableName(c.req.path);
-    await ensureTable(c.env.DB, table);
+  await ensureBaseSchema(c.env.DB);
 
-    const classId = c.req.query('class_id');
-    const query = classId
-      ? `SELECT * FROM ${table} WHERE class_id = ? ORDER BY created_at DESC`
-      : `SELECT * FROM ${table} ORDER BY created_at DESC`;
+  const classIdParam = c.req.query('classId') ?? c.req.query('class_id');
+  const classId = classIdParam ? Number(classIdParam) : null;
 
-    const { results } = classId
-      ? await c.env.DB.prepare(query).bind(classId).all()
-      : await c.env.DB.prepare(query).all();
+  const statement = classId
+    ? c.env.DB.prepare('SELECT * FROM notices WHERE class_id = ? ORDER BY created_at DESC').bind(classId)
+    : c.env.DB.prepare('SELECT * FROM notices ORDER BY created_at DESC');
 
-    return c.json({ success: true, data: results ?? [] });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ success: false, message }, 500);
-  }
+  const { results } = await statement.all<NoticeRow>();
+  const notices = (results ?? []).map(toNoticePayload);
+
+  return c.json({ success: true, notices });
 });
 
-app.delete('/', async (c) => {
-  try {
-    const table = getTableName(c.req.path);
-    await ensureTable(c.env.DB, table);
+app.post('/', async (c) => {
+  await ensureBaseSchema(c.env.DB);
 
-    const id = c.req.query('id');
-    if (!id) {
-      throw new Error('id는 필수 값입니다.');
-    }
+  const body = await c.req.json<{
+    title?: string;
+    content?: string;
+    classId?: number;
+    author?: string | null;
+  }>();
 
-    await c.env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
-    return c.json({ success: true, message: '삭제 완료' });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ success: false, message }, 500);
+  const title = body.title?.trim();
+  const content = body.content?.trim();
+  const classId = body.classId;
+  const author = body.author?.trim() ?? null;
+
+  if (!title) {
+    return c.json({ success: false, message: '공지 제목을 입력해주세요.' }, 400);
   }
+
+  if (!content) {
+    return c.json({ success: false, message: '공지 내용을 입력해주세요.' }, 400);
+  }
+
+  if (typeof classId !== 'number') {
+    return c.json({ success: false, message: '수업 정보를 찾을 수 없습니다.' }, 400);
+  }
+
+  const insertResult = await c.env.DB
+    .prepare('INSERT INTO notices (title, content, author, class_id) VALUES (?, ?, ?, ?)')
+    .bind(title, content, author, classId)
+    .run();
+
+  const insertedId = insertResult.meta.last_row_id;
+
+  const inserted = await c.env.DB
+    .prepare('SELECT * FROM notices WHERE id = ?')
+    .bind(insertedId)
+    .first<NoticeRow>();
+
+  if (!inserted) {
+    return c.json({ success: false, message: '저장된 공지를 찾을 수 없습니다.' }, 500);
+  }
+
+  return c.json({ success: true, notice: toNoticePayload(inserted) });
+});
+
+app.delete('/:id', async (c) => {
+  await ensureBaseSchema(c.env.DB);
+
+  const id = Number(c.req.param('id'));
+
+  if (Number.isNaN(id)) {
+    return c.json({ success: false, message: '삭제할 공지를 찾을 수 없습니다.' }, 400);
+  }
+
+  await c.env.DB.prepare('DELETE FROM notices WHERE id = ?').bind(id).run();
+
+  return c.json({ success: true });
 });
 
 export default app;
