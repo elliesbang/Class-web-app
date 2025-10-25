@@ -8,4 +8,4 @@ database_name = "elliesbang_main"
 database_id = "888b8ddb-1f10-4b41-8d47-6c7f06dd1fcb"
 
 [[functions]]
-directory = "class-web-app/functions"
+directory = "functions"
