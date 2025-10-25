@@ -1,10 +1,67 @@
 import { useRef, useState } from 'react';
+import { Trash2 } from 'lucide-react';
+
+const STORAGE_KEY = 'michina-upload-history';
+
+const createSubmissionId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const getInitialSubmissions = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const storedValue = window.localStorage.getItem(STORAGE_KEY);
+    if (!storedValue) return [];
+    const parsed = JSON.parse(storedValue);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch (error) {
+    console.error('Failed to parse Michina upload history from storage.', error);
+    return [];
+  }
+};
+
+const formatFileSize = (bytes) => {
+  if (!bytes && bytes !== 0) return '';
+  const sizeInMb = bytes / (1024 * 1024);
+  if (sizeInMb >= 1) {
+    return `${sizeInMb.toFixed(1)}MB`;
+  }
+  return `${Math.max(bytes / 1024, 1).toFixed(0)}KB`;
+};
+
+const formatSubmittedAt = (submittedAt) => {
+  try {
+    return new Intl.DateTimeFormat('ko-KR', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(submittedAt));
+  } catch (error) {
+    return submittedAt;
+  }
+};
 
 function MichinaUpload() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissions, setSubmissions] = useState(getInitialSubmissions);
   const fileInputRef = useRef(null);
+
+  const persistSubmissions = (updater) => {
+    setSubmissions((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      }
+      return next;
+    });
+  };
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0] ?? null;
@@ -22,6 +79,13 @@ function MichinaUpload() {
 
     setIsSubmitting(true);
     window.setTimeout(() => {
+      const newSubmission = {
+        id: createSubmissionId(),
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size ?? 0,
+        submittedAt: new Date().toISOString(),
+      };
+      persistSubmissions((prev) => [newSubmission, ...prev]);
       setStatus({
         type: 'success',
         message: '과제 파일이 업로드되었습니다. 담당 강사가 확인 후 피드백을 남겨드립니다.',
@@ -32,6 +96,10 @@ function MichinaUpload() {
       }
       setIsSubmitting(false);
     }, 350);
+  };
+
+  const handleDeleteSubmission = (submissionId) => {
+    persistSubmissions((prev) => prev.filter((submission) => submission.id !== submissionId));
   };
 
   return (
@@ -77,6 +145,41 @@ function MichinaUpload() {
       >
         {isSubmitting ? '업로드 중...' : '업로드 완료하기'}
       </button>
+      <div className="space-y-3 rounded-2xl bg-white/70 p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-ellieGray">업로드 내역</h3>
+          <span className="text-xs text-ellieGray/60">최근 순으로 정렬됩니다.</span>
+        </div>
+        {submissions.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-ellieGray/20 bg-white px-4 py-5 text-center text-xs text-ellieGray/60">
+            아직 업로드한 파일이 없습니다. 과제 파일을 업로드하면 이곳에 기록돼요.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {submissions.map((submission) => (
+              <li
+                key={submission.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-ellieGray/10 bg-white px-4 py-3 shadow-[0_4px_12px_rgba(188,163,138,0.08)]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-ellieGray">{submission.fileName}</p>
+                  <p className="text-xs text-ellieGray/60">
+                    {formatFileSize(submission.fileSize)} · {formatSubmittedAt(submission.submittedAt)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSubmission(submission.id)}
+                  className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full border border-transparent text-ellieGray/70 transition-colors duration-200 hover:border-ellieGray/20 hover:bg-ivory hover:text-ellieGray focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ellieYellow/80"
+                  aria-label={`${submission.fileName} 업로드 삭제`}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </form>
   );
 }
