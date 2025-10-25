@@ -1,13 +1,13 @@
 name = "elliesbang-class"
 compatibility_date = "2025-10-20"
 
-pages_build_output_dir = "class-web-app/dist"
+[pages]
+build_output_dir = "class-web-app/dist"
 
-[[pages.functions]]
-directory = "class-web-app/functions/api"
+[functions]
+directory = "class-web-app/functions"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_main"
 database_id = "888b8ddb-1f10-4b41-8d2f-6c7f06dd1fcb"
-
