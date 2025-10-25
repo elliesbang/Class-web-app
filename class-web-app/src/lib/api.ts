@@ -289,20 +289,37 @@ const toNormalisedClassList = (input: unknown): ClassInfo[] => {
 export const getClasses = async (): Promise<ClassInfo[]> => {
   const response = await fetch('/api/classes');
   await assertResponse(response);
-  const data = (await response.json()) as ApiResponse<ClassInfo[]>;
+  const payload = (await response.json()) as ApiResponse<ClassInfo[]> | ClassInfo[] | { results?: unknown };
 
-  if (data.success === false) {
-    throw new Error(data.message || '수업 목록을 불러오지 못했습니다.');
+  if (Array.isArray(payload)) {
+    const fromArray = normaliseClassList(payload);
+    if (fromArray.length > 0) {
+      return fromArray;
+    }
+    return [];
   }
 
-  const fromData = normaliseClassList(data.data);
-  if (fromData.length > 0) {
-    return fromData;
-  }
+  if (payload && typeof payload === 'object') {
+    const fromResults = normaliseClassList((payload as { results?: unknown }).results);
+    if (fromResults.length > 0) {
+      return fromResults;
+    }
 
-  const fromLegacy = normaliseClassList((data as { classes?: unknown }).classes);
-  if (fromLegacy.length > 0) {
-    return fromLegacy;
+    const data = payload as ApiResponse<ClassInfo[]>;
+
+    if (data.success === false) {
+      throw new Error(data.message || '수업 목록을 불러오지 못했습니다.');
+    }
+
+    const fromData = normaliseClassList(data.data);
+    if (fromData.length > 0) {
+      return fromData;
+    }
+
+    const fromLegacy = normaliseClassList((data as { classes?: unknown }).classes);
+    if (fromLegacy.length > 0) {
+      return fromLegacy;
+    }
   }
 
   return [];
