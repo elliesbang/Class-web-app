@@ -17,7 +17,7 @@ function MaterialsTab({ courseName, materials }) {
                   rel="noreferrer"
                   className="mt-3 inline-flex items-center text-sm font-semibold text-ellieYellow hover:underline"
                 >
-                  자료 보기
+                  {material.mimeType === 'link' ? '링크 열기' : '자료 보기'}
                 </a>
               ) : null}
             </li>

@@ -41,6 +41,8 @@ type MaterialFormState = {
   title: string;
   description: string;
   file: File | null;
+  linkUrl: string;
+  uploadType: 'file' | 'link';
 };
 
 const createFallbackId = () => Number(new Date());
@@ -119,7 +121,13 @@ const ContentManager = () => {
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
   const [videoForm, setVideoForm] = useState<VideoFormState>({ title: '', url: '', description: '' });
   const [noticeForm, setNoticeForm] = useState<NoticeFormState>({ title: '', content: '' });
-  const [materialForm, setMaterialForm] = useState<MaterialFormState>({ title: '', description: '', file: null });
+  const [materialForm, setMaterialForm] = useState<MaterialFormState>({
+    title: '',
+    description: '',
+    file: null,
+    linkUrl: '',
+    uploadType: 'file',
+  });
   const [draggedVideoId, setDraggedVideoId] = useState<number | null>(null);
   const [isReorderingVideos, setIsReorderingVideos] = useState(false);
 
@@ -192,7 +200,8 @@ const ContentManager = () => {
 
   const resetVideoForm = () => setVideoForm({ title: '', url: '', description: '' });
   const resetNoticeForm = () => setNoticeForm({ title: '', content: '' });
-  const resetMaterialForm = () => setMaterialForm({ title: '', description: '', file: null });
+  const resetMaterialForm = () =>
+    setMaterialForm({ title: '', description: '', file: null, linkUrl: '', uploadType: 'file' });
 
   const handleVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -279,12 +288,41 @@ const ContentManager = () => {
     const title = materialForm.title.trim();
     const description = materialForm.description.trim();
     const file = materialForm.file;
+    const linkUrl = materialForm.linkUrl.trim();
+    const uploadType = materialForm.uploadType;
 
-    if (!title || !file) {
+    if (!title) {
+      return;
+    }
+
+    if (uploadType === 'file' && !file) {
+      return;
+    }
+
+    if (uploadType === 'link' && !linkUrl) {
       return;
     }
 
     try {
+      if (uploadType === 'link') {
+        const created = await createMaterial({
+          title,
+          description: description || null,
+          fileUrl: linkUrl,
+          classId: selectedClassId,
+          fileName: null,
+          mimeType: 'link',
+          fileSize: null,
+        });
+        setMaterials((prev) => sortByCreatedAtDesc([created, ...prev.filter((item) => item.id !== created.id)]));
+        resetMaterialForm();
+        return;
+      }
+
+      if (!file) {
+        return;
+      }
+
       const fileUrl = await readFileAsDataUrl(file);
       const created = await createMaterial({
         title,
@@ -299,6 +337,23 @@ const ContentManager = () => {
       resetMaterialForm();
     } catch (error) {
       console.error('[ContentManager] 자료 저장 실패 – 임시 데이터로 대체합니다.', error);
+      if (uploadType === 'link') {
+        const fallback: MaterialPayload = {
+          id: createFallbackId(),
+          title,
+          description: description || null,
+          fileUrl: linkUrl,
+          classId: selectedClassId,
+          createdAt: new Date().toISOString(),
+          fileName: null,
+          mimeType: 'link',
+          fileSize: null,
+        };
+        setMaterials((prev) => sortByCreatedAtDesc([fallback, ...prev]));
+        resetMaterialForm();
+        return;
+      }
+
       if (!file) {
         return;
       }
@@ -382,7 +437,31 @@ const ContentManager = () => {
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
-    setMaterialForm((prev) => ({ ...prev, file }));
+    setMaterialForm((prev) => ({
+      ...prev,
+      file,
+      uploadType: 'file',
+      linkUrl: '',
+    }));
+  };
+
+  const handleUploadTypeChange = (type: 'file' | 'link') => {
+    setMaterialForm((prev) => ({
+      ...prev,
+      uploadType: type,
+      file: type === 'file' ? prev.file : null,
+      linkUrl: type === 'link' ? prev.linkUrl : '',
+    }));
+  };
+
+  const handleLinkChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setMaterialForm((prev) => ({
+      ...prev,
+      linkUrl: value,
+      uploadType: 'link',
+      file: null,
+    }));
   };
 
   return (
@@ -683,21 +762,70 @@ const ContentManager = () => {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="materialFile">
-                  파일 (PDF, 이미지 등)
-                </label>
-                <input
-                  id="materialFile"
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.gif,.heic,.bmp,.ppt,.pptx,.doc,.docx,.zip"
-                  className="rounded-2xl border border-dashed border-[#e9dccf] px-4 py-3 text-sm focus:border-[#ffd331] focus:outline-none"
-                  onChange={handleFileChange}
-                  disabled={!hasClasses}
-                />
-                {materialForm.file && (
-                  <p className="text-xs text-[#7a6f68]">선택된 파일: {materialForm.file.name}</p>
-                )}
+                <span className="text-sm font-semibold text-[#5c5c5c]">업로드 방식</span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                      materialForm.uploadType === 'file'
+                        ? 'border-[#ffd331] bg-[#ffd331] text-[#404040] shadow-sm'
+                        : 'border-[#e9dccf] bg-white text-[#5c5c5c] hover:border-[#ffd331] hover:bg-[#fff6d6]'
+                    }`}
+                    onClick={() => handleUploadTypeChange('file')}
+                    disabled={!hasClasses}
+                  >
+                    파일 업로드
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                      materialForm.uploadType === 'link'
+                        ? 'border-[#ffd331] bg-[#ffd331] text-[#404040] shadow-sm'
+                        : 'border-[#e9dccf] bg-white text-[#5c5c5c] hover:border-[#ffd331] hover:bg-[#fff6d6]'
+                    }`}
+                    onClick={() => handleUploadTypeChange('link')}
+                    disabled={!hasClasses}
+                  >
+                    링크 업로드
+                  </button>
+                </div>
+                <p className="text-xs text-[#7a6f68]">
+                  파일을 직접 업로드하거나 외부 링크를 첨부하여 학습 자료를 공유할 수 있습니다.
+                </p>
               </div>
+              {materialForm.uploadType === 'file' ? (
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="materialFile">
+                    파일 (PDF, 이미지 등)
+                  </label>
+                  <input
+                    id="materialFile"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.gif,.heic,.bmp,.ppt,.pptx,.doc,.docx,.zip"
+                    className="rounded-2xl border border-dashed border-[#e9dccf] px-4 py-3 text-sm focus:border-[#ffd331] focus:outline-none"
+                    onChange={handleFileChange}
+                    disabled={!hasClasses}
+                  />
+                  {materialForm.file && (
+                    <p className="text-xs text-[#7a6f68]">선택된 파일: {materialForm.file.name}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="materialLink">
+                    링크 URL
+                  </label>
+                  <input
+                    id="materialLink"
+                    type="url"
+                    placeholder="https://example.com/material"
+                    className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                    value={materialForm.linkUrl}
+                    onChange={handleLinkChange}
+                    disabled={!hasClasses}
+                  />
+                </div>
+              )}
             </div>
             <div className="mt-4 flex justify-end">
               <button
@@ -736,7 +864,7 @@ const ContentManager = () => {
                               rel="noopener noreferrer"
                               className="font-semibold text-[#404040] underline-offset-2 hover:underline"
                             >
-                              {material.fileName ?? '파일 열기'}
+                              {material.fileName ?? (material.mimeType === 'link' ? '링크 열기' : '파일 열기')}
                             </a>
                           )}
                         </div>
