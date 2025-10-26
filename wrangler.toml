@@ -3,11 +3,11 @@ compatibility_date = "2025-10-25"
 
 [build]
 command = "npm run build"
-cwd = "."  # 그대로 유지
+cwd = "./class-web-app"         # class-web-app 폴더에서 빌드 실행
 
 [pages]
-pages_build_output_dir = "dist"   # ✅ ./dist 대신 dist 로 변경
-functions = "../functions"        # ✅ 상대경로 유지 (루트의 functions 폴더)
+pages_build_output_dir = "./class-web-app/dist"   # 빌드 결과 폴더 지정
+functions = "./functions"                         # 루트 기준 functions 폴더
 
 [[d1_databases]]
 binding = "DB"
