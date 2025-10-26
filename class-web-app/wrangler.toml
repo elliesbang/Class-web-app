@@ -7,7 +7,7 @@ cwd = "."
 
 [pages]
 pages_build_output_dir = "dist"
-functions = "../functions"
+functions = "../functions"  
 
 [[d1_databases]]
 binding = "DB"
@@ -21,5 +21,3 @@ vars = { NODE_ENV = "production" }
 binding = "DB"
 database_name = "elliesbang_class"
 database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
-
-# ✅ Cloudflare Pages validated config (moved inside class-web-app)
