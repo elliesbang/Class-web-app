@@ -3,11 +3,11 @@ compatibility_date = "2025-10-25"
 
 [build]
 command = "npm run build"
-cwd = "."
+cwd = "."  # 그대로 유지
 
 [pages]
-pages_build_output_dir = "./dist"   # ✅ 앞에 ./ 붙이기
-functions = "../functions"          # ✅ 그대로 유지 (루트 functions 인식)
+pages_build_output_dir = "dist"   # ✅ ./dist 대신 dist 로 변경
+functions = "../functions"        # ✅ 상대경로 유지 (루트의 functions 폴더)
 
 [[d1_databases]]
 binding = "DB"
