@@ -1,0 +1,9 @@
+{
+  "name": "엘리의방 클래스",
+  "short_name": "엘리클래스",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5eee9",
+  "theme_color": "#fef568",
+  "icons": []
+}
