@@ -1,14 +1,11 @@
 name = "elliesbang_class"
 compatibility_date = "2025-10-25"
+pages_build_output_dir = "class-web-app/dist"
+pages_functions_dir = "./functions"
 
 [build]
 command = "npm run build"
 cwd = "class-web-app"
-
-[pages]
-# 경로 수정: cwd(class-web-app) 기준으로 'dist'에 결과물이 생성됨
-pages_build_output_dir = "dist" 
-functions = "./functions"
 
 [[d1_databases]]
 binding = "DB"
