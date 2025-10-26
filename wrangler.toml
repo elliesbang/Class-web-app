@@ -10,12 +10,15 @@ cwd = "class-web-app"
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_class"
+# ⚠️ 구문 오류 수정: database_id를 한 줄로 합침
 database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
+
 
 [env.production]
 vars = { NODE_ENV = "production" }
 
-[env.production.d1_databases]
+[[env.production.d1_databases]]
 binding = "DB"
 database_name = "elliesbang_class"
+# ⚠️ 구문 오류 수정: database_id를 한 줄로 합침
 database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
