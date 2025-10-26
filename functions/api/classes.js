@@ -41,6 +41,24 @@ const toNullableDate = (value) => {
   return typeof parsed === 'string' ? parsed : null;
 };
 
+const toNullableNumber = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return null;
+    }
+
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
+
 const parseBooleanFlag = (value, fallback) => {
   if (typeof value === 'boolean') {
     return value;
@@ -294,6 +312,22 @@ const resolveCategoryId = async (db, name) => {
   }
 };
 
+const determineCategoryId = async (db, options) => {
+  const { categoryIdCandidate, categoryName, fallbackId } = options;
+
+  const direct = toNullableNumber(categoryIdCandidate);
+  if (direct != null) {
+    return direct;
+  }
+
+  const resolved = await resolveCategoryId(db, categoryName);
+  if (resolved != null) {
+    return resolved;
+  }
+
+  return toNullableNumber(fallbackId);
+};
+
 const parseDateColumn = (row, ...keys) => {
   for (const key of keys) {
     if (!(key in row)) {
@@ -336,6 +370,7 @@ const toClassPayload = (row) => {
 
   const code = parseStringColumn(row, 'code', 'class_code', 'classCode');
   const category = parseStringColumn(row, 'category', 'class_category', 'category_name', 'categoryName');
+  const categoryId = toNullableNumber(getRowValue(row, 'category_id', 'categoryId'));
   const startDate = parseDateColumn(row, 'start_date', 'startDate');
   const endDate = parseDateColumn(row, 'end_date', 'endDate');
 
@@ -380,6 +415,7 @@ const toClassPayload = (row) => {
     name,
     code: code ?? '',
     category: category ?? '',
+    categoryId: categoryId ?? null,
     startDate,
     endDate,
     assignmentUploadTime,
@@ -419,7 +455,10 @@ const buildInsertStatement = async (db, columns, payload) => {
 
   const categoryIdColumn = resolveColumnName(columns, 'category_id', 'categoryId');
   if (categoryIdColumn) {
-    const categoryId = await resolveCategoryId(db, payload.category);
+    const categoryId = await determineCategoryId(db, {
+      categoryIdCandidate: payload.categoryId,
+      categoryName: payload.category,
+    });
     pushField(categoryIdColumn, categoryId);
   }
 
@@ -522,7 +561,11 @@ const buildUpdateStatement = async (db, columns, id, payload) => {
 
   const categoryIdColumn = resolveColumnName(columns, 'category_id', 'categoryId');
   if (categoryIdColumn) {
-    const categoryId = await resolveCategoryId(db, payload.category);
+    const categoryId = await determineCategoryId(db, {
+      categoryIdCandidate: payload.categoryId,
+      categoryName: payload.category,
+      fallbackId: payload.existingCategoryId,
+    });
     pushSet(categoryIdColumn, categoryId);
   }
 
@@ -644,6 +687,7 @@ app.post('/', async (c) => {
       name,
       code,
       category,
+      categoryId: payload.categoryId ?? payload.category_id ?? null,
       startDate,
       endDate,
       assignmentUploadTime,
@@ -726,6 +770,12 @@ app.put('/:id', async (c) => {
       ? toNullableString(payload.category)
       : existingCategory;
 
+    const existingCategoryId = toNullableNumber(getRowValue(existing, 'category_id', 'categoryId'));
+    const hasCategoryIdField =
+      Object.prototype.hasOwnProperty.call(payload, 'categoryId') ||
+      Object.prototype.hasOwnProperty.call(payload, 'category_id');
+    const categoryIdCandidate = hasCategoryIdField ? payload.categoryId ?? payload.category_id : null;
+
     const existingStartDate = parseDateColumn(existing, 'start_date', 'startDate');
     const startDate = Object.prototype.hasOwnProperty.call(payload, 'startDate')
       ? toNullableDate(payload.startDate)
@@ -791,6 +841,8 @@ app.put('/:id', async (c) => {
       name,
       code,
       category,
+      categoryId: categoryIdCandidate,
+      existingCategoryId,
       startDate,
       endDate,
       assignmentUploadTime,
