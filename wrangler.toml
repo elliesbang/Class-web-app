@@ -5,7 +5,7 @@ compatibility_date = "2025-10-25"
 command = "npm --prefix class-web-app run build"
 cwd = "class-web-app"
 pages_build_output_dir = "class-web-app/dist"
-functions = "./functions" # ✅ 올바른 위치로 이동
+functions = "./functions" 
 
 [[d1_databases]]
 binding = "DB"
