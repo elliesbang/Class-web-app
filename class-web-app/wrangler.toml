@@ -2,12 +2,12 @@ name = "elliesbang_class"
 compatibility_date = "2025-10-25"
 
 [build]
-command = "npm --prefix class-web-app run build"
-cwd = "class-web-app"
+command = "npm run build"
+cwd = "."
 
 [pages]
-pages_build_output_dir = "class-web-app/dist"
-functions = "functions"
+pages_build_output_dir = "dist"
+functions = "../functions"
 
 [[d1_databases]]
 binding = "DB"
@@ -22,5 +22,4 @@ binding = "DB"
 database_name = "elliesbang_class"
 database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
 
-# ✅ for redeploy trigger
-# Cloudflare Pages validated config 2025-10-26
+# ✅ Cloudflare Pages validated config (moved inside class-web-app)
