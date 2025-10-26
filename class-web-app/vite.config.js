@@ -10,4 +10,7 @@ export default defineConfig({
       recharts: path.resolve(__dirname, 'src/lib/recharts.tsx'),
     },
   },
+  build: {
+    outDir: 'dist', 
+  },
 });
