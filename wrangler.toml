@@ -1,11 +1,14 @@
 name = "elliesbang_class"
 compatibility_date = "2025-10-25"
 
+[vars]
+NODE_ENV = "production"
+
 [pages]
 # Vite로 빌드된 정적 파일 경로
-pages_build_output_dir = "./class-web-app/dist"
+pages_build_output_dir = "class-web-app/dist"
 # API 함수들이 들어 있는 경로
-functions = "./functions"
+functions = "functions"
 
 [[d1_databases]]
 binding = "DB"
