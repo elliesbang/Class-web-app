@@ -5,6 +5,7 @@ export type ClassInfo = {
   name: string;
   code: string;
   category: string;
+  categoryId: number | null;
   startDate: string | null;
   endDate: string | null;
   assignmentUploadTime: AssignmentUploadTimeOption;
@@ -19,6 +20,7 @@ export type ClassFormPayload = {
   name: string;
   code: string;
   category: string;
+  categoryId?: number | null;
   startDate: string | null;
   endDate: string | null;
   assignmentUploadTime: AssignmentUploadTimeOption;
@@ -204,6 +206,24 @@ const parseBooleanValue = (value: unknown): boolean => {
   return false;
 };
 
+const parseNumericValue = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return null;
+    }
+
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
+
 const normaliseClassRecord = (item: unknown): ClassInfo | null => {
   if (!item || typeof item !== 'object') {
     return null;
@@ -231,6 +251,7 @@ const normaliseClassRecord = (item: unknown): ClassInfo | null => {
     : rawCategory != null
     ? String(rawCategory).trim()
     : '';
+  const categoryId = parseNumericValue(candidate.category_id ?? candidate.categoryId);
 
   const startDate = parseDateValue(candidate.start_date ?? candidate.startDate);
   const endDate = parseDateValue(candidate.end_date ?? candidate.endDate);
@@ -268,6 +289,7 @@ const normaliseClassRecord = (item: unknown): ClassInfo | null => {
     name,
     code,
     category,
+    categoryId: categoryId ?? null,
     startDate,
     endDate,
     assignmentUploadTime,
@@ -344,6 +366,7 @@ const serialiseClassPayload = (payload: ClassFormPayload) => ({
   name: payload.name,
   code: payload.code,
   category: payload.category,
+  categoryId: payload.categoryId ?? null,
   startDate: payload.startDate,
   endDate: payload.endDate,
   assignmentUploadTime: payload.assignmentUploadTime,

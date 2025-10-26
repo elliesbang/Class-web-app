@@ -15,7 +15,8 @@ const normaliseClasses = (input) => {
 
       const id = "id" in item ? item.id : undefined;
       const name = "name" in item ? item.name : undefined;
-      const categoryId = "categoryId" in item ? item.categoryId : undefined;
+      const categoryId =
+        "categoryId" in item ? item.categoryId : "category_id" in item ? item.category_id : undefined;
 
       if (id == null || name == null) {
         return null;
@@ -59,6 +60,8 @@ const ClassSelector = ({
         console.log("📦 불러온 수업 목록:", data);
         const nextClasses = Array.isArray(data)
           ? data
+          : Array.isArray(data?.data)
+          ? data.data
           : Array.isArray(data?.results)
           ? data.results
           : Array.isArray(data?.classes)
