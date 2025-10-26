@@ -1,26 +1,25 @@
 import { Hono } from 'hono'
+import { withD1 } from '@hono/d1'
+import { z } from 'zod'
 
 interface Env {
   DB: D1Database
 }
+
+type PagesContext<Bindings> = {
+  request: Request
+  env: Bindings
+  waitUntil(promise: Promise<unknown>): void
+  passThroughOnException(): void
+}
+
+type PagesHandler<Bindings> = (context: PagesContext<Bindings>) => Response | Promise<Response>
 
 type AssignmentUploadTime = 'all_day' | 'same_day'
 
 const VALID_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'] as const
 
 type ClassRow = Record<string, unknown>
-
-type ClassRequestBody = {
-  name?: string | null
-  code?: string | null
-  category?: string | null
-  startDate?: string | null
-  endDate?: string | null
-  assignmentUploadTime?: string | null
-  assignmentUploadDays?: unknown
-  deliveryMethods?: unknown
-  isActive?: unknown
-}
 
 /* -------------------------- 유틸 함수 섹션 -------------------------- */
 
@@ -169,25 +168,55 @@ const resolveCategoryId = async (db: D1Database, name: string | null | undefined
 
 /* -------------------------- 라우트 섹션 -------------------------- */
 
+const classPayloadSchema = z.object({
+  id: z.number().int().nonnegative(),
+  name: z.string(),
+  category: z.string().nullable(),
+  code: z.string().nullable(),
+  startDate: z.string().nullable(),
+  endDate: z.string().nullable()
+})
+
 const app = new Hono<{ Bindings: Env }>()
+
+app.use('*', withD1({ binding: 'DB', storeKey: 'DB' }))
 
 // ✅ 모든 수업 조회
 app.get('/', async c => {
   try {
     const columns = await getClassTableColumns(c.env.DB)
     const rows = await fetchClassRows(c.env.DB, columns)
-    const classes = rows.map(r => ({
-      id: Number(r.id),
-      name: toNonEmptyString(r.name) ?? '',
-      category: toNullableString(r.category) ?? '',
-      code: toNullableString(r.code) ?? '',
-      startDate: toNullableDate(r.start_date),
-      endDate: toNullableDate(r.end_date)
-    }))
+    const classes = rows.map(r => {
+      const payload = {
+        id: Number.isFinite(Number(r.id)) ? Number(r.id) : 0,
+        name: toNonEmptyString(r.name) ?? '',
+        category: toNullableString(r.category),
+        code: toNullableString(r.code),
+        startDate: toNullableDate(r.start_date),
+        endDate: toNullableDate(r.end_date)
+      }
+
+      const parsed = classPayloadSchema.safeParse(payload)
+      if (!parsed.success) {
+        console.warn('[classes] Failed to validate class payload', parsed.error.issues)
+        return {
+          id: payload.id,
+          name: payload.name,
+          category: payload.category ?? null,
+          code: payload.code ?? null,
+          startDate: payload.startDate ?? null,
+          endDate: payload.endDate ?? null
+        }
+      }
+
+      return parsed.data
+    })
     return c.json({ success: true, data: classes })
   } catch (err) {
     return c.json({ success: false, message: String(err) }, 500)
   }
 })
 
-export const onRequest = app.fetch;
+export const onRequest: PagesHandler<Env> = context => app.fetch(context.request, context.env, context)
+
+export default app
