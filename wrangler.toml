@@ -1,24 +1,16 @@
 name = "elliesbang-class"
 compatibility_date = "2025-10-25"
 
-# ✅ Cloudflare Pages 빌드 결과물 폴더
-pages_build_output_dir = "./dist"
+pages_build_output_dir = "class-web-app/dist"
 
-# ✅ Functions 경로
-[pages]
-functions = "./functions"
-
-# ✅ D1 데이터베이스 연결
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_class"
 database_id = "2a518bb3-9a4f-437e-a740-79a6a96ead5"
 
-# ✅ production 환경 변수
 [env.production]
 vars = { NODE_ENV = "production" }
 
-# ✅ production 환경에도 D1을 명시해야 경고 안 뜸
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "elliesbang_class"
