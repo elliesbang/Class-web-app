@@ -1,11 +1,13 @@
-name = "elliesbang-class"
+name = "elliesbang_class"
 compatibility_date = "2025-10-25"
 
 [build]
 command = "npm --prefix class-web-app run build"
 cwd = "class-web-app"
+
+[pages]
 pages_build_output_dir = "class-web-app/dist"
-functions = "./functions" 
+functions = "functions"
 
 [[d1_databases]]
 binding = "DB"
