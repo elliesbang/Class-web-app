@@ -3,10 +3,10 @@ compatibility_date = "2025-10-25"
 
 [build]
 command = "npm run build"
-cwd = "class-web-app"  # 빌드 명령이 실행될 경로
+cwd = "class-web-app"
 
 [pages]
-pages_build_output_dir = "./class-web-app/dist"  
+pages_build_output_dir = "./class-web-app/dist"
 functions = "./functions"
 
 [[d1_databases]]
