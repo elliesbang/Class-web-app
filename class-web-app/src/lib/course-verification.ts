@@ -1,3 +1,5 @@
+import { apiFetch } from '../utils/apiClient';
+
 const STORAGE_KEY = 'ellieVerifiedCourseCodes';
 
 type VerifiedCourseMap = Record<string, string>;
@@ -105,24 +107,10 @@ export const verifyCourseCode = async (courseId: string, code: string): Promise<
   }
 
   try {
-    const response = await fetch('/api/courses/verify', {
+    const data = await apiFetch('/api/courses/verify', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ courseId, code: trimmedCode }),
     });
-
-    if (!response.ok) {
-      return { ok: false, message: '유효하지 않은 코드입니다.' };
-    }
-
-    let data: unknown = null;
-    try {
-      data = await response.json();
-    } catch (error) {
-      // ignore JSON parse errors and treat as empty payload
-    }
 
     if (data && typeof data === 'object') {
       const payload = data as Record<string, unknown>;

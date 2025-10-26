@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../utils/apiClient";
 
 const noop = () => {};
 
@@ -54,9 +55,7 @@ const ClassSelector = ({
         const url = selectedCategory
           ? `/api/classes?category_id=${selectedCategory}`
           : "/api/classes";
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("수업 목록 불러오기 실패");
-        const data = await response.json();
+        const data = await apiFetch(url);
         console.log("📦 불러온 수업 목록:", data);
         const nextClasses = Array.isArray(data)
           ? data

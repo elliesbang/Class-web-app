@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '../../utils/apiClient';
 
 const deriveCategoryId = (categories) => {
   if (!categories || categories.length === 0) {
@@ -58,12 +59,10 @@ const ClassForm = ({ categories = [], onSaved }) => {
     setIsSaving(true);
 
     try {
-      const response = await fetch('/api/classes', {
+      await apiFetch('/api/classes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-      if (!response.ok) throw new Error('저장 실패');
       alert('수업이 성공적으로 저장되었습니다!');
       setIsSaving(false);
       setFormData({ name: '', categoryId: '', uploadOption: '' });

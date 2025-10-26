@@ -1,4 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '../../utils/apiClient';
 import type { AssignmentUploadTimeOption, ClassFormPayload, ClassInfo } from '../../lib/api';
 import { useAdminClasses } from './data/AdminClassContext';
 
@@ -103,12 +104,7 @@ const AdminClassManagement = () => {
 
     const loadCategories = async () => {
       try {
-        const response = await fetch('/api/class-categories', { signal: controller.signal });
-        if (!response.ok) {
-          throw new Error('failed to fetch categories');
-        }
-
-        const payload = await response.json();
+        const payload = await apiFetch('/api/class-categories', { signal: controller.signal });
         const rawList = Array.isArray(payload)
           ? payload
           : Array.isArray((payload as { data?: unknown }).data)
