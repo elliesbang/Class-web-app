@@ -1,5 +1,6 @@
 name = "elliesbang_class"
 compatibility_date = "2025-10-25"
+import_map = "./import_map.json"
 
 [pages]
 # ✅ Vite가 빌드한 정적 파일 위치
