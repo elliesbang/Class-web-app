@@ -22,5 +22,5 @@ binding = "DB"
 database_name = "elliesbang_class"
 database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
 
-# ✅ 배포 확인용 주석 추가 (변경 감지를 위한 강제 커밋)
-# Cloudflare Pages config validated 2025-10-26
+# ✅ for redeploy trigger
+# Cloudflare Pages validated config 2025-10-26
