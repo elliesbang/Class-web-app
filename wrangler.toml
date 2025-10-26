@@ -1,24 +1,13 @@
 name = "elliesbang_class"
 compatibility_date = "2025-10-25"
-import_map = "./import_map.json"
 
 [pages]
-# ✅ Vite가 빌드한 정적 파일 위치
-pages_build_output_dir = "class-web-app/dist"
-
-# ✅ API 함수들이 들어 있는 폴더
+# Vite로 빌드된 정적 파일 경로
+pages_build_output_dir = "./class-web-app/dist"
+# API 함수들이 들어 있는 경로
 functions = "./functions"
 
-# ✅ D1 Database 연결
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_class"
-database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
-
-[env.production]
-vars = { NODE_ENV = "production" }
-
-[env.production.d1_databases]
-binding = "DB"
-database_name = "elliesbang_class"
-database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
+database_id = "2a518bb3-9a4f-437e-a740-79a6a9e96ad5"
