@@ -1,15 +1,15 @@
 import { Hono } from 'hono'
 import { withD1 } from '@hono/d1'
+import { jsonResponse, jsonError } from '../_utils'
 
 const app = new Hono()
 
 app.get('/', withD1(async (c) => {
   try {
     const { results } = await c.env.DB.prepare('SELECT * FROM classes').all()
-    return c.json({ success: true, data: results || [] })
+    return jsonResponse(true, results ?? [])
   } catch (error) {
-    console.error('[api/classes] DB fetch error:', error)
-    return c.json({ success: false, message: 'Failed to fetch classes' }, 500)
+    return jsonError(error, 'Failed to fetch classes')
   }
 }))
 
