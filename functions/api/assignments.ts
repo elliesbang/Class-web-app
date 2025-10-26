@@ -205,7 +205,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   const assignments = rowsToCamelCase(results).map(mapRowToResponse);
 
-  return jsonResponse({ assignments });
+  return jsonResponse(true, { assignments });
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -292,5 +292,5 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     status: responsePayload.status,
   });
 
-  return jsonResponse({ assignment: responsePayload }, { status: 201 });
+  return jsonResponse(true, { assignment: responsePayload }, undefined, 201);
 };
