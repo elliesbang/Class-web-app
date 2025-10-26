@@ -1,7 +1,7 @@
 {
   "imports": {
-    "@hono/d1": "./functions/_shims/hono-d1.ts",
+    "@hono/d1": "./node_modules/@hono/d1/index.js",
     "hono": "./node_modules/hono/dist/index.js",
-    "zod": "./node_modules/zod/index.js"
+    "zod": "./node_modules/zod/index.mjs"
   }
 }
