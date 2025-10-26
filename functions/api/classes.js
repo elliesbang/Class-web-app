@@ -207,18 +207,25 @@ const normaliseAssignmentUploadTime = (value, fallback) => {
   return fallback;
 };
 
-const getClassTableColumns = async (db) => {
-  const { results } = await db.prepare("PRAGMA table_info('classes')").all();
+const getTableColumns = async (db, tableName) => {
+  try {
+    const { results } = await db.prepare(`PRAGMA table_info('${tableName}')`).all();
 
-  const columns = new Set();
-  for (const row of results ?? []) {
-    if (row && typeof row.name === 'string') {
-      columns.add(row.name.toLowerCase());
+    const columns = new Set();
+    for (const row of results ?? []) {
+      if (row && typeof row.name === 'string') {
+        columns.add(row.name.toLowerCase());
+      }
     }
-  }
 
-  return columns;
+    return columns;
+  } catch (error) {
+    console.warn(`[classes] Failed to inspect table ${tableName}:`, error);
+    return new Set();
+  }
 };
+
+const getClassTableColumns = async (db) => getTableColumns(db, 'classes');
 
 const hasColumn = (columns, candidate) => columns.has(candidate.toLowerCase());
 
@@ -294,22 +301,53 @@ const fetchClassRows = async (db, columns) => {
   return results ?? [];
 };
 
+const CATEGORY_TABLES = [
+  { table: 'categories', nameCandidates: ['name', 'category_name'] },
+  { table: 'class_categories', nameCandidates: ['name', 'category_name'] },
+];
+
+const isTableMissingError = (error) => error instanceof Error && /no such table/i.test(error.message);
+
 const resolveCategoryId = async (db, name) => {
   const parsed = parseOptionalString(name);
   if (!parsed) {
     return null;
   }
 
-  try {
-    const row = await db
-      .prepare('SELECT id FROM categories WHERE name = ? LIMIT 1')
-      .bind(parsed)
-      .first();
-    return row && typeof row.id === 'number' ? row.id : null;
-  } catch (error) {
-    console.warn('[classes] Failed to resolve category id:', error);
-    return null;
+  for (const { table, nameCandidates } of CATEGORY_TABLES) {
+    try {
+      const columns = await getTableColumns(db, table);
+      if (!columns || columns.size === 0) {
+        continue;
+      }
+
+      const nameColumn = resolveColumnName(columns, ...(nameCandidates ?? []));
+      if (!nameColumn) {
+        continue;
+      }
+
+      const idColumn = resolveColumnName(columns, 'id', 'category_id', 'categoryId') ?? 'id';
+      const row = await db
+        .prepare(`SELECT ${idColumn} AS id FROM ${table} WHERE LOWER(${nameColumn}) = LOWER(?) LIMIT 1`)
+        .bind(parsed)
+        .first();
+
+      if (row && typeof row.id === 'number') {
+        return row.id;
+      }
+      const fallbackId = toNullableNumber(row?.id);
+      if (fallbackId != null) {
+        return fallbackId;
+      }
+    } catch (error) {
+      if (isTableMissingError(error)) {
+        continue;
+      }
+      console.warn(`[classes] Failed to resolve category id from ${table}:`, error);
+    }
   }
+
+  return null;
 };
 
 const determineCategoryId = async (db, options) => {
@@ -326,6 +364,37 @@ const determineCategoryId = async (db, options) => {
   }
 
   return toNullableNumber(fallbackId);
+};
+
+const deleteRelatedClassData = async (db, id) => {
+  const relatedTables = [
+    { table: 'videos', columnCandidates: ['class_id', 'classId', 'classID'] },
+    { table: 'materials', columnCandidates: ['class_id', 'classId', 'classID'] },
+    { table: 'notices', columnCandidates: ['class_id', 'classId', 'classID'] },
+    { table: 'feedback', columnCandidates: ['class_id', 'classId', 'classID'] },
+    { table: 'assignments', columnCandidates: ['class_id', 'classId', 'classID'] },
+  ];
+
+  for (const { table, columnCandidates } of relatedTables) {
+    try {
+      const columns = await getTableColumns(db, table);
+      if (!columns || columns.size === 0) {
+        continue;
+      }
+
+      const column = resolveColumnName(columns, ...columnCandidates);
+      if (!column) {
+        continue;
+      }
+
+      await db.prepare(`DELETE FROM ${table} WHERE ${column} = ?`).bind(id).run();
+    } catch (error) {
+      if (isTableMissingError(error)) {
+        continue;
+      }
+      console.warn(`[classes] Failed to delete related rows in ${table}:`, error);
+    }
+  }
 };
 
 const parseDateColumn = (row, ...keys) => {
@@ -888,6 +957,8 @@ app.delete('/:id', async (c) => {
     if (!existing) {
       return c.json({ success: false, message: '수업 정보를 찾을 수 없습니다.' }, 404);
     }
+
+    await deleteRelatedClassData(c.env.DB, id);
 
     await c.env.DB.prepare(`DELETE FROM classes WHERE ${idColumn} = ?`).bind(id).run();
 
