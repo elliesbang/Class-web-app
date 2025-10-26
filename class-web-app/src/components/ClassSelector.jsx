@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "../utils/apiClient";
 
 const normaliseCategoryItem = (item) => {
   if (item == null) {
@@ -99,11 +100,7 @@ export default function ClassSelector() {
     async function fetchCategories() {
       setLoading((prev) => ({ ...prev, categories: true }));
       try {
-        const res = await fetch("/api/class-categories");
-        if (!res.ok) {
-          throw new Error(`Failed to fetch categories: ${res.status}`);
-        }
-        const payload = await res.json();
+        const payload = await apiFetch("/api/class-categories");
         const nextCategories = extractArrayPayload(payload)
           .map((item) => normaliseCategoryItem(item))
           .filter((item) => item !== null);
@@ -123,11 +120,7 @@ export default function ClassSelector() {
     async function fetchClasses() {
       setLoading((prev) => ({ ...prev, classes: true }));
       try {
-        const res = await fetch("/api/classes");
-        if (!res.ok) {
-          throw new Error(`Failed to fetch classes: ${res.status}`);
-        }
-        const payload = await res.json();
+        const payload = await apiFetch("/api/classes");
         const nextClasses = extractArrayPayload(payload);
         setClasses(nextClasses);
       } catch (err) {
