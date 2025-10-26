@@ -11,7 +11,7 @@ routes = ["/api/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_class"
-database_id = "2a518bb3-9a4f-437e-a740-79a6a96ead5"
+database_id ="2a518bb3-9a4f-437e-a740-79a6ae96ead5"
 
 # ✅ 환경 설정
 [env.production]
@@ -19,5 +19,5 @@ vars = { NODE_ENV = "production" }
 
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "elliesbang_class"
-database_id = "2a518bb3-9a4f-437e-a740-79a6a96ead5"
+database_name = "elliesbang_class"2a518bb3-9a4f-437e-a740-79a6ae96ead5
+"
