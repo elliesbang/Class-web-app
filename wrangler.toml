@@ -6,7 +6,7 @@ command = "npm run build"
 cwd = "class-web-app"  # 빌드 명령이 실행될 경로
 
 [pages]
-pages_build_output_dir = "./class-web-app/dist"  # ✅ ./ 제거
+pages_build_output_dir = "./class-web-app/dist"  
 functions = "./functions"
 
 [[d1_databases]]
