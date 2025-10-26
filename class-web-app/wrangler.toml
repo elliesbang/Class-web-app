@@ -6,8 +6,8 @@ command = "npm run build"
 cwd = "."
 
 [pages]
-pages_build_output_dir = "dist"
-functions = "../functions"  
+pages_build_output_dir = "./dist"   # ✅ 앞에 ./ 붙이기
+functions = "../functions"          # ✅ 그대로 유지 (루트 functions 인식)
 
 [[d1_databases]]
 binding = "DB"
