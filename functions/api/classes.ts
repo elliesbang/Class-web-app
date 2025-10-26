@@ -259,21 +259,51 @@ const fetchClassRows = async (db: D1Database, columns: Set<string>) => {
   return results ?? [];
 };
 
+const tableExists = async (db: D1Database, tableName: string) => {
+  try {
+    const row = await db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?1 LIMIT 1")
+      .bind(tableName)
+      .first<{ name: string }>();
+
+    return Boolean(row?.name);
+  } catch (error) {
+    console.warn(`[classes] Failed to check table existence for "${tableName}":`, error);
+    return false;
+  }
+};
+
 const resolveCategoryId = async (db: D1Database, name: string | null | undefined) => {
   if (!name) {
     return null;
   }
 
-  try {
-    const row = await db
-      .prepare('SELECT id FROM categories WHERE name = ? LIMIT 1')
-      .bind(name)
-      .first<{ id: number }>();
-    return row?.id ?? null;
-  } catch (error) {
-    console.warn('[classes] Failed to resolve category id:', error);
-    return null;
+  const tablesToCheck: Array<{ table: string; column: string }> = [];
+
+  if (await tableExists(db, 'categories')) {
+    tablesToCheck.push({ table: 'categories', column: 'name' });
   }
+
+  if (await tableExists(db, 'class_categories')) {
+    tablesToCheck.push({ table: 'class_categories', column: 'name' });
+  }
+
+  for (const entry of tablesToCheck) {
+    try {
+      const row = await db
+        .prepare(`SELECT id FROM ${entry.table} WHERE ${entry.column} = ?1 LIMIT 1`)
+        .bind(name)
+        .first<{ id: number }>();
+
+      if (row?.id != null) {
+        return row.id;
+      }
+    } catch (error) {
+      console.warn(`[classes] Failed to resolve category id via "${entry.table}":`, error);
+    }
+  }
+
+  return null;
 };
 
 const parseDateColumn = (row: ClassRow, ...keys: string[]) => {
