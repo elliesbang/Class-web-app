@@ -1,42 +1,44 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 
 const VALID_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
-const toNonEmptyString = (value) => {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed.length > 0) {
-      return trimmed;
-    }
-  }
-
-  return null;
-};
-
-const toNullableString = (value) => {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    const stringified = String(value).trim();
-    return stringified.length > 0 ? stringified : null;
-  }
-
-  return null;
-};
-
-const toNullableDate = (value) => {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) {
+const relaxedStringSchema = z.preprocess(
+  (value) => {
+    if (value == null) {
       return null;
     }
-    return trimmed;
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }
+
+    const stringified = String(value).trim();
+    return stringified.length > 0 ? stringified : null;
+  },
+  z.string().optional().nullable(),
+);
+
+const parseOptionalString = (value) => {
+  const result = relaxedStringSchema.safeParse(value);
+  if (!result.success) {
+    return null;
   }
 
-  return null;
+  return result.data ?? null;
+};
+
+const toNonEmptyString = (value) => {
+  const parsed = parseOptionalString(value);
+  return typeof parsed === 'string' && parsed.length > 0 ? parsed : null;
+};
+
+const toNullableString = (value) => parseOptionalString(value);
+
+const toNullableDate = (value) => {
+  const parsed = parseOptionalString(value);
+  return typeof parsed === 'string' ? parsed : null;
 };
 
 const parseBooleanFlag = (value, fallback) => {
@@ -72,8 +74,8 @@ const toStringArray = (value) => {
     const filtered = [];
 
     for (const item of value) {
-      const normalised = typeof item === 'string' ? item.trim() : item == null ? '' : String(item).trim();
-      if (normalised.length === 0 || seen.has(normalised)) {
+      const normalised = parseOptionalString(item);
+      if (!normalised || seen.has(normalised)) {
         continue;
       }
       seen.add(normalised);
@@ -100,15 +102,20 @@ const toStringArray = (value) => {
 
     return trimmed
       .split(',')
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0);
+      .map((item) => parseOptionalString(item))
+      .filter((item) => typeof item === 'string');
   }
 
   if (value == null) {
     return [];
   }
 
-  return toStringArray(String(value));
+  const parsed = parseOptionalString(value);
+  if (parsed == null) {
+    return [];
+  }
+
+  return toStringArray(parsed);
 };
 
 const parseStoredArray = (value) => {
@@ -168,18 +175,15 @@ const normaliseDeliveryMethods = (value, fallback) => {
 };
 
 const normaliseAssignmentUploadTime = (value, fallback) => {
-  if (typeof value === 'string') {
-    const normalised = value.trim().toLowerCase();
+  const parsed = parseOptionalString(value);
+  if (typeof parsed === 'string') {
+    const normalised = parsed.toLowerCase();
     if (normalised === 'same_day' || normalised === 'day_only' || normalised === 'single_day') {
       return 'same_day';
     }
     if (normalised === 'all_day') {
       return 'all_day';
     }
-  }
-
-  if (value === 'same_day') {
-    return 'same_day';
   }
 
   return fallback;
@@ -273,14 +277,15 @@ const fetchClassRows = async (db, columns) => {
 };
 
 const resolveCategoryId = async (db, name) => {
-  if (!name) {
+  const parsed = parseOptionalString(name);
+  if (!parsed) {
     return null;
   }
 
   try {
     const row = await db
       .prepare('SELECT id FROM categories WHERE name = ? LIMIT 1')
-      .bind(name)
+      .bind(parsed)
       .first();
     return row && typeof row.id === 'number' ? row.id : null;
   } catch (error) {
