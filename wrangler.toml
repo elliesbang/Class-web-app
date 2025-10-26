@@ -1,14 +1,20 @@
 name = "elliesbang-class"
 compatibility_date = "2025-10-25"
+main = "functions/index.ts"
+
+# ✅ Cloudflare Pages 설정
+pages_build_output_dir = "./dist"
 
 [site]
 bucket = "./dist"
 
-[pages]
-build_output_dir = "dist"
-functions = "./functions"
+[build]
+command = "npm run build"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_class"
-database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
+database_id = "2a518bb3-9a4f-437e-a740-79a6a96ead5"
+
+[env.production]
+vars = { NODE_ENV = "production" }
