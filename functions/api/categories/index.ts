@@ -118,4 +118,4 @@ app.delete('/:id', async (c) => {
   }
 });
 
-export default app;
+export const onRequest = app.fetch;
