@@ -3,11 +3,11 @@ compatibility_date = "2025-10-25"
 
 [build]
 command = "npm run build"
-cwd = "./class-web-app"         # class-web-app 폴더에서 빌드 실행
+cwd = "class-web-app"  # 빌드 명령이 실행될 경로
 
 [pages]
-pages_build_output_dir = "./class-web-app/dist"   # 빌드 결과 폴더 지정
-functions = "./functions"                         # 루트 기준 functions 폴더
+pages_build_output_dir = "class-web-app/dist"  # ✅ ./ 제거
+functions = "functions"
 
 [[d1_databases]]
 binding = "DB"
@@ -17,7 +17,7 @@ database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
 [env.production]
 vars = { NODE_ENV = "production" }
 
-[[env.production.d1_databases]]
+[env.production.d1_databases]
 binding = "DB"
 database_name = "elliesbang_class"
 database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
