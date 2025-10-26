@@ -103,7 +103,7 @@ const AdminClassManagement = () => {
 
     const loadCategories = async () => {
       try {
-        const response = await fetch('/api/class_categories', { signal: controller.signal });
+        const response = await fetch('/api/class-categories', { signal: controller.signal });
         if (!response.ok) {
           throw new Error('failed to fetch categories');
         }

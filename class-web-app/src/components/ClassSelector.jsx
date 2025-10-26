@@ -99,7 +99,7 @@ export default function ClassSelector() {
     async function fetchCategories() {
       setLoading((prev) => ({ ...prev, categories: true }));
       try {
-        const res = await fetch("/api/class_categories");
+        const res = await fetch("/api/class-categories");
         if (!res.ok) {
           throw new Error(`Failed to fetch categories: ${res.status}`);
         }
