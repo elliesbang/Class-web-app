@@ -1,6 +1,7 @@
 [pages]
 pages_build_output_dir = "class-web-app/dist"
 functions = "functions"
+build_output_dir = "class-web-app/dist"
 
 name = "elliesbang_class"
 compatibility_date = "2025-10-25"
