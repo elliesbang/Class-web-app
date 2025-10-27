@@ -1,9 +1,7 @@
-import { Hono } from 'hono';
+import { Hono } from 'hono'
 
-import { DB, withBindings } from './hono-utils';
-
-interface Env {
-  DB: D1Database;
+type Env = {
+  DB: D1Database
 }
 
 const TABLE_CONFIG = {
@@ -55,89 +53,109 @@ const TABLE_CONFIG = {
     `,
     columns: ['title', 'content', 'class_id'] as const,
   },
-};
+}
 
-type TableName = keyof typeof TABLE_CONFIG;
+const app = new Hono<{ Bindings: Env }>()
+
+type TableName = keyof typeof TABLE_CONFIG
 
 const getTableName = (path: string): TableName => {
-  const [, , table] = path.split('/');
+  const [, , table] = path.split('/')
   if (!table || !(table in TABLE_CONFIG)) {
-    throw new Error('유효하지 않은 테이블입니다.');
+    throw new Error('유효하지 않은 테이블입니다.')
   }
-  return table as TableName;
-};
+  return table as TableName
+}
 
 const ensureTable = async (db: D1Database, table: TableName) => {
-  await db.exec(TABLE_CONFIG[table].schema);
-};
-
-const app = new Hono<{ Bindings: Env }>();
-
-app.onError((err, c) => {
-  console.error('[Feedback API Error]', err);
-  const message = err instanceof Error ? err.message : 'Internal Server Error';
-  return c.json({ error: message }, 500);
-});
+  await db.exec(TABLE_CONFIG[table].schema)
+}
 
 app.post('/', async (c) => {
   try {
-    const table = getTableName(c.req.path);
-    await ensureTable(c.env.DB, table);
+    const env = c.env
+    const table = getTableName(c.req.path)
+    await ensureTable(env.DB, table)
 
-    const body = await c.req.json();
-    const config = TABLE_CONFIG[table];
-    const values = config.columns.map((column) => body[column]);
+    const body = await c.req.json<Record<string, unknown>>()
+    const config = TABLE_CONFIG[table]
+    const values = config.columns.map((column) => body[column])
 
-    const placeholders = values.map(() => '?').join(', ');
-    const query = `INSERT INTO ${table} (${config.columns.join(', ')}) VALUES (${placeholders})`;
-    await c.env.DB.prepare(query).bind(...values).run();
+    const placeholders = values.map(() => '?').join(', ')
+    const query = `INSERT INTO ${table} (${config.columns.join(', ')}) VALUES (${placeholders})`
+    await env.DB.prepare(query).bind(...values).run()
 
-    return c.json({ success: true, message: '등록 성공' });
+    return Response.json({ success: true, count: 0, data: [], message: '등록 성공' })
   } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ error: message }, 500);
+    console.error('[feedback] Failed to insert data', error)
+    return Response.json(
+      {
+        success: false,
+        message: '서버 내부 오류',
+        error: String(error),
+      },
+      500,
+    )
   }
-});
+})
 
 app.get('/', async (c) => {
   try {
-    const table = getTableName(c.req.path);
-    await ensureTable(c.env.DB, table);
+    const env = c.env
+    const table = getTableName(c.req.path)
+    await ensureTable(env.DB, table)
 
-    const classId = c.req.query('class_id');
-    const query = classId
-      ? `SELECT * FROM ${table} WHERE class_id = ? ORDER BY created_at DESC`
-      : `SELECT * FROM ${table} ORDER BY created_at DESC`;
+    const classId = c.req.query('class_id')
+    const statement = classId
+      ? env.DB.prepare(`SELECT * FROM ${table} WHERE class_id = ?1 ORDER BY created_at DESC`).bind(classId)
+      : env.DB.prepare(`SELECT * FROM ${table} ORDER BY created_at DESC`)
 
-    const { results } = classId
-      ? await c.env.DB.prepare(query).bind(classId).all()
-      : await c.env.DB.prepare(query).all();
+    const result = await statement.all<Record<string, unknown>>()
+    const rows = result?.results ?? []
 
-    return c.json({ success: true, data: results ?? [] });
+    return Response.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+    })
   } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ error: message }, 500);
+    console.error('[feedback] Failed to fetch data', error)
+    return Response.json(
+      {
+        success: false,
+        message: '서버 내부 오류',
+        error: String(error),
+      },
+      500,
+    )
   }
-});
+})
 
 app.delete('/', async (c) => {
   try {
-    const table = getTableName(c.req.path);
-    await ensureTable(c.env.DB, table);
+    const env = c.env
+    const table = getTableName(c.req.path)
+    await ensureTable(env.DB, table)
 
-    const id = c.req.query('id');
+    const id = c.req.query('id')
     if (!id) {
-      throw new Error('id는 필수 값입니다.');
+      return Response.json({ success: false, count: 0, data: [], message: 'id는 필수 값입니다.' }, 400)
     }
 
-    await c.env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
-    return c.json({ success: true, message: '삭제 완료' });
+    await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?1`).bind(id).run()
+
+    return Response.json({ success: true, count: 0, data: [], message: '삭제 완료' })
   } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ error: message }, 500);
+    console.error('[feedback] Failed to delete data', error)
+    return Response.json(
+      {
+        success: false,
+        message: '서버 내부 오류',
+        error: String(error),
+      },
+      500,
+    )
   }
-});
+})
 
-export const onRequest = withBindings(app.fetch, { DB });
-
-export default app;
+export const onRequest = async (context: any) => app.fetch(context.request, context.env, context)

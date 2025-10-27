@@ -1,25 +1,32 @@
 import { Hono } from 'hono'
 
-import { DB, withBindings } from './hono-utils'
+type Env = { DB: D1Database }
 
-const app = new Hono<{ Bindings: { DB: D1Database } }>()
-
-app.onError((err, c) => {
-  console.error('[API Root Error]', err)
-  const message = err instanceof Error ? err.message : 'Internal Server Error'
-  return c.json({ error: message }, 500)
-})
+const app = new Hono<{ Bindings: Env }>()
 
 app.get('/', async (c) => {
-  const db = c.env.DB
-  if (!db) {
-    throw new Error('D1 데이터베이스 바인딩(DB)이 설정되지 않았습니다.')
-  }
+  try {
+    const env = c.env
+    const statement = env.DB.prepare('SELECT name FROM sqlite_master WHERE type = ?1').bind('table')
+    const result = await statement.all()
+    const rows = result?.results ?? []
 
-  const { results } = await db.prepare('SELECT name FROM sqlite_master WHERE type = ?1').bind('table').all()
-  return c.json({ success: true, tables: results ?? [] })
+    return Response.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+    })
+  } catch (error) {
+    console.error('[api] Failed to fetch tables', error)
+    return Response.json(
+      {
+        success: false,
+        message: '서버 내부 오류',
+        error: String(error),
+      },
+      500,
+    )
+  }
 })
 
-export const onRequest = withBindings(app.fetch, { DB })
-
-export default app
+export const onRequest = async (context: any) => app.fetch(context.request, context.env, context)

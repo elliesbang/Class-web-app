@@ -1,67 +1,45 @@
-interface Env {
-  CLOUDFLARE_API_TOKEN?: string;
-  DATABASE_ID?: string;
-  DATABASE_NAME?: string;
-  DB?: D1Database;
+import { Hono } from 'hono'
+
+type Env = {
+  CLOUDFLARE_API_TOKEN?: string
+  DATABASE_ID?: string
+  DATABASE_NAME?: string
+  DB: D1Database
 }
 
-interface PagesContext<Bindings> {
-  request: Request;
-  env: Bindings;
-  waitUntil(promise: Promise<unknown>): void;
-  passThroughOnException(): void;
-}
+const app = new Hono<{ Bindings: Env }>()
 
-type PagesHandler<Bindings> = (context: PagesContext<Bindings>) => Promise<Response> | Response;
-
-const createJsonError = (message: string, status = 500) =>
-  Response.json(
-    {
-      error: true,
-      message,
-    },
-    { status },
-  );
-
-const fetchClasses = async (db: D1Database) => {
-  const { results } = await db.prepare('SELECT * FROM classes;').all();
-  return results ?? [];
-};
-
-const createDashboardResponse = (data: unknown[]) =>
-  Response.json({
-    success: true,
-    data,
-  });
-
-const validateEnv = (env: Env) => {
-  const { CLOUDFLARE_API_TOKEN, DATABASE_ID, DATABASE_NAME, DB } = env;
-
-  if (!CLOUDFLARE_API_TOKEN || !DATABASE_ID || !DATABASE_NAME || !DB) {
-    return null;
-  }
-
-  return { CLOUDFLARE_API_TOKEN, DATABASE_ID, DATABASE_NAME, DB } as Required<Env>;
-};
-
-const handleRequest = async (context: PagesContext<Env>) => {
-  const validatedEnv = validateEnv(context.env);
-
-  if (!validatedEnv) {
-    return createJsonError('환경변수를 불러오지 못했습니다.');
-  }
-
-  const { DB } = validatedEnv;
-
+app.get('/', async (c) => {
   try {
-    const classes = await fetchClasses(DB);
-    return createDashboardResponse(classes);
+    const env = c.env
+    const { CLOUDFLARE_API_TOKEN, DATABASE_ID, DATABASE_NAME, DB } = env
+
+    if (!CLOUDFLARE_API_TOKEN || !DATABASE_ID || !DATABASE_NAME || !DB) {
+      return Response.json(
+        { success: false, count: 0, data: [], message: '환경변수를 불러오지 못했습니다.' },
+        500,
+      )
+    }
+
+    const result = await DB.prepare('SELECT * FROM classes').all()
+    const rows = result?.results ?? []
+
+    return Response.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+    })
   } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return createJsonError(`서버 오류: ${message}`);
+    console.error('[admin-dashboard] Failed to load dashboard data', error)
+    return Response.json(
+      {
+        success: false,
+        message: '서버 내부 오류',
+        error: String(error),
+      },
+      500,
+    )
   }
-};
+})
 
-export const onRequestGet: PagesHandler<Env> = (context) => handleRequest(context);
-
-export default onRequestGet;
+export const onRequest = async (context: any) => app.fetch(context.request, context.env, context)
