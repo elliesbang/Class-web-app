@@ -46,10 +46,33 @@ export const onRequestPost = async (context) => {
     const { DB } = context.env;
     const body = await context.request.json();
 
-    let { name, category_id, code, upload_limit, upload_day } = body;
+    let {
+      name = "",
+      category_id,
+      code = "",
+      upload_limit = "",
+      upload_day = "",
+    } = body;
+
+    const safeName = typeof name === "string" ? name : String(name ?? "");
+    const safeCode = typeof code === "string" ? code : String(code ?? "");
+    const safeUploadLimit = Array.isArray(upload_limit)
+      ? upload_limit.join(",")
+      : String(upload_limit ?? "");
+    const safeUploadDay = Array.isArray(upload_day)
+      ? upload_day.join(",")
+      : String(upload_day ?? "");
 
     // ✅ 카테고리 이름이 들어올 경우 자동으로 ID 변환
-    if (isNaN(category_id)) {
+    if (category_id === undefined || category_id === null) {
+      category_id = "";
+    }
+
+    if (
+      typeof category_id === "string" &&
+      category_id.trim() !== "" &&
+      isNaN(Number(category_id))
+    ) {
       const categoryLookup = await DB.prepare(
         "SELECT id FROM categories WHERE name = ?"
       )
@@ -71,9 +94,15 @@ export const onRequestPost = async (context) => {
 
       category_id = categoryLookup.id;
     }
+    if (category_id && !isNaN(Number(category_id))) {
+      category_id = Number(category_id);
+    }
+
+    const hasCategoryId =
+      typeof category_id === "number" ? !Number.isNaN(category_id) : !!category_id;
 
     // ✅ 필수 항목 체크
-    if (!name || !category_id) {
+    if (!safeName || !hasCategoryId) {
       return new Response(
         JSON.stringify({
           status: "error",
@@ -91,13 +120,19 @@ export const onRequestPost = async (context) => {
       INSERT INTO classes (name, category_id, code, upload_limit, upload_day, created_at)
       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `)
-      .bind(name, category_id, code ?? null, upload_limit ?? null, upload_day ?? null)
+      .bind(
+        safeName,
+        category_id ?? "",
+        safeCode,
+        safeUploadLimit,
+        safeUploadDay
+      )
       .run();
 
     return new Response(
       JSON.stringify({
         status: "success",
-        message: "수업이 성공적으로 추가되었습니다.",
+        message: "수업 등록이 완료되었습니다.",
       }),
       {
         status: 201,
