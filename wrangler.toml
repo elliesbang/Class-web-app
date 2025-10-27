@@ -1,5 +1,4 @@
 name = "class-web-app"
-main = "functions"
 compatibility_date = "2024-10-20"
 
 # ✅ Cloudflare Pages 빌드 결과물 경로
