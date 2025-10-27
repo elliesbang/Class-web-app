@@ -1,4 +1,4 @@
-import { ensureBaseSchema } from '../_utils/index.js';
+import { ensureBaseSchema } from "../../_utils/index.js";
 
 const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
