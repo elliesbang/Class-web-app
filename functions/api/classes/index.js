@@ -1,194 +1,170 @@
 /**
- * 🎯 Classes API - 목록 조회 / 추가 / 삭제 (최종 통합 버전)
- * Cloudflare Pages + D1 Database
+ * 📘 functions/classes/index.js
+ * 수업 등록 / 조회 / 수정 / 삭제 통합 API
+ * Cloudflare D1 (env.DB) 기반
  */
 
-export const onRequestGet = async (context) => {
+export const onRequestGet = async ({ request, env }) => {
   try {
-    const { DB } = context.env;
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
 
-    // ✅ 수업 목록 조회 (카테고리명 JOIN)
-    const { results } = await DB.prepare(`
-      SELECT 
-        c.id,
-        c.name AS class_name,
-        cat.name AS category_name,
-        c.code,
-        c.upload_limit,
-        c.upload_day,
-        c.created_at
-      FROM classes c
-      LEFT JOIN categories cat ON c.category_id = cat.id
-      ORDER BY c.created_at DESC
-    `).all();
+    if (id) {
+      // 단일 수업 조회
+      const { results } = await env.DB.prepare(
+        "SELECT * FROM classes WHERE id = ?"
+      )
+        .bind(id)
+        .all();
 
-    return Response.json(results, {
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-    });
+      return new Response(
+        JSON.stringify({ success: true, data: results[0] || null }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    } else {
+      // 전체 수업 조회
+      const { results } = await env.DB.prepare("SELECT * FROM classes").all();
+      return new Response(
+        JSON.stringify({ success: true, data: results }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
   } catch (error) {
     return new Response(
-      JSON.stringify({ status: "error", message: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-      }
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500 }
     );
   }
 };
 
-/**
- * 🆕 새 수업 등록 (POST)
- * - 프론트에서 category_id가 "이름"으로 들어와도 자동 변환
- * - name, category_id는 필수
- */
-export const onRequestPost = async (context) => {
+// ✅ 새 수업 등록
+export const onRequestPost = async ({ request, env }) => {
   try {
-    const { DB } = context.env;
-    const body = await context.request.json();
-
-    let {
-      name = "",
-      category_id,
-      code = "",
-      upload_limit = "",
-      upload_day = "",
+    const body = await request.json();
+    const {
+      name,
+      code,
+      category,
+      startDate,
+      endDate,
+      methods,
+      uploadType,
+      uploadDays,
     } = body;
 
-    const safeName = typeof name === "string" ? name : String(name ?? "");
-    const safeCode = typeof code === "string" ? code : String(code ?? "");
-    const safeUploadLimit = Array.isArray(upload_limit)
-      ? upload_limit.join(",")
-      : String(upload_limit ?? "");
-    const safeUploadDay = Array.isArray(upload_day)
-      ? upload_day.join(",")
-      : String(upload_day ?? "");
-
-    // ✅ 카테고리 이름이 들어올 경우 자동으로 ID 변환
-    if (category_id === undefined || category_id === null) {
-      category_id = "";
-    }
-
-    if (
-      typeof category_id === "string" &&
-      category_id.trim() !== "" &&
-      isNaN(Number(category_id))
-    ) {
-      const categoryLookup = await DB.prepare(
-        "SELECT id FROM categories WHERE name = ?"
-      )
-        .bind(category_id)
-        .first();
-
-      if (!categoryLookup) {
-        return new Response(
-          JSON.stringify({
-            status: "error",
-            message: `해당 카테고리(${category_id})를 찾을 수 없습니다.`,
-          }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json; charset=utf-8" },
-          }
-        );
-      }
-
-      category_id = categoryLookup.id;
-    }
-    if (category_id && !isNaN(Number(category_id))) {
-      category_id = Number(category_id);
-    }
-
-    const hasCategoryId =
-      typeof category_id === "number" ? !Number.isNaN(category_id) : !!category_id;
-
-    // ✅ 필수 항목 체크
-    if (!safeName || !hasCategoryId) {
+    if (!name || !code || !category) {
       return new Response(
         JSON.stringify({
-          status: "error",
+          success: false,
           message: "필수 항목이 누락되었습니다.",
         }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json; charset=utf-8" },
-        }
+        { status: 400 }
       );
     }
 
-    // ✅ DB 삽입
-    await DB.prepare(`
-      INSERT INTO classes (name, category_id, code, upload_limit, upload_day, created_at)
-      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `)
+    await env.DB.prepare(
+      `INSERT INTO classes 
+       (name, code, category, startDate, endDate, methods, uploadType, uploadDays)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
       .bind(
-        safeName,
-        category_id ?? "",
-        safeCode,
-        safeUploadLimit,
-        safeUploadDay
+        name || "",
+        code || "",
+        category || "",
+        startDate || "",
+        endDate || "",
+        Array.isArray(methods) ? methods.join(",") : String(methods || ""),
+        uploadType || "",
+        Array.isArray(uploadDays) ? uploadDays.join(",") : String(uploadDays || "")
       )
       .run();
 
-    return new Response(
-      JSON.stringify({
-        status: "success",
-        message: "수업 등록이 완료되었습니다.",
-      }),
-      {
-        status: 201,
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-      }
-    );
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     return new Response(
-      JSON.stringify({ status: "error", message: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-      }
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500 }
     );
   }
 };
 
-/**
- * 🗑️ 수업 삭제 (DELETE)
- * - /api/classes?id=3 형태로 호출
- */
-export const onRequestDelete = async (context) => {
+// ✅ 기존 수업 수정
+export const onRequestPut = async ({ request, env }) => {
   try {
-    const { DB } = context.env;
-    const url = new URL(context.request.url);
+    const body = await request.json();
+    const {
+      id,
+      name,
+      code,
+      category,
+      startDate,
+      endDate,
+      methods,
+      uploadType,
+      uploadDays,
+    } = body;
+
+    if (!id) {
+      return new Response(
+        JSON.stringify({ success: false, message: "id가 필요합니다." }),
+        { status: 400 }
+      );
+    }
+
+    await env.DB.prepare(
+      `UPDATE classes
+       SET name = ?, code = ?, category = ?, startDate = ?, endDate = ?, 
+           methods = ?, uploadType = ?, uploadDays = ?
+       WHERE id = ?`
+    )
+      .bind(
+        name || "",
+        code || "",
+        category || "",
+        startDate || "",
+        endDate || "",
+        Array.isArray(methods) ? methods.join(",") : String(methods || ""),
+        uploadType || "",
+        Array.isArray(uploadDays) ? uploadDays.join(",") : String(uploadDays || ""),
+        id
+      )
+      .run();
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500 }
+    );
+  }
+};
+
+// ✅ 수업 삭제
+export const onRequestDelete = async ({ request, env }) => {
+  try {
+    const url = new URL(request.url);
     const id = url.searchParams.get("id");
 
     if (!id) {
       return new Response(
-        JSON.stringify({ status: "error", message: "수업 ID가 없습니다." }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json; charset=utf-8" },
-        }
+        JSON.stringify({ success: false, message: "id가 필요합니다." }),
+        { status: 400 }
       );
     }
 
-    await DB.prepare("DELETE FROM classes WHERE id = ?").bind(id).run();
+    await env.DB.prepare("DELETE FROM classes WHERE id = ?").bind(id).run();
 
-    return new Response(
-      JSON.stringify({
-        status: "success",
-        message: `수업 ${id} 삭제 완료`,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-      }
-    );
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     return new Response(
-      JSON.stringify({ status: "error", message: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-      }
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500 }
     );
   }
 };
