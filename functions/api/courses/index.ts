@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 
-import { ensureBaseSchema } from './_utils'
+import { ensureBaseSchema } from '../_utils'
 
 type Env = {
   DB: D1Database
