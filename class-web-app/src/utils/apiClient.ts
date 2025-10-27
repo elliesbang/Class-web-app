@@ -1,3 +1,50 @@
+const rawBaseUrl = (import.meta.env?.VITE_API_BASE_URL ?? '/api') as string;
+
+const API_BASE_URL = rawBaseUrl.trim() || '/api';
+
+const isAbsoluteBaseUrl = /^https?:\/\//.test(API_BASE_URL);
+
+const normaliseRelativeBasePath = (value: string): string => {
+  if (!value || value === '/') {
+    return '';
+  }
+
+  const withoutTrailingSlash = value.replace(/\/+$/, '');
+  return withoutTrailingSlash.startsWith('/') ? withoutTrailingSlash : `/${withoutTrailingSlash}`;
+};
+
+const relativeBasePath = isAbsoluteBaseUrl ? '' : normaliseRelativeBasePath(API_BASE_URL);
+
+const absoluteBaseUrl = isAbsoluteBaseUrl
+  ? API_BASE_URL.endsWith('/')
+    ? API_BASE_URL
+    : `${API_BASE_URL}/`
+  : null;
+
+const resolveRequestUrl = (input: string): string => {
+  if (/^https?:\/\//.test(input)) {
+    return input;
+  }
+
+  if (absoluteBaseUrl) {
+    return new URL(input, absoluteBaseUrl).toString();
+  }
+
+  if (input.startsWith('/')) {
+    if (!relativeBasePath || input.startsWith(relativeBasePath)) {
+      return input;
+    }
+
+    return `${relativeBasePath}${input}`.replace(/\/{2,}/g, '/');
+  }
+
+  if (!relativeBasePath) {
+    return `/${input}`.replace(/\/{2,}/g, '/');
+  }
+
+  return `${relativeBasePath}/${input}`.replace(/\/{2,}/g, '/');
+};
+
 type HeaderTuple = [string, string];
 
 type ApiFetchOptions = RequestInit & {
@@ -70,11 +117,13 @@ export async function apiFetch<T = unknown>(url: string, options: ApiFetchOption
     headers: createMergedHeaders(init.headers),
   };
 
-  const response = await fetch(url, mergedOptions);
+  const requestUrl = resolveRequestUrl(url);
+
+  const response = await fetch(requestUrl, mergedOptions);
 
   if (!response.ok) {
     const errorMessage = await extractErrorMessage(response.clone());
-    console.error(`[API ERROR] ${url} →`, errorMessage);
+    console.error(`[API ERROR] ${requestUrl} →`, errorMessage);
     throw new Error(`API 요청 실패: ${response.status} ${errorMessage}`.trim());
   }
 
