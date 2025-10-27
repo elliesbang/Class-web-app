@@ -1,30 +1,46 @@
 import { Hono } from 'hono'
-import { DB, withBindings } from '../hono-utils'
+import { withD1 } from '@hono/d1'
 
-const app = new Hono<{ Bindings: { DB: D1Database } }>()
+type Env = {
+  DB: D1Database
+}
 
-app.onError((err, c) => {
-  console.error('[Classes API Error]', err)
-  const message = err instanceof Error ? err.message : 'Internal Server Error'
-  return c.json({ error: message }, 500)
-})
+const app = new Hono<{ Bindings: Env }>()
 
-app.get('/', async (c) => {
+// D1 연결 미들웨어
+app.use('*', async (c, next) => {
   try {
-    const { env } = c
-
-    if (!env?.DB) {
-      throw new Error('DB 인스턴스가 없습니다.')
-    }
-
-    const result = await env.DB.prepare('SELECT * FROM classes').all()
-    return c.json(result.results, 200)
-  } catch (err) {
-    console.error('[GET /classes Error]', err)
-    return c.json({ error: err instanceof Error ? err.message : String(err) }, 500)
+    const middleware = withD1({ binding: 'DB' })
+    await middleware(c, next)
+  } catch (error) {
+    console.error('[Middleware Error]', error)
+    return c.json({ success: false, message: 'DB 연결 실패', error: String(error) }, 500)
   }
 })
 
-export const onRequest = withBindings(app.fetch, { DB })
+// 전체 수업 목록 조회
+app.get('/', async c => {
+  try {
+    const result = await c.env.DB.prepare('SELECT * FROM classes').all()
+    const rows = result?.results ?? []
 
-export default app
+    // 정상 응답
+    return c.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+    })
+  } catch (error) {
+    console.error('[Classes API Error]', error)
+    return c.json({
+      success: false,
+      message: '서버 내부 오류',
+      error: String(error),
+    }, 500)
+  }
+})
+
+// Cloudflare Pages Functions entrypoint
+export const onRequest = async (context: any) => {
+  return app.fetch(context.request, context.env, context)
+}
