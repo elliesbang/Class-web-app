@@ -1,64 +1,30 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import MichinaTabs from '../components/MichinaTabs.jsx';
-import MichinaVideo from '../components/michina/MichinaVideo.jsx';
-import MichinaUpload from '../components/michina/MichinaUpload.jsx';
-import MichinaNotice from '../components/michina/MichinaNotice.jsx';
-import MichinaFeedback from '../components/michina/MichinaFeedback.jsx';
-
-const TAB_CONFIG = [
-  { id: 'video', label: '영상보기', icon: '🎬' },
-  { id: 'upload', label: '과제 업로드', icon: '🖼' },
-  { id: 'notice', label: '공지', icon: '📢' },
-  { id: 'feedback', label: '피드백 보기', icon: '💬' },
-];
+import ClassroomTabs from '../components/classroom/ClassroomTabs.jsx';
 
 function Michina() {
   const location = useLocation();
+  const courseId = 'michina';
+  const courseName = '미치나';
   const initialOpen = location.state?.autoOpen ?? false;
   const [isOpen, setIsOpen] = useState(initialOpen);
-  const [activeTab, setActiveTab] = useState('video');
-  const [transitionKey, setTransitionKey] = useState(0);
 
   const handleToggle = () => {
-    if (isOpen) return;
-    if (activeTab !== 'video') {
-      setActiveTab('video');
-      setTransitionKey((key) => key + 1);
+    if (!isOpen) {
+      setIsOpen(true);
     }
-    setIsOpen(true);
   };
-
-  const handleTabChange = (tabId) => {
-    if (tabId === activeTab) return;
-    setActiveTab(tabId);
-    setTransitionKey((key) => key + 1);
-  };
-
-  const activeContent = useMemo(() => {
-    switch (activeTab) {
-      case 'upload':
-        return <MichinaUpload />;
-      case 'notice':
-        return <MichinaNotice />;
-      case 'feedback':
-        return <MichinaFeedback />;
-      case 'video':
-      default:
-        return <MichinaVideo />;
-    }
-  }, [activeTab]);
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-5 pb-12">
       <header className="rounded-3xl bg-white px-6 py-5 shadow-soft">
-        <h1 className="text-xl font-bold text-ellieGray">미치나 클래스</h1>
+        <h1 className="text-xl font-bold text-ellieGray">{courseName} 클래스</h1>
         <p className="mt-2 text-sm leading-relaxed text-ellieGray/70">
-          미치나 강의를 위한 전용 탭에서 영상 시청부터 과제 확인까지 한 번에 이용해보세요.
+          {courseName} 수강생을 위한 전용 강의실입니다. 영상, 자료, 과제, 피드백, 공지를 하나의 탭에서 편리하게 확인하세요.
         </p>
       </header>
 
-      {!isOpen && (
+      {!isOpen ? (
         <button
           type="button"
           onClick={handleToggle}
@@ -66,21 +32,9 @@ function Michina() {
         >
           수강하기
         </button>
-      )}
+      ) : null}
 
-      {isOpen && (
-        <MichinaTabs
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          tabs={TAB_CONFIG}
-        />
-      )}
-
-      {isOpen && (
-        <section key={transitionKey} className="michina-fade rounded-3xl bg-ivory p-6 shadow-soft">
-          {activeContent}
-        </section>
-      )}
+      {isOpen ? <ClassroomTabs courseId={courseId} courseName={courseName} /> : null}
     </div>
   );
 }
