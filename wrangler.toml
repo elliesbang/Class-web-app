@@ -1,11 +1,17 @@
 name = "class-web-app"
 compatibility_date = "2024-10-20"
 
-# ✅ Cloudflare Pages 빌드 결과물 경로
-pages_build_output_dir = "./class-web-app/dist"
+# ✅ dist가 이제 루트로 이동되므로 이렇게 변경
+pages_build_output_dir = "./dist"
 
-# ✅ D1 Database 연결
+# ✅ functions는 그대로 루트에 존재
+functions_directory = "./functions"
+
+# ✅ D1 Database 연결 정보 유지
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang_class"
 database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
+
+[build]
+command = "cd class-web-app && npm run build"
