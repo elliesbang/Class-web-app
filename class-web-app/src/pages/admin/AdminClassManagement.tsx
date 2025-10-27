@@ -104,7 +104,7 @@ const AdminClassManagement = () => {
 
     const loadCategories = async () => {
       try {
-        const payload = await apiFetch('/api/class-categories', { signal: controller.signal });
+        const payload = await apiFetch('/api/categories', { signal: controller.signal });
         const rawList = Array.isArray(payload)
           ? payload
           : Array.isArray((payload as { data?: unknown }).data)

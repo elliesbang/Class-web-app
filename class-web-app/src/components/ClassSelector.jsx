@@ -100,7 +100,7 @@ export default function ClassSelector() {
     async function fetchCategories() {
       setLoading((prev) => ({ ...prev, categories: true }));
       try {
-        const payload = await apiFetch("/api/class-categories");
+        const payload = await apiFetch("/api/categories");
         const nextCategories = extractArrayPayload(payload)
           .map((item) => normaliseCategoryItem(item))
           .filter((item) => item !== null);
