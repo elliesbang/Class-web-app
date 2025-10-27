@@ -1,98 +1,111 @@
-import type { PagesFunction } from '@cloudflare/workers-types';
+import { Hono } from 'hono'
 
-import type { Env } from './_utils';
-import { ensureBaseSchema, jsonError, jsonResponse } from './_utils';
+type Env = { DB: D1Database }
 
-type CategoryRow = { id: number | string | null; name: string | null };
+type CategoryRow = { id: number | string | null; name: string | null }
 
-type CategoryResult = { name: string | null };
+type CategoryResult = { name: string | null }
+
+const app = new Hono<{ Bindings: Env }>()
 
 const normaliseCategoryName = (value: string | null | undefined) => {
   if (typeof value !== 'string') {
-    return '';
+    return ''
   }
 
-  return value.trim();
-};
+  return value.trim()
+}
 
 const fetchCategoriesFromTable = async (db: D1Database) => {
   try {
-    const { results } = await db
+    const result = await db
       .prepare("SELECT id, name FROM categories WHERE TRIM(name) <> '' ORDER BY name COLLATE NOCASE")
-      .all<CategoryRow>();
+      .all<CategoryRow>()
+    const rows = (result?.results ?? []) as CategoryRow[]
 
-    if (!results) {
-      return null as const;
-    }
-
-    const seen = new Map<string, { id: string; name: string }>();
-    for (const row of results) {
-      const name = normaliseCategoryName(row.name);
+    const seen = new Map<string, { id: string; name: string }>()
+    for (const row of rows) {
+      const name = normaliseCategoryName(row.name)
       if (!name) {
-        continue;
+        continue
       }
 
-      const key = name.toLocaleLowerCase('ko');
+      const key = name.toLocaleLowerCase('ko')
       if (!seen.has(key)) {
-        const rawId = row.id != null ? String(row.id).trim() : '';
-        const id = rawId || name;
-        seen.set(key, { id, name });
+        const rawId = row.id != null ? String(row.id).trim() : ''
+        const id = rawId || name
+        seen.set(key, { id, name })
       }
     }
 
-    return Array.from(seen.values());
+    return Array.from(seen.values())
   } catch (error) {
-    const message = error instanceof Error ? error.message : '';
+    const message = error instanceof Error ? error.message : ''
     if (/no such table/i.test(message)) {
-      return null as const;
+      return []
     }
-    throw error;
+    throw error
   }
-};
+}
 
 const fetchCategoriesFromClasses = async (db: D1Database) => {
-  const { results } = await db
+  const result = await db
     .prepare(
       "SELECT DISTINCT TRIM(category) as name FROM classes WHERE category IS NOT NULL AND TRIM(category) <> '' ORDER BY name COLLATE NOCASE",
     )
-    .all<CategoryResult>();
+    .all<CategoryResult>()
+  const rows = (result?.results ?? []) as CategoryResult[]
 
-  if (!results) {
-    return [] as const;
-  }
-
-  const seen = new Map<string, { id: string; name: string }>();
-  for (const row of results) {
-    const name = normaliseCategoryName(row.name);
+  const seen = new Map<string, { id: string; name: string }>()
+  for (const row of rows) {
+    const name = normaliseCategoryName(row.name)
     if (!name) {
-      continue;
+      continue
     }
 
-    const key = name.toLocaleLowerCase('ko');
+    const key = name.toLocaleLowerCase('ko')
     if (!seen.has(key)) {
-      seen.set(key, { id: name, name });
+      seen.set(key, { id: name, name })
     }
   }
 
-  return Array.from(seen.values());
-};
+  return Array.from(seen.values())
+}
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+app.get('/', async (c) => {
   try {
-    const db = env.DB;
-    if (!db) {
-      throw new Error('데이터베이스 연결을 찾을 수 없습니다.');
+    const env = c.env
+    const [tableCategories, classCategories] = await Promise.all([
+      fetchCategoriesFromTable(env.DB),
+      fetchCategoriesFromClasses(env.DB),
+    ])
+
+    const merged = new Map<string, { id: string; name: string }>()
+
+    for (const category of [...tableCategories, ...classCategories]) {
+      if (!merged.has(category.id)) {
+        merged.set(category.id, category)
+      }
     }
 
-    await ensureBaseSchema(db);
+    const rows = Array.from(merged.values())
 
-    const categoriesFromTable = await fetchCategoriesFromTable(db);
-    const categories = categoriesFromTable ?? (await fetchCategoriesFromClasses(db));
-
-    return jsonResponse(true, categories);
+    return Response.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+    })
   } catch (error) {
-    return jsonError(error, '카테고리 정보를 불러오는 중 오류가 발생했습니다.');
+    console.error('[class-categories] Failed to fetch categories', error)
+    return Response.json(
+      {
+        success: false,
+        message: '서버 내부 오류',
+        error: String(error),
+      },
+      500,
+    )
   }
-};
+})
 
-export const onRequest = onRequestGet;
+export const onRequest = async (context: any) => app.fetch(context.request, context.env, context)

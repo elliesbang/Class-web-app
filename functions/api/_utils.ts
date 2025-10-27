@@ -118,21 +118,6 @@ export const fetchClasses = async (db: D1Database): Promise<ClassRecord[]> => {
   return results ?? [];
 };
 
-export function jsonResponse(success: boolean, data: unknown = null, message?: string, status = 200) {
-  return new Response(JSON.stringify({ success, data, message }), {
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
-    status,
-  });
-}
-
-export function jsonError(error: unknown, fallbackMessage = 'Internal Server Error', status = 500) {
-  console.error('[API ERROR]', error);
-  const message = error instanceof Error ? error.message : fallbackMessage;
-  return jsonResponse(false, null, message, status);
-}
-
-export const errorResponse = (message: string, status = 400) => jsonResponse(false, null, message, status);
-
 export const normaliseDate = (value: unknown) => {
   if (typeof value === 'string' && value.length > 0) {
     return value;
