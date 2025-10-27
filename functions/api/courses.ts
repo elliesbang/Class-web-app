@@ -1,6 +1,8 @@
+import type { PagesFunction } from '@cloudflare/workers-types'
 import { Hono } from 'hono'
 
 import { ensureBaseSchema } from './_utils'
+import { DB, withBindings } from './hono-utils'
 
 type Env = {
   DB: D1Database
@@ -120,7 +122,9 @@ app.post('/verify', async (c) => {
   })
 })
 
-export const onRequest: PagesFunction<Env> = (context) => app.fetch(context.request, context.env, context)
-export const onRequestPost: PagesFunction<Env> = (context) => app.fetch(context.request, context.env, context)
+const handleRequest = withBindings<Env>(app.fetch, { DB })
+
+export const onRequest: PagesFunction<Env> = handleRequest
+export const onRequestPost: PagesFunction<Env> = handleRequest
 
 export default app

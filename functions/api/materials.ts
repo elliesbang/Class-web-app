@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 
+import { DB, withBindings } from './hono-utils';
+
 import { ensureBaseSchema, normaliseDate } from './_utils';
 
 interface Env {
@@ -31,6 +33,12 @@ const toMaterialPayload = (row: MaterialRow) => ({
 });
 
 const app = new Hono<{ Bindings: Env }>();
+
+app.onError((err, c) => {
+  console.error('[Materials API Error]', err);
+  const message = err instanceof Error ? err.message : 'Internal Server Error';
+  return c.json({ error: message }, 500);
+});
 
 app.get('/', async (c) => {
   await ensureBaseSchema(c.env.DB);
@@ -96,7 +104,7 @@ app.post('/', async (c) => {
     .first<MaterialRow>();
 
   if (!inserted) {
-    return c.json({ success: false, message: '저장된 자료를 찾을 수 없습니다.' }, 500);
+    return c.json({ error: '저장된 자료를 찾을 수 없습니다.' }, 500);
   }
 
   return c.json({ success: true, material: toMaterialPayload(inserted) });
@@ -115,5 +123,7 @@ app.delete('/:id', async (c) => {
 
   return c.json({ success: true });
 });
+
+export const onRequest = withBindings(app.fetch, { DB });
 
 export default app;

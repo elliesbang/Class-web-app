@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 
+import { DB, withBindings } from './hono-utils';
+
 interface Env {
   DB: D1Database;
 }
@@ -71,6 +73,12 @@ const ensureTable = async (db: D1Database, table: TableName) => {
 
 const app = new Hono<{ Bindings: Env }>();
 
+app.onError((err, c) => {
+  console.error('[Feedback API Error]', err);
+  const message = err instanceof Error ? err.message : 'Internal Server Error';
+  return c.json({ error: message }, 500);
+});
+
 app.post('/', async (c) => {
   try {
     const table = getTableName(c.req.path);
@@ -87,7 +95,7 @@ app.post('/', async (c) => {
     return c.json({ success: true, message: '등록 성공' });
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ success: false, message }, 500);
+    return c.json({ error: message }, 500);
   }
 });
 
@@ -108,7 +116,7 @@ app.get('/', async (c) => {
     return c.json({ success: true, data: results ?? [] });
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ success: false, message }, 500);
+    return c.json({ error: message }, 500);
   }
 });
 
@@ -126,8 +134,10 @@ app.delete('/', async (c) => {
     return c.json({ success: true, message: '삭제 완료' });
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return c.json({ success: false, message }, 500);
+    return c.json({ error: message }, 500);
   }
 });
+
+export const onRequest = withBindings(app.fetch, { DB });
 
 export default app;
