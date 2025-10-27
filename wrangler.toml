@@ -9,3 +9,11 @@ pages_build_output_dir = "./class-web-app/dist"
 binding = "DB"
 database_name = "elliesbang_class"
 database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
+
+[vars]
+NODE_VERSION = "20"
+D1_DATABASE_ID = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
+DATABASE_NAME = "elliesbang_class"
+DB = "elliesbang_class"
+VITE_API_BASE_URL = "/api"
+VITE_APP_ENV = "production"
