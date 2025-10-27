@@ -1,3 +1,4 @@
+import type { ExecutionContext, PagesFunction } from '@cloudflare/workers-types';
 import type { Context } from 'hono';
 
 export type AppBindings = {
@@ -11,6 +12,8 @@ export type AppEnv = {
 export type ClassRow = {
   id: number;
 };
+
+export const DB = 'DB' as const;
 
 const ensureClassesTable = async (db: D1Database) => {
   await db
@@ -123,4 +126,56 @@ export const handleRoute = async (
     console.error('[API ERROR]', message, error);
     return errorResponse(c, message, 500);
   }
+};
+
+const jsonErrorResponse = (message: string, status = 500) =>
+  new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+  });
+
+export const withBindings = <Env extends Record<string, unknown>>(
+  fetcher: (request: Request, env: Env, context: ExecutionContext) => Promise<Response>,
+  requiredBindings: Record<string, string>,
+): PagesFunction<Env> => {
+  return async (context) => {
+    const { request, env } = context;
+    const bindingKeys = Object.values(requiredBindings);
+
+    const missingBindings = bindingKeys.filter((binding) => env[binding as keyof Env] === undefined);
+    if (missingBindings.length > 0) {
+      const message = `Missing bindings: ${missingBindings.join(', ')}`;
+      console.error('[Binding Error]', message);
+      return jsonErrorResponse(message, 500);
+    }
+
+    if (bindingKeys.includes(DB)) {
+      const db = env[DB as keyof Env] as D1Database | undefined;
+      console.log('[DB 연결 상태 확인] Binding present:', Boolean(db));
+      if (db) {
+        const testQuery = async () => {
+          try {
+            const { results } = await db.prepare('SELECT 1 as ready').all();
+            console.log('[DB 연결 상태 확인] Test query results:', results);
+          } catch (error) {
+            console.error('[DB 연결 상태 확인] Test query failed', error);
+          }
+        };
+
+        if (typeof context.waitUntil === 'function') {
+          context.waitUntil(testQuery());
+        } else {
+          await testQuery();
+        }
+      }
+    }
+
+    try {
+      return await fetcher(request, env as Env, context);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Internal Server Error';
+      console.error('[API Handler Error]', error);
+      return jsonErrorResponse(message, 500);
+    }
+  };
 };

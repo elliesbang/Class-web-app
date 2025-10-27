@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
 
+import { DB, withBindings } from "../hono-utils";
+
 const addClassSchema = z
   .object({
     classCode: z
@@ -26,6 +28,12 @@ const addClassSchema = z
   .passthrough();
 
 export const classes = new Hono();
+
+classes.onError((err, c) => {
+  console.error('[Classes Add API Error]', err);
+  const message = err instanceof Error ? err.message : 'Internal Server Error';
+  return c.json({ error: message }, 500);
+});
 
 classes.post("/add", async (c) => {
   try {
@@ -65,5 +73,7 @@ classes.post("/add", async (c) => {
     return c.json({ error: String(err) }, 500);
   }
 });
+
+export const onRequest = withBindings(classes.fetch, { DB });
 
 export default classes;

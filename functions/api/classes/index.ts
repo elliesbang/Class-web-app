@@ -1,15 +1,12 @@
 import { Hono } from 'hono'
-import { withD1 } from '@hono/d1'
+import { DB, withBindings } from '../hono-utils'
 
 const app = new Hono<{ Bindings: { DB: D1Database } }>()
 
-app.use('*', async (c, next) => {
-  try {
-    await withD1()(c, next)
-  } catch (err) {
-    console.error('[D1 Middleware Error]', err)
-    return c.json({ success: false, message: 'D1 연결 실패', error: String(err) }, 500)
-  }
+app.onError((err, c) => {
+  console.error('[Classes API Error]', err)
+  const message = err instanceof Error ? err.message : 'Internal Server Error'
+  return c.json({ error: message }, 500)
 })
 
 app.get('/', async (c) => {
@@ -21,8 +18,11 @@ app.get('/', async (c) => {
     return c.json({ success: true, data: result.results || [] })
   } catch (err) {
     console.error('[GET /classes Error]', err)
-    return c.json({ success: false, message: '데이터 불러오기 실패', error: String(err) }, 500)
+    const message = err instanceof Error ? err.message : '데이터 불러오기 실패'
+    return c.json({ error: message }, 500)
   }
 })
 
-export const onRequest = app.fetch
+export const onRequest = withBindings(app.fetch, { DB })
+
+export default app
