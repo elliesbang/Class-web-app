@@ -1,20 +1,23 @@
 /**
- * 🎯 Classes API - 수업 목록 조회
- * Cloudflare Pages + D1 Database 버전
+ * 🎯 Classes API - 수업 목록 조회 (최종 확정 버전)
+ * Cloudflare Pages + D1 Database
  */
 
 export const onRequestGet = async (context) => {
   try {
     const { DB } = context.env;
 
-    // ✅ 실제 classes 테이블 데이터 조회
+    // ✅ 실제 테이블 구조에 맞게 수정
     const { results } = await DB.prepare(`
       SELECT 
-        id, 
-        class_name, 
-        category_id, 
-        class_type, 
-        upload_limit, 
+        id,
+        name,
+        category_id,
+        start_date,
+        end_date,
+        upload_limit,
+        upload_day,
+        code,
         created_at
       FROM classes
       ORDER BY created_at DESC
