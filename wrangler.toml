@@ -2,7 +2,7 @@ name = "class-web-app"
 compatibility_date = "2024-10-20"
 
 # ✅ Cloudflare Pages 빌드 결과물 경로
-pages_build_output_dir = "./dist"
+pages_build_output_dir = "./class-web-app/dist"
 
 # ✅ D1 Database 연결
 [[d1_databases]]
