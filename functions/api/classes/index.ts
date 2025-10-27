@@ -11,15 +11,17 @@ app.onError((err, c) => {
 
 app.get('/', async (c) => {
   try {
-    const db = c.env.DB
-    if (!db) throw new Error('DB 인스턴스가 없습니다.')
+    const { env } = c
 
-    const result = await db.prepare('SELECT * FROM classes').all()
-    return c.json({ success: true, data: result.results || [] })
+    if (!env?.DB) {
+      throw new Error('DB 인스턴스가 없습니다.')
+    }
+
+    const result = await env.DB.prepare('SELECT * FROM classes').all()
+    return c.json(result.results, 200)
   } catch (err) {
     console.error('[GET /classes Error]', err)
-    const message = err instanceof Error ? err.message : '데이터 불러오기 실패'
-    return c.json({ error: message }, 500)
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 500)
   }
 })
 

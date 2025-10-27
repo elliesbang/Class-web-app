@@ -161,15 +161,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     }
   }
 
-  const limitParam = url.searchParams.get('limit');
-  let limitValue: number | null = null;
-  if (limitParam) {
-    const parsedLimit = Number(limitParam);
-    if (!Number.isNaN(parsedLimit) && parsedLimit > 0) {
-      limitValue = Math.floor(parsedLimit);
-    }
-  }
-
   let query = `
     SELECT
       a.id,
@@ -194,11 +185,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   query += ' ORDER BY datetime(a.submitted_at) DESC, a.id DESC';
-
-  if (limitValue !== null) {
-    query += ' LIMIT ?';
-    params.push(limitValue);
-  }
 
   const statement = params.length > 0 ? env.DB.prepare(query).bind(...params) : env.DB.prepare(query);
   const { results } = await statement.all<AssignmentRow>();
