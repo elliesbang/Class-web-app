@@ -1,13 +1,11 @@
 /**
- * 🎯 Classes API - 수업 목록 조회 + 카테고리명 JOIN 포함
- * Cloudflare Pages + D1 Database
+ * 🎯 Classes API - 목록 조회 + 삭제 기능
  */
 
 export const onRequestGet = async (context) => {
   try {
     const { DB } = context.env;
 
-    // ✅ JOIN으로 카테고리명까지 가져오기
     const { results } = await DB.prepare(`
       SELECT 
         c.id,
@@ -26,15 +24,41 @@ export const onRequestGet = async (context) => {
       headers: { "Content-Type": "application/json; charset=utf-8" },
     });
   } catch (error) {
-    return new Response(
-      JSON.stringify({
-        status: "error",
-        message: error.message,
-      }),
-      {
-        status: 500,
+    return new Response(JSON.stringify({ status: "error", message: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    });
+  }
+};
+
+/**
+ * 🗑️ 수업 삭제 (DELETE)
+ * 프론트에서 fetch('/api/classes?id=3', { method: 'DELETE' }) 형태로 호출
+ */
+export const onRequestDelete = async (context) => {
+  try {
+    const { DB } = context.env;
+    const url = new URL(context.request.url);
+    const id = url.searchParams.get("id");
+
+    if (!id) {
+      return new Response(JSON.stringify({ status: "error", message: "수업 ID가 없습니다." }), {
+        status: 400,
         headers: { "Content-Type": "application/json; charset=utf-8" },
-      }
+      });
+    }
+
+    // ✅ 실제 삭제 쿼리
+    await DB.prepare("DELETE FROM classes WHERE id = ?").bind(id).run();
+
+    return new Response(
+      JSON.stringify({ status: "success", message: `수업 ${id} 삭제 완료` }),
+      { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" } }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ status: "error", message: error.message }),
+      { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } }
     );
   }
 };
