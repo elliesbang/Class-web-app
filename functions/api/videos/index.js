@@ -1,33 +1,61 @@
-/**
- * 🎥 Videos API - 수업별 영상 업로드 / 조회
- * Cloudflare Pages + D1 Database
- */
+import { rowsToCamelCase } from "../_utils/index.js";
+
+const jsonResponse = (data, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+  });
+
+const errorResponse = (error) =>
+  new Response(
+    JSON.stringify({
+      success: false,
+      message: error instanceof Error ? error.message : String(error),
+    }),
+    {
+      status: 500,
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    }
+  );
+
+const normaliseClassId = (value) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const numeric = Number(value);
+  if (!Number.isNaN(numeric)) {
+    return numeric;
+  }
+
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 export const onRequestGet = async (context) => {
   try {
     const { DB } = context.env;
     const url = new URL(context.request.url);
-    const class_id = url.searchParams.get("class_id");
+    const classIdRaw =
+      url.searchParams.get("classId") ?? url.searchParams.get("class_id");
+    const classId = normaliseClassId(classIdRaw);
 
-    let query = "SELECT * FROM videos";
-    let results;
+    const baseQuery =
+      "SELECT id, title, url, description, class_id, display_order, created_at FROM videos";
+    const orderBy = " ORDER BY created_at DESC";
 
-    if (class_id) {
-      query += " WHERE class_id = ? ORDER BY created_at DESC";
-      results = await DB.prepare(query).bind(class_id).all();
-    } else {
-      query += " ORDER BY created_at DESC";
-      results = await DB.prepare(query).all();
-    }
-
-    return Response.json(results, {
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-    });
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ status: "error", message: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } }
+    const statement = DB.prepare(
+      classId == null ? `${baseQuery}${orderBy}` : `${baseQuery} WHERE class_id = ?${orderBy}`
     );
+
+    const result =
+      classId == null ? await statement.all() : await statement.bind(classId).all();
+
+    const rows = rowsToCamelCase(result?.results ?? []);
+
+    return jsonResponse({ success: true, items: rows, videos: rows });
+  } catch (error) {
+    return errorResponse(error);
   }
 };
 
