@@ -1,4 +1,4 @@
-import { rowsToCamelCase } from "../_utils/index.js";
+import { rowsToCamelCase } from "../../_utils/index.js";
 
 const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -41,17 +41,19 @@ export const onRequestGet = async (context) => {
     const classId = normaliseClassId(classIdRaw);
 
     const baseQuery =
-      "SELECT id, title, file_url, description, file_name, mime_type, file_size, class_id, created_at FROM materials";
+      "SELECT id, title, url, description, class_id, display_order, created_at FROM videos";
     const orderBy = " ORDER BY created_at DESC";
+
     const statement = DB.prepare(
       classId == null ? `${baseQuery}${orderBy}` : `${baseQuery} WHERE class_id = ?${orderBy}`
     );
+
     const result =
       classId == null ? await statement.all() : await statement.bind(classId).all();
 
     const rows = rowsToCamelCase(result?.results ?? []);
 
-    return jsonResponse({ success: true, items: rows, materials: rows });
+    return jsonResponse({ success: true, items: rows, videos: rows });
   } catch (error) {
     return errorResponse(error);
   }
@@ -62,29 +64,29 @@ export const onRequestPost = async (context) => {
     const { DB } = context.env;
     const body = await context.request.json();
 
-    const { title, file_url, class_id } = body;
+    const { title, video_url, class_id, thumbnail_url } = body;
 
-    if (!title || !file_url || !class_id) {
+    if (!title || !video_url || !class_id) {
       return new Response(
         JSON.stringify({
           status: "error",
-          message: "필수 항목(title, file_url, class_id)이 누락되었습니다.",
+          message: "필수 항목(title, video_url, class_id)이 누락되었습니다.",
         }),
         { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
       );
     }
 
     await DB.prepare(`
-      INSERT INTO materials (title, file_url, class_id, created_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT INTO videos (title, video_url, thumbnail_url, class_id, created_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
     `)
-      .bind(title, file_url, class_id)
+      .bind(title, video_url, thumbnail_url ?? null, class_id)
       .run();
 
     return new Response(
       JSON.stringify({
         status: "success",
-        message: "자료가 성공적으로 업로드되었습니다.",
+        message: "영상이 성공적으로 업로드되었습니다.",
       }),
       { status: 201, headers: { "Content-Type": "application/json; charset=utf-8" } }
     );

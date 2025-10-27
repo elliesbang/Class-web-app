@@ -1,4 +1,4 @@
-import { rowsToCamelCase } from "../_utils/index.js";
+import { rowsToCamelCase } from "../../_utils/index.js";
 
 const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
