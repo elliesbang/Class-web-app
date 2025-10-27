@@ -1,5 +1,5 @@
 /**
- * 📘 functions/classes/index.js
+ * ✅ functions/classes/index.js
  * 수업 등록 / 조회 / 수정 / 삭제 통합 API
  * Cloudflare D1 (env.DB) 기반
  */
@@ -37,7 +37,7 @@ export const onRequestGet = async ({ request, env }) => {
   }
 };
 
-// ✅ 새 수업 등록
+// ✅ 새 수업 등록 (POST)
 export const onRequestPost = async ({ request, env }) => {
   try {
     const body = await request.json();
@@ -52,7 +52,7 @@ export const onRequestPost = async ({ request, env }) => {
       uploadDays,
     } = body;
 
-    if (!name || !code || !category) {
+    if (!name || !code) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -90,7 +90,7 @@ export const onRequestPost = async ({ request, env }) => {
   }
 };
 
-// ✅ 기존 수업 수정
+// ✅ 수업 수정 (PUT)
 export const onRequestPut = async ({ request, env }) => {
   try {
     const body = await request.json();
@@ -143,7 +143,7 @@ export const onRequestPut = async ({ request, env }) => {
   }
 };
 
-// ✅ 수업 삭제
+// ✅ 수업 삭제 (DELETE)
 export const onRequestDelete = async ({ request, env }) => {
   try {
     const url = new URL(request.url);
