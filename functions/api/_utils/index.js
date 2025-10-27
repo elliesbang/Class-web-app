@@ -1,15 +1,4 @@
-export type Env = {
-  DB: D1Database;
-  ADMIN_EMAIL: string;
-  ADMIN_PASSWORD: string;
-};
-
-export type ClassRecord = {
-  id: number;
-  name: string;
-};
-
-const ensureColumn = async (db: D1Database, table: string, definition: string) => {
+const ensureColumn = async (db, table, definition) => {
   try {
     await db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition};`);
   } catch (error) {
@@ -20,7 +9,7 @@ const ensureColumn = async (db: D1Database, table: string, definition: string) =
   }
 };
 
-export const ensureBaseSchema = async (db: D1Database) => {
+export const ensureBaseSchema = async (db) => {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS classes (
       id INTEGER PRIMARY KEY,
@@ -112,27 +101,27 @@ export const ensureBaseSchema = async (db: D1Database) => {
   await ensureColumn(db, 'materials', 'file_size INTEGER');
 };
 
-export const fetchClasses = async (db: D1Database): Promise<ClassRecord[]> => {
+export const fetchClasses = async (db) => {
   await ensureBaseSchema(db);
-  const { results } = await db.prepare('SELECT id, name FROM classes ORDER BY id ASC').all<ClassRecord>();
+  const { results } = await db.prepare('SELECT id, name FROM classes ORDER BY id ASC').all();
   return results ?? [];
 };
 
-export const normaliseDate = (value: unknown) => {
+export const normaliseDate = (value) => {
   if (typeof value === 'string' && value.length > 0) {
     return value;
   }
   return new Date().toISOString();
 };
 
-export const rowsToCamelCase = <T extends Record<string, unknown>>(rows: T[] | undefined | null) => {
-  if (!rows) return [] as T[];
+export const rowsToCamelCase = (rows) => {
+  if (!rows) return [];
 
   return rows.map((row) => {
     const entries = Object.entries(row).map(([key, value]) => {
       const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
       return [camelKey, value];
     });
-    return Object.fromEntries(entries) as T;
+    return Object.fromEntries(entries);
   });
 };
