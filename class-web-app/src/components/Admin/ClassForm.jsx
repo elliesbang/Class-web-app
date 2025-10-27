@@ -1,57 +1,75 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../utils/apiClient';
 
-const deriveCategoryId = (categories) => {
-  if (!categories || categories.length === 0) {
+const toCategoryString = (candidate) => {
+  if (candidate == null) {
     return '';
   }
 
-  const first = categories[0];
-  if (typeof first === 'string' || typeof first === 'number') {
-    return String(first);
+  if (typeof candidate === 'string' || typeof candidate === 'number') {
+    return String(candidate).trim();
   }
 
-  if (typeof first === 'object' && first !== null) {
-    if ('value' in first && first.value !== undefined) {
-      return String(first.value);
+  if (typeof candidate === 'object') {
+    if ('name' in candidate && candidate.name != null) {
+      return String(candidate.name).trim();
     }
-    if ('id' in first && first.id !== undefined) {
-      return String(first.id);
+    if ('value' in candidate && candidate.value != null) {
+      return String(candidate.value).trim();
+    }
+    if ('label' in candidate && candidate.label != null) {
+      return String(candidate.label).trim();
+    }
+    if ('id' in candidate && candidate.id != null) {
+      return String(candidate.id).trim();
     }
   }
 
   return '';
 };
 
+const deriveCategoryValue = (categories) => {
+  if (!categories || categories.length === 0) {
+    return '';
+  }
+
+  return toCategoryString(categories[0]);
+};
+
 const initialFormData = {
   name: '',
-  categoryId: '',
+  category: '',
   uploadOption: '',
 };
 
 const ClassForm = ({ categories = [], onSaved }) => {
-  const defaultCategoryId = useMemo(() => deriveCategoryId(categories), [categories]);
+  const defaultCategoryValue = useMemo(() => deriveCategoryValue(categories), [categories]);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     ...initialFormData,
-    categoryId: defaultCategoryId,
+    category: defaultCategoryValue,
   });
 
   useEffect(() => {
-    if (!formData.categoryId && defaultCategoryId) {
-      setFormData((prev) => ({ ...prev, categoryId: defaultCategoryId }));
+    if (!formData.category && defaultCategoryValue) {
+      setFormData((prev) => ({ ...prev, category: defaultCategoryValue }));
     }
-  }, [defaultCategoryId, formData.categoryId]);
+  }, [defaultCategoryValue, formData.category]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue = typeof value === 'string' ? value : String(value ?? '');
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handleSave = async (event) => {
     event?.preventDefault?.();
 
-    if (!formData.name || !formData.categoryId) {
+    const safeName = typeof formData.name === 'string' ? formData.name.trim() : '';
+    const safeCategory = typeof formData.category === 'string' ? formData.category.trim() : '';
+    const safeUploadOption = typeof formData.uploadOption === 'string' ? formData.uploadOption.trim() : '';
+
+    if (!safeName || !safeCategory) {
       alert('필수 항목을 입력해주세요.');
       return;
     }
@@ -61,11 +79,15 @@ const ClassForm = ({ categories = [], onSaved }) => {
     try {
       await apiFetch('/api/classes', {
         method: 'POST',
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: safeName,
+          category: safeCategory,
+          uploadOption: safeUploadOption,
+        }),
       });
       alert('수업이 성공적으로 저장되었습니다!');
       setIsSaving(false);
-      setFormData({ name: '', categoryId: '', uploadOption: '' });
+      setFormData({ name: '', category: '', uploadOption: '' });
       if (typeof onSaved === 'function') {
         onSaved();
       }
@@ -99,8 +121,8 @@ const ClassForm = ({ categories = [], onSaved }) => {
         </label>
         <select
           id="class-category"
-          name="categoryId"
-          value={formData.categoryId}
+          name="category"
+          value={formData.category}
           onChange={handleChange}
           className="rounded-md border border-gray-300 px-3 py-2 text-sm"
         >
@@ -108,22 +130,19 @@ const ClassForm = ({ categories = [], onSaved }) => {
             카테고리를 선택하세요
           </option>
           {categories.map((category) => {
-            if (typeof category === 'string' || typeof category === 'number') {
-              const value = String(category);
-              return (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              );
+            const value = toCategoryString(category);
+            if (!value) {
+              return null;
             }
 
-            const key = category.id ?? category.value ?? category.name;
-            const value = category.id ?? category.value ?? '';
-            const label = category.name ?? category.label ?? value;
+            const key =
+              (category && typeof category === 'object' && 'id' in category && category.id != null
+                ? String(category.id)
+                : value) || value;
 
             return (
-              <option key={String(key)} value={String(value)}>
-                {String(label)}
+              <option key={key} value={value}>
+                {value}
               </option>
             );
           })}
@@ -149,7 +168,13 @@ const ClassForm = ({ categories = [], onSaved }) => {
         <button
           type="submit"
           className="rounded-md bg-yellow-400 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isSaving || !formData.name || !formData.categoryId}
+          disabled={
+            isSaving ||
+            typeof formData.name !== 'string' ||
+            formData.name.trim().length === 0 ||
+            typeof formData.category !== 'string' ||
+            formData.category.trim().length === 0
+          }
         >
           {isSaving ? '저장 중...' : '저장'}
         </button>
