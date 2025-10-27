@@ -1,0 +1,9 @@
+name = "class-web-app"
+main = "functions"
+compatibility_date = "2024-10-20"
+
+[site]
+bucket = "./dist"
+
+[build]
+command = "npm run build"
