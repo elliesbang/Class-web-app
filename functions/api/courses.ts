@@ -74,14 +74,14 @@ app.post('/verify', async (c) => {
 
   if (!Number.isNaN(numericId)) {
     course = await c.env.DB
-      .prepare('SELECT id, name, code, category FROM classes WHERE id = ?1 LIMIT 1')
+      .prepare('SELECT id, name, code, category FROM classes WHERE id = ?1')
       .bind(numericId)
       .first<CourseRow>()
   }
 
   if (!course) {
     course = await c.env.DB
-      .prepare('SELECT id, name, code, category FROM classes WHERE LOWER(name) = ?1 OR LOWER(category) = ?1 LIMIT 1')
+      .prepare('SELECT id, name, code, category FROM classes WHERE LOWER(name) = ?1 OR LOWER(category) = ?1')
       .bind(courseIdLower)
       .first<CourseRow>()
   }

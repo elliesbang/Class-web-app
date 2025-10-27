@@ -16,7 +16,7 @@ app.get('/', async (c) => {
     throw new Error('D1 데이터베이스 바인딩(DB)이 설정되지 않았습니다.')
   }
 
-  const { results } = await db.prepare('SELECT name FROM sqlite_master WHERE type = ?1 LIMIT 5').bind('table').all()
+  const { results } = await db.prepare('SELECT name FROM sqlite_master WHERE type = ?1').bind('table').all()
   return c.json({ success: true, tables: results ?? [] })
 })
 
