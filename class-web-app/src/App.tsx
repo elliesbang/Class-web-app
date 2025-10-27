@@ -16,6 +16,7 @@ import Michina from './pages/Michina.jsx';
 import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/Notices.jsx';
 import VOD from './pages/VOD.jsx';
+import ClassDetailPage from './pages/class/[id].tsx';
 import EarlChalCoursePage from './pages/courses/earlchal/index.jsx';
 import CandymaCoursePage from './pages/courses/candyma/index.jsx';
 import MitemnaCoursePage from './pages/courses/mitemna/index.jsx';
@@ -36,6 +37,7 @@ function App() {
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/internal/michina" element={<Michina />} />
+        <Route path="/class/:id" element={<ClassDetailPage />} />
         <Route path="/courses/earlchal" element={<EarlChalCoursePage />} />
         <Route path="/courses/candyma" element={<CandymaCoursePage />} />
         <Route path="/courses/mitemna" element={<MitemnaCoursePage />} />
