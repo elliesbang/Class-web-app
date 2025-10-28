@@ -1,3 +1,4 @@
+// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 /**
  * 📤 Submissions API - 학생 과제 제출 / 조회
  * Cloudflare Pages + D1 Database
