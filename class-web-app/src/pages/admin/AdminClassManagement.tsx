@@ -269,8 +269,12 @@ const AdminClassManagement = () => {
     isActive: formState.isActive,
   });
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSave = async (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
+    if (isSaving || isLoading) {
+      return;
+    }
 
     if (!formState.name.trim()) {
       setFormError('수업명을 입력해주세요.');
@@ -588,7 +592,7 @@ const formatDateTime = (value: string | null | undefined) => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-3xl rounded-3xl bg-white shadow-xl">
-            <form onSubmit={handleSubmit} className="flex h-full max-h-[90vh] flex-col">
+            <form onSubmit={handleSave} className="flex h-full max-h-[90vh] flex-col">
               <header className="flex items-center justify-between border-b border-[#f0e3d8] px-6 py-4">
                 <div>
                   <h3 className="text-xl font-bold text-[#404040]">{editingClass ? '수업 수정' : '새 수업 등록'}</h3>
@@ -797,9 +801,9 @@ const formatDateTime = (value: string | null | undefined) => {
                   취소
                 </button>
                 <button
-                  type="submit"
-                  className="rounded-full bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c] disabled:cursor-not-allowed disabled:opacity-70"
-                  disabled={isLoading || isSaving}
+                  type="button"
+                  onClick={handleSave}
+                  className="rounded-full bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
                 >
                   {isSaving ? '저장 중...' : '저장'}
                 </button>
