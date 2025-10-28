@@ -2,7 +2,7 @@ const ensureColumn = async (db, table, definition) => {
   try {
     await db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition};`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : '';
+    const message = error instanceof Error ? error.message : String(error ?? '');
     if (!/duplicate column name/i.test(message)) {
       throw error;
     }
@@ -10,7 +10,6 @@ const ensureColumn = async (db, table, definition) => {
 };
 
 export const ensureBaseSchema = async (db) => {
-  // ✅ 기본 테이블 생성
   await db.exec(`
     CREATE TABLE IF NOT EXISTS classes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,7 +95,6 @@ export const ensureBaseSchema = async (db) => {
     );
   `);
 
-  // ✅ 안전하게 컬럼 추가 (이미 있으면 건너뜀)
   await ensureColumn(db, 'classes', 'code TEXT');
   await ensureColumn(db, 'classes', 'category TEXT');
   await ensureColumn(db, 'classes', 'start_date TEXT');
@@ -107,7 +105,7 @@ export const ensureBaseSchema = async (db) => {
   await ensureColumn(db, 'classes', 'is_active INTEGER NOT NULL DEFAULT 1');
   await ensureColumn(db, 'classes', "created_at TEXT NOT NULL DEFAULT (datetime('now'))");
   await ensureColumn(db, 'classes', "updated_at TEXT NOT NULL DEFAULT (datetime('now'))");
-  await ensureColumn(db, 'classes', 'duration TEXT'); // ✅ duration 컬럼 추가
+  await ensureColumn(db, 'classes', 'duration TEXT');
 
   await ensureColumn(db, 'videos', "display_order INTEGER NOT NULL DEFAULT 0");
   await ensureColumn(db, 'materials', 'file_name TEXT');
@@ -115,14 +113,22 @@ export const ensureBaseSchema = async (db) => {
   await ensureColumn(db, 'materials', 'file_size INTEGER');
 };
 
-// ✅ 클래스 목록 불러오기
+export const initDB = async (env) => {
+  const db = env?.DB;
+  if (!db) {
+    throw new Error('D1 binding "DB" is required to initialise the database.');
+  }
+
+  await ensureBaseSchema(db);
+  return db;
+};
+
 export const fetchClasses = async (db) => {
   await ensureBaseSchema(db);
   const { results } = await db.prepare('SELECT id, name FROM classes ORDER BY id ASC').all();
   return results ?? [];
 };
 
-// ✅ 날짜 포맷 보정
 export const normaliseDate = (value) => {
   if (typeof value === 'string' && value.length > 0) {
     return value;
@@ -130,7 +136,6 @@ export const normaliseDate = (value) => {
   return new Date().toISOString();
 };
 
-// ✅ snake_case → camelCase 변환
 export const rowsToCamelCase = (rows) => {
   if (!rows) return [];
 
