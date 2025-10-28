@@ -25,7 +25,9 @@ const mapRow = (r = {}) => ({
   code: safe(r.code),
   created_at: safe(r.created_at),
   category: safe(r.category),
-  duration: safe(r.duration),
+
+  // ✅ duration undefined 방어 (대소문자/캐시 불일치 모두 대응)
+  duration: safe(r.duration ?? r.DURATION ?? r.Duration ?? ''),
 });
 
 // ✅ SELECT 컬럼 순서도 완전히 동일
