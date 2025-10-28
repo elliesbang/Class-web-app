@@ -169,16 +169,16 @@ const mapRowToResponse = (row: RawClassRow): ClassResponseRecord => ({
   id: Number(row.id),
   name: row.name ?? '',
   code: row.code ?? '',
-  category: row.category ?? '',
-  startDate: normaliseDateValue(row.start_date),
-  endDate: normaliseDateValue(row.end_date),
+  category: row.category ?? '미분류',
+  startDate: normaliseDateValue(row.start_date) ?? '',
+  endDate: normaliseDateValue(row.end_date) ?? '',
   assignmentUploadTime: normaliseAssignmentUploadTime(row.assignment_upload_time),
-  assignmentUploadDays: parseStringList(row.assignment_upload_days),
-  deliveryMethods: parseStringList(row.delivery_methods),
+  assignmentUploadDays: row.assignment_upload_days ? parseStringList(row.assignment_upload_days) : [],
+  deliveryMethods: row.delivery_methods ? parseStringList(row.delivery_methods) : [],
   isActive: normaliseBoolean(row.is_active, true),
   createdAt: row.created_at ?? null,
   updatedAt: row.updated_at ?? null,
-  duration: row.duration ?? null, // ✅ 안전하게 duration 포함
+  duration: row.duration ?? '', // ✅ 안전하게 duration 포함
 });
 
 // ===== DB 쿼리 =====
@@ -204,7 +204,9 @@ const fetchAllClasses = async (db: D1Database): Promise<ClassResponseRecord[]> =
     )
     .all<RawClassRow>();
 
-  return (results ?? []).map(mapRowToResponse);
+  const safeResults = Array.isArray(results) ? results.filter(Boolean) : [];
+
+  return safeResults.map(mapRowToResponse);
 };
 
 // ===== GET =====
