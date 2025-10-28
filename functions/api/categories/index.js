@@ -1,3 +1,4 @@
+// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 export const onRequestGet = async (context) => {
   try {
     const { DB } = context.env;

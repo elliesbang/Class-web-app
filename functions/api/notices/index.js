@@ -1,3 +1,4 @@
+// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 import { rowsToCamelCase } from "../../_utils/index.js";
 
 const jsonResponse = (data, status = 200) =>

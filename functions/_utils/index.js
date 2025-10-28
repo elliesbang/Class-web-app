@@ -1,3 +1,4 @@
+// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 const ensureColumn = async (db, table, definition) => {
   try {
     await db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition};`);

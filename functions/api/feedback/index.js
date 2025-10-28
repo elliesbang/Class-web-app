@@ -1,3 +1,4 @@
+// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 /**
  * 💬 Feedback API - 수업별 과제 피드백 등록 / 조회
  */

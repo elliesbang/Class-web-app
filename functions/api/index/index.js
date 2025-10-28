@@ -1,3 +1,4 @@
+// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
     status,

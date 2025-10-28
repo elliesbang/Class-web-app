@@ -1,3 +1,4 @@
+// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 const methodNotAllowed = () =>
   new Response(
     JSON.stringify({ success: false, message: 'Not implemented: categories/add' }),

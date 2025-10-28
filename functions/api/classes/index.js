@@ -1,3 +1,4 @@
+// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 import { ensureBaseSchema } from '../../_utils/index.js';
 
 const json = (payload, status = 200) =>
