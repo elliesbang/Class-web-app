@@ -11,10 +11,9 @@ const handleError = (err) => {
   return json({ success: false, message: err.message || '서버 오류' }, 500);
 };
 
-// undefined 방지
 const safe = (v) => (v === undefined || v === null ? '' : v);
 
-// row 매핑 함수
+// ✅ D1 DB 컬럼 순서와 완전히 동일하게 매핑
 const mapRow = (r = {}) => ({
   id: safe(r.id),
   name: safe(r.name),
@@ -29,28 +28,22 @@ const mapRow = (r = {}) => ({
   duration: safe(r.duration),
 });
 
-// ✅ 실제 컬럼 순서 정확히 맞춤
+// ✅ SELECT 컬럼 순서도 완전히 동일
 const selectCols = `
   id, name, category_id, start_date, end_date,
   upload_limit, upload_day, code, created_at, category, duration
 `;
 
-// 전체 조회
 const fetchAll = async (db) => {
   const { results } = await db.prepare(`SELECT ${selectCols} FROM classes ORDER BY id DESC`).all();
   return (results || []).map(mapRow);
 };
 
-// 단일 조회
 const fetchById = async (db, id) => {
-  const row = await db
-    .prepare(`SELECT ${selectCols} FROM classes WHERE id = ?1`)
-    .bind(id)
-    .first();
+  const row = await db.prepare(`SELECT ${selectCols} FROM classes WHERE id = ?1`).bind(id).first();
   return row ? mapRow(row) : null;
 };
 
-// GET
 export const onRequestGet = async ({ request, env }) => {
   try {
     await ensureBaseSchema(env.DB);
@@ -63,7 +56,6 @@ export const onRequestGet = async ({ request, env }) => {
   }
 };
 
-// POST
 export const onRequestPost = async ({ request, env }) => {
   try {
     await ensureBaseSchema(env.DB);
@@ -96,7 +88,6 @@ export const onRequestPost = async ({ request, env }) => {
   }
 };
 
-// PUT
 export const onRequestPut = async ({ request, env }) => {
   try {
     await ensureBaseSchema(env.DB);
@@ -137,7 +128,6 @@ export const onRequestPut = async ({ request, env }) => {
   }
 };
 
-// DELETE
 export const onRequestDelete = async ({ request, env }) => {
   try {
     await ensureBaseSchema(env.DB);
