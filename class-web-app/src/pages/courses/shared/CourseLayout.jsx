@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import ClassroomTabs from '../../../components/classroom/ClassroomTabs.jsx';
+import ClassroomTabs from '@/components/classroom/ClassroomTabs';
 import { hasCourseAccess, subscribeCourseAccessChanges } from '../../../lib/course-access';
 import { subscribeAdminAuthChanges } from '../../../lib/auth';
 
