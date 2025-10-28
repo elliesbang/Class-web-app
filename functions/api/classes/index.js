@@ -15,17 +15,17 @@ const safe = (v) => (v === undefined || v === null ? '' : v);
 
 // ✅ D1 DB 컬럼 순서와 완전히 동일하게 매핑
 const mapRow = (r = {}) => ({
-  id: safe(r.id),
-  name: safe(r.name),
-  category_id: safe(r.category_id),
-  start_date: safe(r.start_date),
-  end_date: safe(r.end_date),
-  upload_limit: safe(r.upload_limit),
-  upload_day: safe(r.upload_day),
-  code: safe(r.code),
-  created_at: safe(r.created_at),
-  category: safe(r.category),
-  duration: safe(r.duration),
+  id: safe(r?.id),
+  name: safe(r?.name),
+  category_id: safe(r?.category_id),
+  start_date: safe(r?.start_date),
+  end_date: safe(r?.end_date),
+  upload_limit: safe(r?.upload_limit),
+  upload_day: safe(r?.upload_day),
+  code: safe(r?.code),
+  created_at: safe(r?.created_at),
+  category: safe(r?.category),
+  duration: safe(r?.duration),
 });
 
 // ✅ SELECT 컬럼 순서도 완전히 동일
@@ -50,7 +50,8 @@ export const onRequestGet = async ({ request, env }) => {
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
     const data = id ? await fetchById(env.DB, id) : await fetchAll(env.DB);
-    return json({ success: true, data });
+    console.log('[GET classes] rows:', Array.isArray(data) ? data.length : 0);
+    return json({ success: true, data: data || [] });
   } catch (err) {
     return handleError(err);
   }
