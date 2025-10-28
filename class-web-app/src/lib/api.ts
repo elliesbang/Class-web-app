@@ -31,6 +31,12 @@ export type ClassFormPayload = {
   isActive: boolean;
 };
 
+export type ClassMutationResult = {
+  success: boolean;
+  message?: string | null;
+  classInfo?: ClassInfo | null;
+};
+
 export type VideoPayload = {
   id: number;
   title: string;
@@ -368,57 +374,66 @@ const serialiseClassPayload = (payload: ClassFormPayload) => ({
   isActive: payload.isActive,
 });
 
-export const createClass = async (payload: ClassFormPayload): Promise<ClassInfo> => {
+const toClassMutationResult = (
+  response: ApiResponse<ClassInfo | ClassInfo[] | ClassInfo> | null,
+  failureMessage: string,
+  missingRecordMessage: string,
+): ClassMutationResult => {
+  if (!response || typeof response !== 'object') {
+    return { success: false, message: failureMessage };
+  }
+
+  if (response.success === false) {
+    return { success: false, message: response.message ?? failureMessage };
+  }
+
+  const normalised = toNormalisedClassList(
+    (response as { data?: unknown }).data ?? (response as { class?: unknown }).class ?? (response as { classes?: unknown }).classes,
+  );
+
+  if (normalised.length > 0) {
+    return { success: true, classInfo: normalised[0], message: response.message ?? null };
+  }
+
+  return { success: false, message: missingRecordMessage };
+};
+
+export const createClass = async (payload: ClassFormPayload): Promise<ClassMutationResult> => {
   const data = (await apiFetch('/api/classes', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(serialiseClassPayload(payload)),
   })) as ApiResponse<ClassInfo | ClassInfo[]>;
 
-  if (data.success === false) {
-    throw new Error(data.message || '수업을 등록하지 못했습니다.');
-  }
-
-  const normalised = toNormalisedClassList(data.data);
-  if (normalised.length > 0) {
-    return normalised[0];
-  }
-
-  const fallback = toNormalisedClassList((data as { classes?: unknown }).classes);
-  if (fallback.length > 0) {
-    return fallback[0];
-  }
-
-  throw new Error('생성된 수업 정보를 확인할 수 없습니다.');
+  return toClassMutationResult(data, '수업을 등록하지 못했습니다.', '생성된 수업 정보를 확인할 수 없습니다.');
 };
 
-export const updateClass = async (id: number, payload: ClassFormPayload): Promise<ClassInfo> => {
-  const data = (await apiFetch(`/api/classes/${id}`, {
+export const updateClass = async (id: number, payload: ClassFormPayload): Promise<ClassMutationResult> => {
+  const data = (await apiFetch('/api/classes', {
     method: 'PUT',
-    body: JSON.stringify(serialiseClassPayload(payload)),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...serialiseClassPayload(payload) }),
   })) as ApiResponse<ClassInfo | ClassInfo[]>;
 
-  if (data.success === false) {
-    throw new Error(data.message || '수업 정보를 수정하지 못했습니다.');
-  }
-
-  const normalised = toNormalisedClassList(data.data);
-  if (normalised.length > 0) {
-    return normalised[0];
-  }
-
-  const fallback = toNormalisedClassList((data as { classes?: unknown }).classes);
-  if (fallback.length > 0) {
-    return fallback[0];
-  }
-
-  throw new Error('수정된 수업 정보를 확인할 수 없습니다.');
+  return toClassMutationResult(data, '수업 정보를 수정하지 못했습니다.', '수정된 수업 정보를 확인할 수 없습니다.');
 };
 
-export const deleteClass = async (id: number): Promise<void> => {
-  await apiFetch(`/api/classes/${id}`, {
+export const deleteClass = async (id: number): Promise<ClassMutationResult> => {
+  const data = (await apiFetch('/api/classes', {
     method: 'DELETE',
-    skipJsonParse: true,
-  });
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  })) as ApiResponse<unknown> | null;
+
+  if (!data || typeof data !== 'object') {
+    return { success: false, message: '수업 삭제에 실패했습니다.' };
+  }
+
+  if (data.success === false) {
+    return { success: false, message: data.message ?? '수업 삭제에 실패했습니다.' };
+  }
+
+  return { success: true, message: data.message ?? null };
 };
 
 export const getVideos = async (params: { classId?: number } = {}) => {
