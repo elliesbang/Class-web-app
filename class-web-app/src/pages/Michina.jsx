@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import ClassroomTabs from '../components/classroom/ClassroomTabs.jsx';
+import ClassroomTabs from '@/components/classroom/ClassroomTabs';
 
 function Michina() {
   const location = useLocation();

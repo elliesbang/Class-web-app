@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import ClassroomTabs from '../../components/classroom/ClassroomTabs.jsx';
+import ClassroomTabs from '@/components/classroom/ClassroomTabs';
 
 function ClassDetailPage() {
   const { id } = useParams();
