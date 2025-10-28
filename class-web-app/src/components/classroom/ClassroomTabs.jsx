@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { hasCourseAccess, subscribeCourseAccessChanges } from '@/lib/course-access';
+import { subscribeAdminAuthChanges } from '@/lib/auth';
 import VideoTab from './VideoTab';
 import MaterialTab from './MaterialTab';
 import UploadTab from './UploadTab';
@@ -15,6 +17,25 @@ const TAB_CONFIG = [
 
 function ClassroomTabs({ courseId, courseName, className = '' }) {
   const [activeTab, setActiveTab] = useState(TAB_CONFIG[0]?.id ?? 'video');
+  const [hasAccess, setHasAccess] = useState(() => hasCourseAccess(courseId));
+
+  useEffect(() => {
+    const updateAccess = () => {
+      setHasAccess(hasCourseAccess(courseId));
+    };
+
+    updateAccess();
+
+    const unsubscribeAccess = subscribeCourseAccessChanges(updateAccess);
+    const unsubscribeAdmin = subscribeAdminAuthChanges(() => updateAccess());
+
+    return () => {
+      unsubscribeAccess();
+      unsubscribeAdmin();
+    };
+  }, [courseId]);
+
+  const containerClassName = `space-y-4 ${className}`.trim();
 
   const activeConfig = useMemo(() => {
     return TAB_CONFIG.find((tab) => tab.id === activeTab) ?? TAB_CONFIG[0];
@@ -22,8 +43,21 @@ function ClassroomTabs({ courseId, courseName, className = '' }) {
 
   const ActiveComponent = activeConfig?.Component ?? VideoTab;
 
+  if (!hasAccess) {
+    return (
+      <div className={containerClassName}>
+        <section className="rounded-3xl bg-ivory p-6 text-center shadow-soft">
+          <h2 className="text-lg font-semibold text-ellieGray">접근이 제한된 강의실입니다</h2>
+          <p className="mt-3 text-sm leading-relaxed text-ellieGray/70">
+            수강 중인 클래스로 등록되어 있는지 확인해주세요. 관리자 계정으로 로그인하면 모든 강의실을 바로 확인할 수 있습니다.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div className={`space-y-4 ${className}`.trim()}>
+    <div className={containerClassName}>
       <nav className="sticky top-0 z-10 rounded-3xl bg-white/90 p-2 shadow-soft backdrop-blur">
         <ul className="flex flex-wrap gap-2">
           {TAB_CONFIG.map((tab) => {

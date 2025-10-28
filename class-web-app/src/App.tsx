@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -17,14 +18,27 @@ import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/Notices.jsx';
 import VOD from './pages/VOD.jsx';
 import ClassDetailPage from './pages/class/[id].tsx';
-import EarlChalCoursePage from './pages/courses/earlchal/index.jsx';
-import CandymaCoursePage from './pages/courses/candyma/index.jsx';
-import MitemnaCoursePage from './pages/courses/mitemna/index.jsx';
-import EggjakCoursePage from './pages/courses/eggjak/index.jsx';
-import NacoljakCoursePage from './pages/courses/nacoljak/index.jsx';
-import EggjakChalCoursePage from './pages/courses/eggjakchal/index.jsx';
-import NacoljakChalCoursePage from './pages/courses/nacoljakchal/index.jsx';
 import AdminLogin from './pages/AdminLogin';
+
+const courseModules = import.meta.glob('./pages/course/*/index.jsx', { eager: true }) as Record<string, { default: ComponentType }>;
+
+const courseRoutes = Object.entries(courseModules)
+  .map(([key, module]) => {
+    const match = key.match(/\.\/pages\/course\/([^/]+)\/index\.jsx$/);
+    if (!match) {
+      return null;
+    }
+
+    const Component = module.default;
+    if (!Component) {
+      return null;
+    }
+
+    return { courseId: match[1], Component };
+  })
+  .filter((entry): entry is { courseId: string; Component: ComponentType } => entry !== null)
+  .sort((a, b) => a.courseId.localeCompare(b.courseId));
+
 
 function App() {
   return (
@@ -38,13 +52,9 @@ function App() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/internal/michina" element={<Michina />} />
         <Route path="/class/:id" element={<ClassDetailPage />} />
-        <Route path="/courses/earlchal" element={<EarlChalCoursePage />} />
-        <Route path="/courses/candyma" element={<CandymaCoursePage />} />
-        <Route path="/courses/mitemna" element={<MitemnaCoursePage />} />
-        <Route path="/courses/eggjak" element={<EggjakCoursePage />} />
-        <Route path="/courses/nacoljak" element={<NacoljakCoursePage />} />
-        <Route path="/courses/eggjakchal" element={<EggjakChalCoursePage />} />
-        <Route path="/courses/nacoljakchal" element={<NacoljakChalCoursePage />} />
+        {courseRoutes.map(({ courseId, Component }) => (
+          <Route key={courseId} path={`/courses/${courseId}`} element={<Component />} />
+        ))}
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
