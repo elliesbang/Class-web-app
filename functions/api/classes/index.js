@@ -1,49 +1,38 @@
 import { ensureBaseSchema } from '../../_utils/index.js';
 
-/* ---------- 공통 함수 ---------- */
+/* ---------- 공통 ---------- */
 const json = (payload, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
   });
 
-const HttpError = class extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-};
-
 const handleError = (err) => {
-  console.error('[API Error]', err);
-  const msg = err?.message || '서버 오류가 발생했습니다.';
-  return json({ success: false, message: msg }, 500);
+    console.error('[API Error]', err);
+    return json({ success: false, message: err.message || '서버 오류' }, 500);
 };
 
-const safeStr = (v, d = '') => (v === undefined || v === null ? d : String(v));
-const safeDate = (v) => (v ? String(v) : '');
 const nowISO = () => new Date().toISOString();
 
-/* ---------- Row 매핑 ---------- */
+/* ---------- Row 변환 ---------- */
 const mapRow = (r = {}) => ({
   id: r.id,
-  name: safeStr(r.name),
-  category_id: safeStr(r.category_id),
-  start_date: safeDate(r.start_date),
-  end_date: safeDate(r.end_date),
-  upload_limit: safeStr(r.upload_limit), // 
-  upload_day: safeStr(r.upload_day),
-  code: safeStr(r.code),
-  created_at: safeDate(r.created_at),
-  category: safeStr(r.category),
-  duration: safeStr(r.duration, ''), // ✅ undefined 방지
+  name: r.name || '',
+  category_id: r.category_id || '',
+  start_date: r.start_date || '',
+  end_date: r.end_date || '',
+  upload_limit: r.upload_limit || '',
+  upload_day: r.upload_day || '',
+  code: r.code || '',
+  created_at: r.created_at || '',
+  category: r.category || '',
+  duration: r.duration || '', // ✅ 실제 컬럼명 그대로 사용
 });
 
 /* ---------- SELECT ---------- */
 const selectCols = `
-  id, name, code, category_id, category,
-  start_date, end_date, upload_limit, upload_day, created_at,
-  COALESCE(duration, '') AS duration
+  id, name, category_id, start_date, end_date,
+  upload_limit, upload_day, code, created_at, category, duration
 `;
 
 const fetchAll = async (db) => {
@@ -53,7 +42,7 @@ const fetchAll = async (db) => {
   return (results || []).map(mapRow);
 };
 
-const fetchOne = async (db, id) => {
+const fetchById = async (db, id) => {
   const row = await db
     .prepare(`SELECT ${selectCols} FROM classes WHERE id = ?1`)
     .bind(id)
@@ -67,7 +56,7 @@ export const onRequestGet = async ({ request, env }) => {
     await ensureBaseSchema(env.DB);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
-    const data = id ? await fetchOne(env.DB, id) : await fetchAll(env.DB);
+    const data = id ? await fetchById(env.DB, id) : await fetchAll(env.DB);
     return json({ success: true, data });
   } catch (err) {
     return handleError(err);
@@ -79,37 +68,28 @@ export const onRequestPost = async ({ request, env }) => {
   try {
     await ensureBaseSchema(env.DB);
     const body = await request.json();
-    const name = safeStr(body.name);
-    const code = safeStr(body.code);
-    if (!name || !code) throw new HttpError(400, '수업명과 코드를 입력해주세요.');
 
-    const insertSql = `
+    const insertSQL = `
       INSERT INTO classes (
-        name, code, category_id, start_date, end_date,
-        upload_limit, upload_day, created_at, category, duration
-      )
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+        name, category_id, start_date, end_date,
+        upload_limit, upload_day, code, created_at, category, duration
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
     `;
 
-    const result = await env.DB
-      .prepare(insertSql)
-      .bind(
-        name,
-        code,
-        safeStr(body.category_id),
-        safeDate(body.start_date),
-        safeDate(body.end_date),
-        safeStr(body.upload_limit), // ✅ 순서 맞춤
-        safeStr(body.upload_day),
-        nowISO(),
-        safeStr(body.category),
-        safeStr(body.duration)
-      )
-      .run();
+    await env.DB.prepare(insertSQL).bind(
+      body.name || '',
+      body.category_id || '',
+      body.start_date || '',
+      body.end_date || '',
+      body.upload_limit || '',
+      body.upload_day || '',
+      body.code || '',
+      nowISO(),
+      body.category || '',
+      body.duration || ''
+    ).run();
 
-    const newId = result?.lastInsertRowid;
-    const created = await fetchOne(env.DB, newId);
-    return json({ success: true, data: created, message: '수업이 저장되었습니다.' }, 201);
+    return json({ success: true, message: '수업이 등록되었습니다.' }, 201);
   } catch (err) {
     return handleError(err);
   }
@@ -120,36 +100,29 @@ export const onRequestPut = async ({ request, env }) => {
   try {
     await ensureBaseSchema(env.DB);
     const body = await request.json();
-    const id = Number(body.id);
-    if (!id) throw new HttpError(400, 'ID가 필요합니다.');
 
-    const updateSql = `
+    const updateSQL = `
       UPDATE classes SET
-        name = ?1, code = ?2, category_id = ?3,
-        start_date = ?4, end_date = ?5, upload_limit = ?6,
-        upload_day = ?7, created_at = ?8, category = ?9, duration = ?10
-      WHERE id = ?11
+        name = ?1, category_id = ?2, start_date = ?3, end_date = ?4,
+        upload_limit = ?5, upload_day = ?6, code = ?7,
+        category = ?8, duration = ?9
+      WHERE id = ?10
     `;
 
-    await env.DB
-      .prepare(updateSql)
-      .bind(
-        safeStr(body.name),
-        safeStr(body.code),
-        safeStr(body.category_id),
-        safeDate(body.start_date),
-        safeDate(body.end_date),
-        safeStr(body.upload_limit),
-        safeStr(body.upload_day),
-        nowISO(),
-        safeStr(body.category),
-        safeStr(body.duration),
-        id
-      )
-      .run();
+    await env.DB.prepare(updateSQL).bind(
+      body.name || '',
+      body.category_id || '',
+      body.start_date || '',
+      body.end_date || '',
+      body.upload_limit || '',
+      body.upload_day || '',
+      body.code || '',
+      body.category || '',
+      body.duration || '',
+      body.id
+    ).run();
 
-    const updated = await fetchOne(env.DB, id);
-    return json({ success: true, data: updated, message: '수업이 수정되었습니다.' });
+    return json({ success: true, message: '수업이 수정되었습니다.' });
   } catch (err) {
     return handleError(err);
   }
@@ -160,7 +133,7 @@ export const onRequestDelete = async ({ request, env }) => {
   try {
     await ensureBaseSchema(env.DB);
     const url = new URL(request.url);
-    const id = Number(url.searchParams.get('id'));
+    const id = url.searchParams.get('id');
     await env.DB.prepare('DELETE FROM classes WHERE id = ?1').bind(id).run();
     return json({ success: true, message: '수업이 삭제되었습니다.' });
   } catch (err) {
