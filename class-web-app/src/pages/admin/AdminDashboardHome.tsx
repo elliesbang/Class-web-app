@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Toast, { ToastVariant } from '../../components/admin/Toast';
-import { getMaterials, getNotices, getVideos } from '../../lib/api';
+import type { MaterialPayload, NoticePayload, VideoPayload } from '../../lib/api';
 import { DEFAULT_CLASS_LIST, DEFAULT_CLASS_NAME_BY_ID } from '../../lib/default-classes';
 
 type DashboardStat = {
@@ -55,13 +55,73 @@ const AdminDashboardHome = () => {
     const loadDashboardData = async () => {
       setIsLoading(true);
 
+      const fetchDashboardResource = async <T extends { id: number }>(
+        input: string,
+        key: 'videos' | 'materials' | 'notices',
+      ): Promise<{ items: T[]; hasFatalError: boolean }> => {
+        try {
+          const response = await fetch(input);
+
+          if (!response.ok) {
+            console.warn(`[AdminDashboardHome] Request failed: ${input} → ${response.status}`);
+            return { items: [], hasFatalError: true };
+          }
+
+          const contentType = response.headers.get('content-type') ?? '';
+          const responseText = await response.text();
+
+          if (!responseText.trim()) {
+            console.warn(`[AdminDashboardHome] Empty response received from ${response.url || input}.`);
+            return { items: [], hasFatalError: false };
+          }
+
+          if (contentType && !contentType.toLowerCase().includes('application/json')) {
+            console.warn(
+              `[AdminDashboardHome] Expected JSON response but received '${contentType}' from ${response.url || input}.`,
+            );
+            return { items: [], hasFatalError: false };
+          }
+
+          try {
+            const parsed = JSON.parse(responseText) as unknown;
+
+            if (Array.isArray(parsed)) {
+              return { items: parsed as T[], hasFatalError: false };
+            }
+
+            if (parsed && typeof parsed === 'object') {
+              const nested = (parsed as Record<string, unknown>)[key];
+              if (Array.isArray(nested)) {
+                return { items: nested as T[], hasFatalError: false };
+              }
+            }
+
+            console.warn(
+              `[AdminDashboardHome] Response from ${response.url || input} did not contain a valid '${key}' array.`,
+            );
+          } catch (parseError) {
+            console.warn(`[AdminDashboardHome] Failed to parse JSON from ${response.url || input}`, parseError);
+          }
+
+          return { items: [], hasFatalError: false };
+        } catch (networkError) {
+          console.warn(`[AdminDashboardHome] Failed to request ${input}`, networkError);
+          return { items: [], hasFatalError: true };
+        }
+      };
+
       try {
         const classList = DEFAULT_CLASS_LIST;
-        const [videoList, materialList, noticeList] = await Promise.all([
-          getVideos(),
-          getMaterials(),
-          getNotices(),
+
+        const [videoResult, materialResult, noticeResult] = await Promise.all([
+          fetchDashboardResource<VideoPayload>('/api/videos', 'videos'),
+          fetchDashboardResource<MaterialPayload>('/api/materials', 'materials'),
+          fetchDashboardResource<NoticePayload>('/api/notices', 'notices'),
         ]);
+
+        const videoList = videoResult.items;
+        const materialList = materialResult.items;
+        const noticeList = noticeResult.items;
 
         const classNameById = new Map(DEFAULT_CLASS_NAME_BY_ID);
 
@@ -105,8 +165,18 @@ const AdminDashboardHome = () => {
         ].filter((section) => section.items.length > 0);
 
         setSections(resolvedSections);
+
+        const hasFatalError = videoResult.hasFatalError || materialResult.hasFatalError || noticeResult.hasFatalError;
+        if (hasFatalError) {
+          setToast({
+            message: '대시보드 데이터를 불러오는 중 문제가 발생했습니다.',
+            variant: 'error',
+          });
+        } else {
+          setToast(null);
+        }
       } catch (error) {
-        console.error('Failed to load admin dashboard data', error);
+        console.warn('[AdminDashboardHome] Failed to load admin dashboard data', error);
         setStats([]);
         setSections([]);
         setToast({
