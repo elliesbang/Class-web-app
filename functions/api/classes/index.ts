@@ -55,7 +55,7 @@ type ClassResponseRecord = {
   isActive: boolean;
   createdAt: string | null;
   updatedAt: string | null;
-  duration: string | null; // ✅ 응답에도 포함
+  duration: string; // ✅ 응답에도 포함
 };
 
 // ===== 유틸 =====
@@ -161,24 +161,24 @@ const normaliseClassPayload = (input: ClassPayloadInput) => ({
   assignmentUploadDays: parseStringList(input.assignmentUploadDays),
   deliveryMethods: parseStringList(input.deliveryMethods),
   isActive: normaliseBoolean(input.isActive, true),
-  duration: typeof input.duration === 'string' ? input.duration.trim() : null, // ✅ duration 추가
+  duration: typeof input.duration === 'string' ? input.duration.trim() : '', // ✅ duration 추가
 });
 
 // ===== DB → API 변환 =====
-const mapRowToResponse = (row: RawClassRow): ClassResponseRecord => ({
-  id: Number(row.id),
-  name: row.name ?? '',
-  code: row.code ?? '',
-  category: row.category ?? '미분류',
-  startDate: normaliseDateValue(row.start_date) ?? '',
-  endDate: normaliseDateValue(row.end_date) ?? '',
-  assignmentUploadTime: normaliseAssignmentUploadTime(row.assignment_upload_time),
-  assignmentUploadDays: row.assignment_upload_days ? parseStringList(row.assignment_upload_days) : [],
-  deliveryMethods: row.delivery_methods ? parseStringList(row.delivery_methods) : [],
-  isActive: normaliseBoolean(row.is_active, true),
-  createdAt: row.created_at ?? null,
-  updatedAt: row.updated_at ?? null,
-  duration: row.duration ?? '', // ✅ 안전하게 duration 포함
+const mapRowToResponse = (row: RawClassRow | null | undefined): ClassResponseRecord => ({
+  id: Number(row?.id ?? 0),
+  name: row?.name ?? '',
+  code: row?.code ?? '',
+  category: row?.category ?? '미분류',
+  startDate: normaliseDateValue(row?.start_date) ?? '',
+  endDate: normaliseDateValue(row?.end_date) ?? '',
+  assignmentUploadTime: normaliseAssignmentUploadTime(row?.assignment_upload_time),
+  assignmentUploadDays: row?.assignment_upload_days ? parseStringList(row.assignment_upload_days) : [],
+  deliveryMethods: row?.delivery_methods ? parseStringList(row.delivery_methods) : [],
+  isActive: normaliseBoolean(row?.is_active, true),
+  createdAt: row?.created_at ?? null,
+  updatedAt: row?.updated_at ?? null,
+  duration: row?.duration ?? '', // ✅ 안전하게 duration 포함
 });
 
 // ===== DB 쿼리 =====
@@ -186,7 +186,7 @@ const fetchClassById = async (db: D1Database, id: number): Promise<ClassResponse
   const row = await db
     .prepare<RawClassRow>(
       `SELECT id, name, code, category, start_date, end_date, assignment_upload_time, assignment_upload_days,
-              delivery_methods, is_active, created_at, updated_at, duration
+              delivery_methods, is_active, created_at, updated_at, COALESCE(duration, '') as duration
          FROM classes WHERE id = ?1`,
     )
     .bind(id)
@@ -199,12 +199,14 @@ const fetchAllClasses = async (db: D1Database): Promise<ClassResponseRecord[]> =
   const { results } = await db
     .prepare<RawClassRow>(
       `SELECT id, name, code, category, start_date, end_date, assignment_upload_time, assignment_upload_days,
-              delivery_methods, is_active, created_at, updated_at, duration
+              delivery_methods, is_active, created_at, updated_at, COALESCE(duration, '') as duration
          FROM classes ORDER BY id DESC`,
     )
     .all<RawClassRow>();
 
-  const safeResults = Array.isArray(results) ? results.filter(Boolean) : [];
+  const safeResults = Array.isArray(results)
+    ? results.filter((row): row is RawClassRow => Boolean(row))
+    : [];
 
   return safeResults.map(mapRowToResponse);
 };
@@ -255,7 +257,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
         payload.isActive ? 1 : 0,
         now,
         now,
-        payload.duration // ✅ duration 추가
+        payload.duration ?? '' // ✅ duration 추가
       )
       .run();
 
@@ -300,7 +302,7 @@ export const onRequestPut = async ({ request, env }: { request: Request; env: En
         serialiseStringList(payload.deliveryMethods),
         payload.isActive ? 1 : 0,
         now,
-        payload.duration,
+        payload.duration ?? '',
         id
       )
       .run();
