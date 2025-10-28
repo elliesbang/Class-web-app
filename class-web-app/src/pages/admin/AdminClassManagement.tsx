@@ -299,19 +299,27 @@ const AdminClassManagement = () => {
 
     try {
       const payload = buildPayload();
-      if (editingClass) {
-        const updated = await updateClass(editingClass.id, payload);
-        setFeedbackMessage(`‘${updated.name}’ 수업 정보가 저장되었습니다.`);
+      const result = editingClass
+        ? await updateClass(editingClass.id, payload)
+        : await createClass(payload);
+
+      if (result.success) {
+        const successMessage = '저장 완료';
+        setFeedbackMessage(successMessage);
+        alert(successMessage);
+        closeModal();
+        resetForm();
       } else {
-        const created = await createClass(payload);
-        setFeedbackMessage(`‘${created.name}’ 수업이 새로 등록되었습니다.`);
+        const message = result.message ?? '수업 정보를 저장하지 못했습니다.';
+        console.error('[admin-class] failed to save class', message);
+        setFormError(message);
+        alert(message);
       }
-      closeModal();
-      resetForm();
     } catch (caught) {
       console.error('[admin-class] failed to save class', caught);
       const message = caught instanceof Error ? caught.message : '수업 정보를 저장하지 못했습니다.';
       setFormError(message);
+      alert(message);
     } finally {
       setIsSaving(false);
       setIsLoading(false);
@@ -335,12 +343,20 @@ const AdminClassManagement = () => {
     setIsDeleting(true);
     setIsLoading(true);
     try {
-      await deleteClass(deleteTarget.id);
-      setFeedbackMessage(`‘${deleteTarget.name}’ 수업이 삭제되었습니다.`);
-      setDeleteTarget(null);
+      const result = await deleteClass(deleteTarget.id);
+
+      if (result.success) {
+        setFeedbackMessage(result.message ?? '수업이 삭제되었습니다.');
+        setDeleteTarget(null);
+      } else {
+        const message = result.message ?? '수업 삭제에 실패했습니다. 다시 시도해주세요.';
+        console.error('[admin-class] failed to delete class', message);
+        alert(message);
+      }
     } catch (caught) {
       console.error('[admin-class] failed to delete class', caught);
-      alert(caught instanceof Error ? caught.message : '수업 삭제에 실패했습니다. 다시 시도해주세요.');
+      const message = caught instanceof Error ? caught.message : '수업 삭제에 실패했습니다. 다시 시도해주세요.';
+      alert(message);
     } finally {
       setIsDeleting(false);
       setIsLoading(false);

@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { ClassFormPayload, ClassInfo } from '../../../lib/api';
+import type { ClassFormPayload, ClassInfo, ClassMutationResult } from '../../../lib/api';
 import {
   createClass as requestCreateClass,
   deleteClass as requestDeleteClass,
@@ -22,9 +22,9 @@ type AdminClassContextValue = {
   error: string | null;
   hasFetched: boolean;
   refresh: () => Promise<ClassInfo[]>;
-  createClass: (payload: ClassFormPayload) => Promise<ClassInfo>;
-  updateClass: (id: number, payload: ClassFormPayload) => Promise<ClassInfo>;
-  deleteClass: (id: number) => Promise<void>;
+  createClass: (payload: ClassFormPayload) => Promise<ClassMutationResult>;
+  updateClass: (id: number, payload: ClassFormPayload) => Promise<ClassMutationResult>;
+  deleteClass: (id: number) => Promise<ClassMutationResult>;
 };
 
 const AdminClassContext = createContext<AdminClassContextValue | undefined>(undefined);
@@ -67,23 +67,38 @@ export const AdminClassProvider = ({ children }: { children: ReactNode }) => {
   }, [refresh]);
 
   const createClass = useCallback(async (payload: ClassFormPayload) => {
-    const created = await requestCreateClass(payload);
-    setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== created.id), created]));
-    hasFetchedRef.current = true;
-    return created;
+    const result = await requestCreateClass(payload);
+
+    if (result.success && result.classInfo) {
+      const record = result.classInfo;
+      setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== record.id), record]));
+      hasFetchedRef.current = true;
+    }
+
+    return result;
   }, []);
 
   const updateClass = useCallback(async (id: number, payload: ClassFormPayload) => {
-    const updated = await requestUpdateClass(id, payload);
-    setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== updated.id), updated]));
-    hasFetchedRef.current = true;
-    return updated;
+    const result = await requestUpdateClass(id, payload);
+
+    if (result.success && result.classInfo) {
+      const record = result.classInfo;
+      setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== record.id), record]));
+      hasFetchedRef.current = true;
+    }
+
+    return result;
   }, []);
 
   const deleteClass = useCallback(async (id: number) => {
-    await requestDeleteClass(id);
-    setClasses((prev) => prev.filter((item) => item.id !== id));
-    hasFetchedRef.current = true;
+    const result = await requestDeleteClass(id);
+
+    if (result.success) {
+      setClasses((prev) => prev.filter((item) => item.id !== id));
+      hasFetchedRef.current = true;
+    }
+
+    return result;
   }, []);
 
   const value = useMemo<AdminClassContextValue>(
