@@ -178,7 +178,7 @@ const mapRowToResponse = (row: RawClassRow): ClassResponseRecord => ({
   isActive: normaliseBoolean(row.is_active, true),
   createdAt: row.created_at ?? null,
   updatedAt: row.updated_at ?? null,
-  duration: row.duration ?? null, // ✅ 안전하게 duration 포함
+  duration: row.duration ?? '', // ✅ duration null 처리
 });
 
 // ===== DB 쿼리 =====
