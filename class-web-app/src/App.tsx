@@ -1,4 +1,3 @@
-import type { ComponentType } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -20,26 +19,6 @@ import VOD from './pages/VOD.jsx';
 import ClassDetailPage from './pages/class/[id].tsx';
 import AdminLogin from './pages/AdminLogin';
 
-const courseModules = import.meta.glob('./pages/course/*/index.jsx', { eager: true }) as Record<string, { default: ComponentType }>;
-
-const courseRoutes = Object.entries(courseModules)
-  .map(([key, module]) => {
-    const match = key.match(/\.\/pages\/course\/([^/]+)\/index\.jsx$/);
-    if (!match) {
-      return null;
-    }
-
-    const Component = module.default;
-    if (!Component) {
-      return null;
-    }
-
-    return { courseId: match[1], Component };
-  })
-  .filter((entry): entry is { courseId: string; Component: ComponentType } => entry !== null)
-  .sort((a, b) => a.courseId.localeCompare(b.courseId));
-
-
 function App() {
   return (
     <Routes>
@@ -52,9 +31,6 @@ function App() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/internal/michina" element={<Michina />} />
         <Route path="/class/:id" element={<ClassDetailPage />} />
-        {courseRoutes.map(({ courseId, Component }) => (
-          <Route key={courseId} path={`/courses/${courseId}`} element={<Component />} />
-        ))}
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
