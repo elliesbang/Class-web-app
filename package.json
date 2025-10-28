@@ -5,7 +5,9 @@
     "class-web-app"
   ],
   "scripts": {
-    "build": "npm run build --workspace class-web-app"
+    "build": "npm run build --workspace class-web-app",
+    "generate:course-pages": "node scripts/generate-course-pages.mjs",
+    "prebuild": "npm run generate:course-pages"
   },
   "dependencies": {
     "@hono/d1": "file:packages/hono-d1",
