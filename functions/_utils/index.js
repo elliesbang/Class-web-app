@@ -15,11 +15,14 @@ export const ensureBaseSchema = async (db) => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       code TEXT,
+      category_id INTEGER,
       category TEXT,
       start_date TEXT,
       end_date TEXT,
       assignment_upload_time TEXT,
       assignment_upload_days TEXT,
+      upload_limit TEXT,
+      upload_day TEXT,
       delivery_methods TEXT,
       is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -96,11 +99,14 @@ export const ensureBaseSchema = async (db) => {
   `);
 
   await ensureColumn(db, 'classes', 'code TEXT');
+  await ensureColumn(db, 'classes', 'category_id INTEGER');
   await ensureColumn(db, 'classes', 'category TEXT');
   await ensureColumn(db, 'classes', 'start_date TEXT');
   await ensureColumn(db, 'classes', 'end_date TEXT');
   await ensureColumn(db, 'classes', 'assignment_upload_time TEXT');
   await ensureColumn(db, 'classes', 'assignment_upload_days TEXT');
+  await ensureColumn(db, 'classes', 'upload_limit TEXT');
+  await ensureColumn(db, 'classes', 'upload_day TEXT');
   await ensureColumn(db, 'classes', 'delivery_methods TEXT');
   await ensureColumn(db, 'classes', 'is_active INTEGER NOT NULL DEFAULT 1');
   await ensureColumn(db, 'classes', "created_at TEXT NOT NULL DEFAULT (datetime('now'))");
