@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../../utils/apiClient';
+import { fetchCategories } from '../../lib/api';
 import type { AssignmentUploadTimeOption, ClassFormPayload, ClassInfo } from '../../lib/api';
 import { useAdminClasses } from './data/AdminClassContext';
 
@@ -8,6 +8,40 @@ const WEEKDAY_OPTIONS = ['월', '화', '수', '목', '금', '토', '일'];
 const ASSIGNMENT_UPLOAD_TIME_LABELS: Record<AssignmentUploadTimeOption, string> = {
   all_day: '24시간 가능',
   same_day: '하루 한정',
+};
+
+const extractCategoryName = (value: unknown): string => {
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const candidate =
+      record.name ?? record.categoryName ?? record.category ?? record.title ?? record.label ?? record.text;
+
+    if (typeof candidate === 'string') {
+      return candidate.trim();
+    }
+
+    if (candidate != null) {
+      return String(candidate).trim();
+    }
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value).trim();
+  }
+
+  return '';
+};
+
+const toUniqueCategoryNames = (input: unknown[]): string[] => {
+  const names = input
+    .map((item) => extractCategoryName(item))
+    .filter((name): name is string => name.length > 0);
+
+  return Array.from(new Set(names));
 };
 
 type ClassFormState = {
@@ -75,6 +109,8 @@ const AdminClassManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formState, setFormState] = useState<ClassFormState>(() => createInitialFormState(''));
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [isCategoryLoading, setIsCategoryLoading] = useState(true);
   const [editingClass, setEditingClass] = useState<ClassInfo | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -101,69 +137,47 @@ const AdminClassManagement = () => {
 
   useEffect(() => {
     const controller = new AbortController();
+    let isMounted = true;
 
     const loadCategories = async () => {
+      setIsCategoryLoading(true);
+      setCategoryError(null);
+
       try {
-        const payload = await apiFetch('/api/categories', { signal: controller.signal });
+        const payload = await fetchCategories({ signal: controller.signal });
 
-        const rawList: unknown[] = (() => {
-          try {
-            if (Array.isArray(payload)) {
-              return payload;
-            }
-
-            if (payload && typeof payload === 'object') {
-              const candidate = payload as { data?: unknown; results?: unknown };
-              if (Array.isArray(candidate.data)) {
-                return candidate.data;
-              }
-              if (Array.isArray(candidate.results)) {
-                return candidate.results;
-              }
-            }
-          } catch (parseError) {
-            console.warn('[admin-class] 카테고리 응답 파싱 실패, 빈 배열로 대체합니다.', parseError);
-          }
-          return [];
-        })();
-
-        const names = rawList
-          .map((item) => {
-            try {
-              if (item && typeof item === 'object' && 'name' in item) {
-                const value = (item as { name: unknown }).name;
-                if (typeof value === 'string') {
-                  return value.trim();
-                }
-                if (value == null) {
-                  return '';
-                }
-                return String(value).trim();
-              }
-              if (typeof item === 'string') {
-                return item.trim();
-              }
-            } catch (parseError) {
-              console.warn('[admin-class] 카테고리 항목 파싱 실패, 항목을 건너뜁니다.', parseError);
-            }
-            return '';
-          })
-          .filter((name): name is string => name.length > 0);
-
-        const unique = Array.from(new Set(names));
-        setCategoryOptions(unique);
-      } catch (caught) {
-        if ((caught as Error)?.name === 'AbortError') {
+        if (!isMounted) {
           return;
         }
+
+        const names = toUniqueCategoryNames(payload);
+        setCategoryOptions(names);
+        setCategoryError(names.length === 0 ? '카테고리 불러오기 실패' : null);
+      } catch (caught) {
+        if (!isMounted) {
+          return;
+        }
+
+        const errorLike = caught as { name?: string } | null;
+        if (errorLike?.name === 'AbortError') {
+          return;
+        }
+
         console.error('[admin-class] failed to load categories', caught);
         setCategoryOptions([]);
+        setCategoryError('카테고리 불러오기 실패');
+      } finally {
+        if (!isMounted) {
+          return;
+        }
+        setIsCategoryLoading(false);
       }
     };
 
-    loadCategories();
+    void loadCategories();
 
     return () => {
+      isMounted = false;
       controller.abort();
     };
   }, []);
@@ -545,6 +559,9 @@ const formatDateTime = (value: string | null | undefined) => {
 
         {feedbackMessage && (
           <p className="mt-4 rounded-xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">{feedbackMessage}</p>
+        )}
+        {categoryError && !isCategoryLoading && (
+          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{categoryError}</p>
         )}
         {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{error}</p>}
       </section>

@@ -1,4 +1,4 @@
-import { apiFetch } from '../utils/apiClient';
+import { apiFetch, type ApiFetchOptions } from '../utils/apiClient';
 
 export type AssignmentUploadTimeOption = 'all_day' | 'same_day';
 
@@ -124,6 +124,37 @@ type ApiResponse<T> = {
   assignments?: AssignmentListItem[];
   assignment?: AssignmentListItem;
 };
+
+export async function fetchCategories(options: ApiFetchOptions = {}): Promise<unknown[]> {
+  try {
+    const payload = await apiFetch('/api/categories', options);
+
+    if (!payload) {
+      return [];
+    }
+
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    if (typeof payload === 'object') {
+      const candidate = payload as { data?: unknown; results?: unknown };
+
+      if (Array.isArray(candidate.data)) {
+        return candidate.data;
+      }
+
+      if (Array.isArray(candidate.results)) {
+        return candidate.results;
+      }
+    }
+
+    return [];
+  } catch (error) {
+    console.error('⚠️ 카테고리 불러오기 실패:', error);
+    return [];
+  }
+}
 
 const parseDateValue = (value: unknown): string | null => {
   if (typeof value === 'string') {
