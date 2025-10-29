@@ -1,8 +1,7 @@
-const json = (payload, status = 200) =>
-  new Response(JSON.stringify(payload), {
-    status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
-  });
+import { ensureDb, handleError, jsonResponse } from './utils';
+export { onRequestPost } from './post';
+export { onRequestPut } from './put';
+export { onRequestDelete } from './delete';
 
 const handleError = (error) => {
   const message = error instanceof Error ? error.message : String(error ?? 'Unknown error');
@@ -86,36 +85,9 @@ const buildInsertStatement = (db, payload) => {
 
 export const onRequestPost = async ({ request, env }) => {
   try {
-    if (!env || !env.DB) {
-      throw new Error('Database binding "DB" is not configured.');
-    }
-
-    const body = await request.json().catch(() => ({}));
-    const payload = normalisePayload(body);
-
-    if (!payload.name) {
-      const error = new Error('The "name" field is required.');
-      error.status = 400;
-      throw error;
-    }
-
-    const { statement, values } = buildInsertStatement(env.DB, payload);
-    await statement.bind(...values).run();
-
-    return json({ success: true, message: 'Class created successfully' }, 201);
-  } catch (error) {
-    return handleError(error);
-  }
-};
-
-export const onRequestGet = async ({ env }) => {
-  try {
-    if (!env || !env.DB) {
-      throw new Error('Database binding "DB" is not configured.');
-    }
-
+    const db = ensureDb(env);
     const query = `
-      SELECT 
+      SELECT
         id,
         name,
         category_id,
@@ -131,10 +103,9 @@ export const onRequestGet = async ({ env }) => {
       ORDER BY id DESC
     `;
 
-    const { results } = await env.DB.prepare(query).all();
-
-    return json(results || []);
+    const { results } = await db.prepare(query).all();
+    return jsonResponse(results ?? []);
   } catch (error) {
     return handleError(error);
   }
-};
+}
