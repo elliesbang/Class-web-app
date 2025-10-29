@@ -1,8 +1,12 @@
 /**
- * ✅ DB 연결 보장 함수 (Cloudflare D1 전용)
- * exec() 대신 batch()를 사용해야 합니다.
+ * ✅ Cloudflare D1 Database 초기화 (완전 호환 버전)
  */
-export const ensureDb = async (DB) => {
+export const ensureDb = async (env) => {
+  const DB = env.DB;
+  if (!DB || typeof DB.prepare !== "function") {
+    throw new Error("D1 Database binding(DB)이 올바르지 않습니다.");
+  }
+
   await DB.batch([
     DB.prepare(`
       CREATE TABLE IF NOT EXISTS classes (
@@ -14,10 +18,12 @@ export const ensureDb = async (DB) => {
       )
     `),
   ]);
+
+  return DB;
 };
 
 /**
- * ✅ 정상 응답 포맷
+ * ✅ JSON 응답 헬퍼
  */
 export const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -29,7 +35,7 @@ export const jsonResponse = (data, status = 200) =>
   });
 
 /**
- * ❌ 오류 응답 포맷
+ * ✅ 오류 응답 헬퍼
  */
 export const errorResponse = (error, status = 500) => {
   const message =
@@ -51,7 +57,7 @@ export const errorResponse = (error, status = 500) => {
 };
 
 /**
- * ⚙️ 공통 에러 핸들러
+ * ✅ 공통 에러 핸들러
  */
 export const handleError = (error) => {
   console.error("❌ API Error:", error);
