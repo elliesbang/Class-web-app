@@ -354,8 +354,8 @@ export const getClasses = async (): Promise<ClassInfo[]> => {
     if (typeof payload === 'object') {
       const data = payload as ApiResponse<ClassInfo[]>;
 
-      if (data.success === false) {
-        throw new Error(data.message || '수업 목록을 불러오지 못했습니다.');
+      if (data.success === false && data.message) {
+        console.warn('⚠️ /api/classes 응답이 실패 상태를 반환했습니다:', data.message);
       }
 
       if ('data' in data) {
@@ -382,12 +382,12 @@ export const getClasses = async (): Promise<ClassInfo[]> => {
         return fromResults;
       }
     }
-
-    return [];
   } catch (error) {
     console.error('❌ 수업 목록 불러오기 실패:', error);
-    throw error;
+    return [];
   }
+
+  return [];
 };
 
 const serialiseClassPayload = (payload: ClassFormPayload) => ({
