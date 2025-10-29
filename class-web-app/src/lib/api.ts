@@ -234,7 +234,7 @@ const normaliseClassRecord = (item: unknown): ClassInfo | null => {
 
   const candidate = item as Record<string, unknown>;
   const id = Number(candidate.id ?? candidate.class_id);
-  const rawName = candidate.name ?? candidate.class_name;
+  const rawName = candidate.name ?? candidate.class_name ?? candidate.title ?? candidate.classTitle;
   const name = typeof rawName === 'string' ? rawName.trim() : rawName != null ? String(rawName).trim() : '';
 
   if (Number.isNaN(id) || name.length === 0) {
@@ -258,7 +258,8 @@ const normaliseClassRecord = (item: unknown): ClassInfo | null => {
 
   const startDate = parseDateValue(candidate.start_date ?? candidate.startDate);
   const endDate = parseDateValue(candidate.end_date ?? candidate.endDate);
-  const rawDuration = candidate.duration ?? candidate.class_duration ?? candidate.classDuration;
+  const rawDuration =
+    candidate.duration ?? candidate.class_duration ?? candidate.classDuration ?? candidate.class_time ?? candidate.classTime;
   const duration =
     typeof rawDuration === 'string'
       ? rawDuration.trim()
@@ -335,40 +336,58 @@ const toNormalisedClassList = (input: unknown): ClassInfo[] => {
 };
 
 export const getClasses = async (): Promise<ClassInfo[]> => {
-  const payload = (await apiFetch('/api/classes')) as ApiResponse<ClassInfo[]> | ClassInfo[] | { results?: unknown };
+  try {
+    const payload = (await apiFetch('/api/classes')) as
+      | ApiResponse<ClassInfo[]>
+      | ClassInfo[]
+      | { results?: unknown }
+      | null;
 
-  if (Array.isArray(payload)) {
-    const fromArray = normaliseClassList(payload);
-    if (fromArray.length > 0) {
-      return fromArray;
+    if (!payload) {
+      return [];
     }
+
+    if (Array.isArray(payload)) {
+      return normaliseClassList(payload);
+    }
+
+    if (typeof payload === 'object') {
+      const data = payload as ApiResponse<ClassInfo[]>;
+
+      if (data.success === false) {
+        throw new Error(data.message || '수업 목록을 불러오지 못했습니다.');
+      }
+
+      if ('data' in data) {
+        const rawData = data.data;
+        if (Array.isArray(rawData)) {
+          return normaliseClassList(rawData);
+        }
+
+        if (rawData == null) {
+          return [];
+        }
+
+        console.warn('⚠️ /api/classes 응답 data 형식이 예상과 다릅니다:', rawData);
+        return [];
+      }
+
+      const fromLegacy = normaliseClassList((data as { classes?: unknown }).classes);
+      if (fromLegacy.length > 0) {
+        return fromLegacy;
+      }
+
+      const fromResults = normaliseClassList((payload as { results?: unknown }).results);
+      if (fromResults.length > 0) {
+        return fromResults;
+      }
+    }
+
     return [];
+  } catch (error) {
+    console.error('❌ 수업 목록 불러오기 실패:', error);
+    throw error;
   }
-
-  if (payload && typeof payload === 'object') {
-    const fromResults = normaliseClassList((payload as { results?: unknown }).results);
-    if (fromResults.length > 0) {
-      return fromResults;
-    }
-
-    const data = payload as ApiResponse<ClassInfo[]>;
-
-    if (data.success === false) {
-      throw new Error(data.message || '수업 목록을 불러오지 못했습니다.');
-    }
-
-    const fromData = normaliseClassList(data.data);
-    if (fromData.length > 0) {
-      return fromData;
-    }
-
-    const fromLegacy = normaliseClassList((data as { classes?: unknown }).classes);
-    if (fromLegacy.length > 0) {
-      return fromLegacy;
-    }
-  }
-
-  return [];
 };
 
 const serialiseClassPayload = (payload: ClassFormPayload) => ({
