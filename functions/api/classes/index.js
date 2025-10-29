@@ -107,3 +107,34 @@ export const onRequestPost = async ({ request, env }) => {
     return handleError(error);
   }
 };
+
+export const onRequestGet = async ({ env }) => {
+  try {
+    if (!env || !env.DB) {
+      throw new Error('Database binding "DB" is not configured.');
+    }
+
+    const query = `
+      SELECT 
+        id,
+        name,
+        category_id,
+        start_date,
+        end_date,
+        upload_limit,
+        upload_day,
+        code,
+        created_at,
+        category,
+        duration
+      FROM classes
+      ORDER BY id DESC
+    `;
+
+    const { results } = await env.DB.prepare(query).all();
+
+    return json(results || []);
+  } catch (error) {
+    return handleError(error);
+  }
+};
