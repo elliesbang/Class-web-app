@@ -1,23 +1,17 @@
-import { ensureDb, handleError, jsonResponse } from './utils';
+import { ensureDb, jsonResponse, handleError } from './utils';
 
-export async function onRequest({ request, env }) {
-  if (request.method !== 'GET') {
-    return jsonResponse({ error: 'Method Not Allowed' }, 405);
-  }
-
+export const onRequestGet = async ({ env }) => {
   try {
-    const db = ensureDb(env);
-    const { results } = await db
-      .prepare(
-        `SELECT id, name, category_id, start_date, end_date, upload_limit,
-                upload_day, code, created_at, category, duration
-         FROM classes
-         ORDER BY id DESC`
-      )
-      .all();
-
-    return jsonResponse(results ?? []);
-  } catch (error) {
-    return handleError(error);
+    const db = await ensureDb(env);
+    const query = `
+      SELECT id, name, category_id, start_date, end_date,
+             upload_limit, upload_day, code, created_at, category, duration
+      FROM classes
+      ORDER BY id DESC
+    `;
+    const { results } = await db.prepare(query).all();
+    return jsonResponse(results);
+  } catch (err) {
+    return handleError(err);
   }
-}
+};
