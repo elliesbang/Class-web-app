@@ -1,4 +1,4 @@
-// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
+// 🔄 Force Cloudflare Functions redeploy - 2024-08-27T00:00:00.000Z
 const ensureColumn = async (db, table, definition) => {
   try {
     await db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition};`);
@@ -26,6 +26,7 @@ export const ensureBaseSchema = async (db) => {
       upload_day TEXT,
       delivery_methods TEXT,
       is_active INTEGER NOT NULL DEFAULT 1,
+      description TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       duration TEXT
@@ -110,6 +111,7 @@ export const ensureBaseSchema = async (db) => {
   await ensureColumn(db, 'classes', 'upload_day TEXT');
   await ensureColumn(db, 'classes', 'delivery_methods TEXT');
   await ensureColumn(db, 'classes', 'is_active INTEGER NOT NULL DEFAULT 1');
+  await ensureColumn(db, 'classes', 'description TEXT');
   await ensureColumn(db, 'classes', "created_at TEXT NOT NULL DEFAULT (datetime('now'))");
   await ensureColumn(db, 'classes', "updated_at TEXT NOT NULL DEFAULT (datetime('now'))");
   await ensureColumn(db, 'classes', 'duration TEXT');
