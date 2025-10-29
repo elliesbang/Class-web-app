@@ -1,27 +1,36 @@
-// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
-import { rowsToCamelCase } from "../../_utils/index.js";
+const jsonResponse = ({ success, data, status = 200, count }) => {
+  const resolvedCount =
+    typeof count === "number"
+      ? count
+      : Array.isArray(data)
+      ? data.length
+      : data != null
+      ? 1
+      : 0;
 
-const jsonResponse = (data, status = 200) =>
-  new Response(JSON.stringify(data), {
+  return new Response(JSON.stringify({ success, count: resolvedCount, data }), {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8" },
   });
+};
 
-const errorResponse = (error) =>
-  new Response(
-    JSON.stringify({
-      success: false,
+const handleError = (error, status = 500) =>
+  jsonResponse({
+    success: false,
+    data: {
       message: error instanceof Error ? error.message : String(error),
-    }),
-    {
-      status: 500,
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-    }
-  );
+    },
+    status,
+    count: 0,
+  });
 
 const normaliseClassId = (value) => {
   if (value === null || value === undefined) {
     return null;
+  }
+
+  if (typeof value === "number") {
+    return value;
   }
 
   const numeric = Number(value);
@@ -33,28 +42,38 @@ const normaliseClassId = (value) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const mapNoticeRecord = (row) => ({
+  id: row?.id ?? null,
+  classId: row?.class_id ?? row?.classId ?? null,
+  title: row?.title ?? null,
+  content: row?.content ?? null,
+  author: row?.author ?? null,
+  createdAt: row?.created_at ?? row?.createdAt ?? null,
+});
+
 export const onRequestGet = async (context) => {
   try {
     const { DB } = context.env;
     const url = new URL(context.request.url);
-    const classIdRaw =
-      url.searchParams.get("classId") ?? url.searchParams.get("class_id");
-    const classId = normaliseClassId(classIdRaw);
+    const classIdParam =
+      url.searchParams.get("class_id") ?? url.searchParams.get("classId");
+    const classId = normaliseClassId(classIdParam);
 
     const baseQuery =
-      "SELECT id, title, content, author, class_id, created_at FROM notices";
+      "SELECT id, class_id, title, content, author, created_at FROM notices";
     const orderBy = " ORDER BY created_at DESC";
-    const statement = DB.prepare(
-      classId == null ? `${baseQuery}${orderBy}` : `${baseQuery} WHERE class_id = ?${orderBy}`
-    );
-    const result =
-      classId == null ? await statement.all() : await statement.bind(classId).all();
 
-    const rows = rowsToCamelCase(result?.results ?? []);
+    const statement =
+      classId == null
+        ? DB.prepare(`${baseQuery}${orderBy}`)
+        : DB.prepare(`${baseQuery} WHERE class_id = ?1${orderBy}`).bind(classId);
 
-    return jsonResponse({ success: true, items: rows, notices: rows });
+    const { results } = await statement.all();
+    const rows = Array.isArray(results) ? results.map(mapNoticeRecord) : [];
+
+    return jsonResponse({ success: true, data: rows });
   } catch (error) {
-    return errorResponse(error);
+    return handleError(error);
   }
 };
 
@@ -63,36 +82,54 @@ export const onRequestPost = async (context) => {
     const { DB } = context.env;
     const body = await context.request.json();
 
-    const { title, content, class_id } = body;
+    const title = body.title;
+    const classId = body.class_id ?? body.classId;
+    const content = body.content ?? null;
+    const author = body.author ?? null;
 
-    if (!title || !class_id) {
-      return new Response(
-        JSON.stringify({
-          status: "error",
-          message: "필수 항목(title, class_id)이 누락되었습니다.",
-        }),
-        { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
-      );
+    if (!title || !classId) {
+      return jsonResponse({
+        success: false,
+        data: { message: "title and class_id are required to create a notice." },
+        status: 400,
+        count: 0,
+      });
     }
 
-    await DB.prepare(`
-      INSERT INTO notices (title, content, class_id, created_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-    `)
-      .bind(title, content ?? null, class_id)
-      .run();
+    const insertStatement = DB.prepare(
+      `INSERT INTO notices (class_id, title, content, author, created_at) VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP)`
+    ).bind(classId, title, content, author);
 
-    return new Response(
-      JSON.stringify({
-        status: "success",
-        message: "공지사항이 성공적으로 등록되었습니다.",
-      }),
-      { status: 201, headers: { "Content-Type": "application/json; charset=utf-8" } }
-    );
+    const insertResult = await insertStatement.run();
+    const insertedId = insertResult?.meta?.last_row_id ?? null;
+
+    if (!insertedId) {
+      return jsonResponse({
+        success: true,
+        data: { id: null, classId, title, content, author },
+        status: 201,
+      });
+    }
+
+    const { results } = await DB.prepare(
+      `SELECT id, class_id, title, content, author, created_at FROM notices WHERE id = ?1`
+    )
+      .bind(insertedId)
+      .all();
+
+    const record =
+      Array.isArray(results) && results.length > 0
+        ? mapNoticeRecord(results[0])
+        : mapNoticeRecord({
+            id: insertedId,
+            class_id: classId,
+            title,
+            content,
+            author,
+          });
+
+    return jsonResponse({ success: true, data: record, status: 201 });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ status: "error", message: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } }
-    );
+    return handleError(error);
   }
 };

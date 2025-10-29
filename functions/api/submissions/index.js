@@ -1,72 +1,85 @@
-// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
-/**
- * 📤 Submissions API - 학생 과제 제출 / 조회
- * Cloudflare Pages + D1 Database
- */
+const jsonResponse = ({ success, data, status = 200, count }) => {
+  const resolvedCount =
+    typeof count === "number"
+      ? count
+      : Array.isArray(data)
+      ? data.length
+      : data != null
+      ? 1
+      : 0;
+
+  return new Response(JSON.stringify({ success, count: resolvedCount, data }), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+  });
+};
+
+const handleError = (error, status = 500) =>
+  jsonResponse({
+    success: false,
+    data: {
+      message: error instanceof Error ? error.message : String(error),
+    },
+    status,
+    count: 0,
+  });
+
+const toBoolean = (value) => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+
+  if (typeof value === "string") {
+    const lower = value.trim().toLowerCase();
+    return ["1", "true", "yes"].includes(lower);
+  }
+
+  return false;
+};
 
 export const onRequestGet = async (context) => {
   try {
     const { DB } = context.env;
     const url = new URL(context.request.url);
-    const class_id = url.searchParams.get("class_id");
+    const classId = url.searchParams.get("class_id") ?? url.searchParams.get("classId");
+    const role = url.searchParams.get("role");
+    const isAdminParam =
+      url.searchParams.get("is_admin") ?? url.searchParams.get("isAdmin");
 
-    let query = "SELECT * FROM submissions";
-    let results;
+    const isAdmin =
+      (typeof role === "string" && role.toLowerCase() === "admin") ||
+      toBoolean(isAdminParam);
 
-    if (class_id) {
-      query += " WHERE class_id = ? ORDER BY submitted_at DESC";
-      results = await DB.prepare(query).bind(class_id).all();
-    } else {
-      query += " ORDER BY submitted_at DESC";
-      results = await DB.prepare(query).all();
-    }
+    let statement;
 
-    return Response.json(results, {
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-    });
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ status: "error", message: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } }
-    );
-  }
-};
-
-export const onRequestPost = async (context) => {
-  try {
-    const { DB } = context.env;
-    const body = await context.request.json();
-
-    const { student_name, file_url, comment, class_id } = body;
-
-    if (!student_name || !file_url || !class_id) {
-      return new Response(
-        JSON.stringify({
-          status: "error",
-          message: "필수 항목(student_name, file_url, class_id)이 누락되었습니다.",
-        }),
-        { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
+    if (isAdmin) {
+      statement = DB.prepare(
+        "SELECT id, class_id, student_name, file_url, feedback, created_at FROM submissions ORDER BY created_at DESC"
       );
+    } else {
+      if (!classId) {
+        return jsonResponse({
+          success: false,
+          data: { message: "class_id is required for student submission queries." },
+          status: 400,
+          count: 0,
+        });
+      }
+
+      statement = DB.prepare(
+        "SELECT id, class_id, student_name, file_url, feedback, created_at FROM submissions WHERE class_id = ?1 ORDER BY created_at DESC"
+      ).bind(classId);
     }
 
-    await DB.prepare(`
-      INSERT INTO submissions (student_name, file_url, comment, class_id)
-      VALUES (?, ?, ?, ?)
-    `)
-      .bind(student_name, file_url, comment ?? null, class_id)
-      .run();
+    const { results } = await statement.all();
+    const rows = Array.isArray(results) ? results : [];
 
-    return new Response(
-      JSON.stringify({
-        status: "success",
-        message: "과제가 성공적으로 제출되었습니다.",
-      }),
-      { status: 201, headers: { "Content-Type": "application/json; charset=utf-8" } }
-    );
+    return jsonResponse({ success: true, data: rows });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ status: "error", message: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } }
-    );
+    return handleError(error);
   }
 };

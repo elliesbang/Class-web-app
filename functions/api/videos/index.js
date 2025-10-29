@@ -1,27 +1,36 @@
-// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
-import { rowsToCamelCase } from "../../_utils/index.js";
+const jsonResponse = ({ success, data, status = 200, count }) => {
+  const resolvedCount =
+    typeof count === "number"
+      ? count
+      : Array.isArray(data)
+      ? data.length
+      : data != null
+      ? 1
+      : 0;
 
-const jsonResponse = (data, status = 200) =>
-  new Response(JSON.stringify(data), {
+  return new Response(JSON.stringify({ success, count: resolvedCount, data }), {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8" },
   });
+};
 
-const errorResponse = (error) =>
-  new Response(
-    JSON.stringify({
-      success: false,
+const handleError = (error, status = 500) =>
+  jsonResponse({
+    success: false,
+    data: {
       message: error instanceof Error ? error.message : String(error),
-    }),
-    {
-      status: 500,
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-    }
-  );
+    },
+    status,
+    count: 0,
+  });
 
 const normaliseClassId = (value) => {
   if (value === null || value === undefined) {
     return null;
+  }
+
+  if (typeof value === "number") {
+    return value;
   }
 
   const numeric = Number(value);
@@ -33,30 +42,40 @@ const normaliseClassId = (value) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const mapVideoRecord = (row) => ({
+  id: row?.id ?? null,
+  classId: row?.class_id ?? row?.classId ?? null,
+  title: row?.title ?? null,
+  content: row?.content ?? row?.description ?? null,
+  fileUrl: row?.file_url ?? row?.fileUrl ?? row?.url ?? null,
+  createdAt: row?.created_at ?? row?.createdAt ?? null,
+  displayOrder: row?.display_order ?? row?.displayOrder ?? null,
+  thumbnailUrl: row?.thumbnail_url ?? row?.thumbnailUrl ?? null,
+});
+
 export const onRequestGet = async (context) => {
   try {
     const { DB } = context.env;
     const url = new URL(context.request.url);
-    const classIdRaw =
-      url.searchParams.get("classId") ?? url.searchParams.get("class_id");
-    const classId = normaliseClassId(classIdRaw);
+    const classIdParam =
+      url.searchParams.get("class_id") ?? url.searchParams.get("classId");
+    const classId = normaliseClassId(classIdParam);
 
     const baseQuery =
-      "SELECT id, title, url, description, class_id, display_order, created_at FROM videos";
+      "SELECT id, class_id, title, content, file_url, created_at, display_order, thumbnail_url FROM videos";
     const orderBy = " ORDER BY created_at DESC";
 
-    const statement = DB.prepare(
-      classId == null ? `${baseQuery}${orderBy}` : `${baseQuery} WHERE class_id = ?${orderBy}`
-    );
+    const statement =
+      classId == null
+        ? DB.prepare(`${baseQuery}${orderBy}`)
+        : DB.prepare(`${baseQuery} WHERE class_id = ?1${orderBy}`).bind(classId);
 
-    const result =
-      classId == null ? await statement.all() : await statement.bind(classId).all();
+    const { results } = await statement.all();
+    const rows = Array.isArray(results) ? results.map(mapVideoRecord) : [];
 
-    const rows = rowsToCamelCase(result?.results ?? []);
-
-    return jsonResponse({ success: true, items: rows, videos: rows });
+    return jsonResponse({ success: true, data: rows });
   } catch (error) {
-    return errorResponse(error);
+    return handleError(error);
   }
 };
 
@@ -65,36 +84,68 @@ export const onRequestPost = async (context) => {
     const { DB } = context.env;
     const body = await context.request.json();
 
-    const { title, video_url, class_id, thumbnail_url } = body;
+    const title = body.title;
+    const classId = body.class_id ?? body.classId;
+    const content = body.content ?? body.description ?? null;
+    const fileUrl = body.file_url ?? body.fileUrl ?? body.url ?? null;
+    const displayOrder = body.display_order ?? body.displayOrder ?? null;
+    const thumbnailUrl = body.thumbnail_url ?? body.thumbnailUrl ?? null;
 
-    if (!title || !video_url || !class_id) {
-      return new Response(
-        JSON.stringify({
-          status: "error",
-          message: "필수 항목(title, video_url, class_id)이 누락되었습니다.",
-        }),
-        { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
-      );
+    if (!title || !classId || !fileUrl) {
+      return jsonResponse({
+        success: false,
+        data: {
+          message: "title, class_id, and file_url are required to create a video.",
+        },
+        status: 400,
+        count: 0,
+      });
     }
 
-    await DB.prepare(`
-      INSERT INTO videos (title, video_url, thumbnail_url, class_id, created_at)
-      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `)
-      .bind(title, video_url, thumbnail_url ?? null, class_id)
-      .run();
+    const insertStatement = DB.prepare(
+      `INSERT INTO videos (class_id, title, content, file_url, display_order, thumbnail_url, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, CURRENT_TIMESTAMP)`
+    ).bind(classId, title, content, fileUrl, displayOrder, thumbnailUrl);
 
-    return new Response(
-      JSON.stringify({
-        status: "success",
-        message: "영상이 성공적으로 업로드되었습니다.",
-      }),
-      { status: 201, headers: { "Content-Type": "application/json; charset=utf-8" } }
-    );
+    const insertResult = await insertStatement.run();
+    const insertedId = insertResult?.meta?.last_row_id ?? null;
+
+    if (!insertedId) {
+      return jsonResponse({
+        success: true,
+        data: {
+          id: null,
+          classId,
+          title,
+          content,
+          fileUrl,
+          displayOrder,
+          thumbnailUrl,
+        },
+        status: 201,
+      });
+    }
+
+    const { results } = await DB.prepare(
+      `SELECT id, class_id, title, content, file_url, created_at, display_order, thumbnail_url FROM videos WHERE id = ?1`
+    )
+      .bind(insertedId)
+      .all();
+
+    const record =
+      Array.isArray(results) && results.length > 0
+        ? mapVideoRecord(results[0])
+        : mapVideoRecord({
+            id: insertedId,
+            class_id: classId,
+            title,
+            content,
+            file_url: fileUrl,
+            display_order: displayOrder,
+            thumbnail_url: thumbnailUrl,
+          });
+
+    return jsonResponse({ success: true, data: record, status: 201 });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ status: "error", message: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } }
-    );
+    return handleError(error);
   }
 };
