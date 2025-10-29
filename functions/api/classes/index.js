@@ -1,15 +1,25 @@
-import { ensureDb, jsonResponse, handleError } from './utils';
+import { DB } from '../../_db';
 
-export const onRequestGet = async (context) => {
+export async function onRequestGet() {
   try {
-    const DB = await ensureDb(context);
-    const statement = DB.prepare(
-      `SELECT id, name, category, code, created_at FROM classes ORDER BY id DESC`
-    );
-    const { results = [] } = await statement.all();
-
-    return jsonResponse({ success: true, count: results.length, data: results });
-  } catch (error) {
-    return handleError(error);
+    const result = await DB.prepare('SELECT * FROM classes ORDER BY id DESC').all();
+    return Response.json(result.results);
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
-};
+}
+
+export async function onRequestPost({ request }) {
+  try {
+    const data = await request.json();
+    const { title, category_id, duration, upload_time, type } = data;
+
+    await DB.prepare(
+      'INSERT INTO classes (title, category_id, duration, upload_time, type) VALUES (?, ?, ?, ?, ?)'
+    ).bind(title, category_id, duration, upload_time, type).run();
+
+    return new Response(JSON.stringify({ success: true }), { status: 201 });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+}
