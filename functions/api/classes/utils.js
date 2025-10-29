@@ -2,9 +2,8 @@
  * ✅ Cloudflare Pages Functions 전용 D1 초기화 버전
  */
 export const ensureDb = async (context) => {
-  const { env } = context;
+  const { env } = context ?? {};
   const DB = env?.DB;
-
   if (!DB || typeof DB.prepare !== "function") {
     console.error("❌ D1 Database binding(DB) is invalid:", DB);
     throw new Error("D1 Database binding(DB)이 유효하지 않습니다. wrangler.toml의 [[d1_databases]] 설정을 확인하세요.");

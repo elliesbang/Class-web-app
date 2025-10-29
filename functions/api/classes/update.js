@@ -1,44 +1,17 @@
 import { ensureDb, jsonResponse, handleError } from './utils';
 
-export const onRequestPut = async ({ request, env }) => {
+export const onRequestPost = async (context) => {
   try {
-    const db = await ensureDb(env);
-    const body = await request.json();
-    const {
-      id,
-      name,
-      category_id,
-      start_date,
-      end_date,
-      upload_limit,
-      upload_day,
-      code,
-      category,
-      duration
-    } = body;
+    const DB = await ensureDb(context);
+    const { id, name, category, code } = await context.request.json();
 
-    const query = `
-      UPDATE classes
-      SET name = ?, category_id = ?, start_date = ?, end_date = ?,
-          upload_limit = ?, upload_day = ?, code = ?, category = ?, duration = ?
-      WHERE id = ?
-    `;
+    const statement = DB.prepare(
+      `UPDATE classes SET name = ?1, category = ?2, code = ?3 WHERE id = ?4`
+    );
+    await statement.bind(name, category, code, id).run();
 
-    await db.prepare(query).bind(
-      name,
-      category_id,
-      start_date,
-      end_date,
-      upload_limit,
-      upload_day,
-      code,
-      category,
-      duration,
-      id
-    ).run();
-
-    return jsonResponse({ success: true, message: 'Class updated successfully' });
-  } catch (err) {
-    return handleError(err);
+    return jsonResponse({ success: true, message: '수업 정보가 수정되었습니다.' });
+  } catch (error) {
+    return handleError(error);
   }
 };

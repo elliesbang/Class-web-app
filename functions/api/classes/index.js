@@ -1,17 +1,15 @@
 import { ensureDb, jsonResponse, handleError } from './utils';
 
-export const onRequestGet = async ({ env }) => {
+export const onRequestGet = async (context) => {
   try {
-    const db = await ensureDb(env);
-    const query = `
-      SELECT id, name, category_id, start_date, end_date,
-             upload_limit, upload_day, code, created_at, category, duration
-      FROM classes
-      ORDER BY id DESC
-    `;
-    const { results } = await db.prepare(query).all();
-    return jsonResponse(results);
-  } catch (err) {
-    return handleError(err);
+    const DB = await ensureDb(context);
+    const statement = DB.prepare(
+      `SELECT id, name, category, code, created_at FROM classes ORDER BY id DESC`
+    );
+    const { results = [] } = await statement.all();
+
+    return jsonResponse({ success: true, count: results.length, data: results });
+  } catch (error) {
+    return handleError(error);
   }
 };
