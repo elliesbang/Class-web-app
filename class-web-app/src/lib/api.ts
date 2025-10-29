@@ -10,6 +10,7 @@ export type ClassInfo = {
   categoryId: number | null;
   startDate: string | null;
   endDate: string | null;
+  duration: string;
   assignmentUploadTime: AssignmentUploadTimeOption;
   assignmentUploadDays: string[];
   deliveryMethods: string[];
@@ -25,6 +26,7 @@ export type ClassFormPayload = {
   categoryId?: number | null;
   startDate: string | null;
   endDate: string | null;
+  duration?: string | null;
   assignmentUploadTime: AssignmentUploadTimeOption;
   assignmentUploadDays: string[];
   deliveryMethods: string[];
@@ -256,6 +258,13 @@ const normaliseClassRecord = (item: unknown): ClassInfo | null => {
 
   const startDate = parseDateValue(candidate.start_date ?? candidate.startDate);
   const endDate = parseDateValue(candidate.end_date ?? candidate.endDate);
+  const rawDuration = candidate.duration ?? candidate.class_duration ?? candidate.classDuration;
+  const duration =
+    typeof rawDuration === 'string'
+      ? rawDuration.trim()
+      : rawDuration != null
+      ? String(rawDuration).trim()
+      : '';
   const assignmentUploadTime = parseAssignmentUploadTime(
     candidate.assignment_upload_time ??
     candidate.assignmentUploadTime ??
@@ -293,6 +302,7 @@ const normaliseClassRecord = (item: unknown): ClassInfo | null => {
     categoryId: categoryId ?? null,
     startDate,
     endDate,
+    duration,
     assignmentUploadTime,
     assignmentUploadDays,
     deliveryMethods,
@@ -368,6 +378,7 @@ const serialiseClassPayload = (payload: ClassFormPayload) => ({
   categoryId: payload.categoryId ?? null,
   startDate: payload.startDate,
   endDate: payload.endDate,
+  duration: payload.duration?.trim() ?? '',
   assignmentUploadTime: payload.assignmentUploadTime,
   assignmentUploadDays: payload.assignmentUploadDays,
   deliveryMethods: payload.deliveryMethods,
