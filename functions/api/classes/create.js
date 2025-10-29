@@ -1,51 +1,17 @@
 import { ensureDb, jsonResponse, handleError } from './utils';
 
-export const onRequestPost = async ({ request, env }) => {
+export const onRequestPost = async (context) => {
   try {
-    const db = await ensureDb(env);
-    const body = await request.json();
-    const {
-      name,
-      category_id,
-      start_date,
-      end_date,
-      upload_limit,
-      upload_day,
-      code,
-      category,
-      duration
-    } = body;
+    const DB = await ensureDb(context);
+    const { name, category, code } = await context.request.json();
 
-    const query = `
-      INSERT INTO classes (
-        name,
-        category_id,
-        start_date,
-        end_date,
-        upload_limit,
-        upload_day,
-        code,
-        category,
-        duration,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `;
+    const statement = DB.prepare(
+      `INSERT INTO classes (name, category, code) VALUES (?1, ?2, ?3)`
+    );
+    await statement.bind(name, category, code).run();
 
-    await db.prepare(query).bind(
-      name,
-      category_id,
-      start_date,
-      end_date,
-      upload_limit,
-      upload_day,
-      code,
-      category,
-      duration
-    ).run();
-
-    return jsonResponse({ success: true, message: 'Class created successfully' });
-  } catch (err) {
-    return handleError(err);
+    return jsonResponse({ success: true, message: '수업이 추가되었습니다.' });
+  } catch (error) {
+    return handleError(error);
   }
 };

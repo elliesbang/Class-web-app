@@ -1,17 +1,19 @@
 import { ensureDb, jsonResponse, handleError } from './utils';
 
-export const onRequestDelete = async ({ request, env }) => {
+export const onRequestPost = async (context) => {
   try {
-    const db = await ensureDb(env);
-    const url = new URL(request.url);
-    const id = url.searchParams.get('id');
+    const DB = await ensureDb(context);
+    const { id } = await context.request.json();
 
-    if (!id) return jsonResponse({ error: 'Missing id' }, 400);
+    if (id == null) {
+      throw new Error('수업 ID가 필요합니다.');
+    }
 
-    await db.prepare(`DELETE FROM classes WHERE id = ?`).bind(id).run();
+    const statement = DB.prepare(`DELETE FROM classes WHERE id = ?1`);
+    await statement.bind(id).run();
 
-    return jsonResponse({ success: true, message: 'Class deleted successfully' });
-  } catch (err) {
-    return handleError(err);
+    return jsonResponse({ success: true, message: '수업이 삭제되었습니다.' });
+  } catch (error) {
+    return handleError(error);
   }
 };

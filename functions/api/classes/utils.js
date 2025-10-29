@@ -1,8 +1,9 @@
 /**
  * ✅ Cloudflare D1 Database 초기화 (완전 호환 버전)
  */
-export const ensureDb = async (env) => {
-  const DB = env.DB;
+export const ensureDb = async (context) => {
+  const { env } = context ?? {};
+  const DB = env?.DB;
   if (!DB || typeof DB.prepare !== "function") {
     throw new Error("D1 Database binding(DB)이 올바르지 않습니다.");
   }
