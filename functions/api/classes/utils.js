@@ -1,10 +1,13 @@
 /**
- * ✅ Cloudflare D1 Database 초기화 (완전 호환 버전)
+ * ✅ Cloudflare Pages Functions 전용 D1 초기화 버전
  */
-export const ensureDb = async (env) => {
-  const DB = env.DB;
+export const ensureDb = async (context) => {
+  const { env } = context;
+  const DB = env?.DB;
+
   if (!DB || typeof DB.prepare !== "function") {
-    throw new Error("D1 Database binding(DB)이 올바르지 않습니다.");
+    console.error("❌ D1 Database binding(DB) is invalid:", DB);
+    throw new Error("D1 Database binding(DB)이 유효하지 않습니다. wrangler.toml의 [[d1_databases]] 설정을 확인하세요.");
   }
 
   await DB.batch([
@@ -23,7 +26,7 @@ export const ensureDb = async (env) => {
 };
 
 /**
- * ✅ JSON 응답 헬퍼
+ * ✅ 정상 응답 포맷
  */
 export const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -35,17 +38,13 @@ export const jsonResponse = (data, status = 200) =>
   });
 
 /**
- * ✅ 오류 응답 헬퍼
+ * ✅ 오류 응답 포맷
  */
 export const errorResponse = (error, status = 500) => {
   const message =
     error instanceof Error ? error.message : String(error ?? "Unknown error");
-
   return new Response(
-    JSON.stringify({
-      success: false,
-      error: message,
-    }),
+    JSON.stringify({ success: false, error: message }),
     {
       status,
       headers: {
