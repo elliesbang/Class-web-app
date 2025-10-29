@@ -1,43 +1,51 @@
-import { ensureDb, handleError, jsonResponse, normaliseClassPayload } from './utils';
+import { ensureDb, jsonResponse, handleError } from './utils';
 
-export async function onRequest({ request, env }) {
-  if (request.method !== 'POST') {
-    return jsonResponse({ error: 'Method Not Allowed' }, 405);
-  }
-
+export const onRequestPost = async ({ request, env }) => {
   try {
-    const db = ensureDb(env);
-    const data = await request.json().catch(() => ({}));
-    const payload = normaliseClassPayload(data);
+    const db = await ensureDb(env);
+    const body = await request.json();
+    const {
+      name,
+      category_id,
+      start_date,
+      end_date,
+      upload_limit,
+      upload_day,
+      code,
+      category,
+      duration
+    } = body;
 
-    const result = await db
-      .prepare(
-        `INSERT INTO classes (
-           name, category_id, start_date, end_date, upload_limit,
-           upload_day, code, category, duration
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    const query = `
+      INSERT INTO classes (
+        name,
+        category_id,
+        start_date,
+        end_date,
+        upload_limit,
+        upload_day,
+        code,
+        category,
+        duration,
+        created_at
       )
-      .bind(
-        payload.name,
-        payload.category_id,
-        payload.start_date,
-        payload.end_date,
-        payload.upload_limit,
-        payload.upload_day,
-        payload.code,
-        payload.category,
-        payload.duration
-      )
-      .run();
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `;
 
-    return jsonResponse(
-      {
-        success: true,
-        id: result?.meta?.last_row_id ?? null,
-      },
-      201,
-    );
-  } catch (error) {
-    return handleError(error);
+    await db.prepare(query).bind(
+      name,
+      category_id,
+      start_date,
+      end_date,
+      upload_limit,
+      upload_day,
+      code,
+      category,
+      duration
+    ).run();
+
+    return jsonResponse({ success: true, message: 'Class created successfully' });
+  } catch (err) {
+    return handleError(err);
   }
-}
+};
