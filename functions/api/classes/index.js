@@ -169,17 +169,19 @@ const parseStoredArray = (value) => {
 
 // ✅ D1 DB 컬럼 순서와 완전히 동일하게 매핑
 const mapRow = (r = {}) => {
+  const row = typeof r === 'object' && r !== null ? r : {};
+
   const assignmentUploadTime =
-    r.assignment_upload_time ??
-    r.assignmentUploadTime ??
-    r.upload_limit ??
-    r.uploadLimit ??
+    row.assignment_upload_time ??
+    row.assignmentUploadTime ??
+    row.upload_limit ??
+    row.uploadLimit ??
     '';
 
   const assignmentUploadDaysRaw =
-    r.assignment_upload_days ?? r.assignmentUploadDays ?? r.upload_day ?? r.uploadDay ?? '[]';
+    row.assignment_upload_days ?? row.assignmentUploadDays ?? row.upload_day ?? row.uploadDay ?? '[]';
 
-  const deliveryMethodsRaw = r.delivery_methods ?? r.deliveryMethods ?? '[]';
+  const deliveryMethodsRaw = row.delivery_methods ?? row.deliveryMethods ?? '[]';
 
   const assignmentUploadDays = parseStoredArray(assignmentUploadDaysRaw);
   const deliveryMethods = parseStoredArray(deliveryMethodsRaw);
@@ -192,17 +194,17 @@ const mapRow = (r = {}) => {
     ? JSON.stringify(parseArrayInput(deliveryMethodsRaw))
     : safe(deliveryMethodsRaw);
 
-  const categoryId = toNumberOrNull(r.category_id ?? r.categoryId);
-  const isActive = normaliseBoolean(r.is_active ?? r.isActive, 1);
+  const categoryId = toNumberOrNull(row.category_id ?? row.categoryId);
+  const isActive = normaliseBoolean(row.is_active ?? row.isActive, 1);
 
   return {
-    id: toNumberOrNull(r.id) ?? safe(r.id),
-    name: safe(r.name),
-    code: safe(r.code),
-    category: safe(r.category),
+    id: toNumberOrNull(row.id) ?? safe(row.id),
+    name: safe(row.name),
+    code: safe(row.code),
+    category: safe(row.category),
     category_id: categoryId,
-    start_date: safe(r.start_date),
-    end_date: safe(r.end_date),
+    start_date: safe(row.start_date),
+    end_date: safe(row.end_date),
     assignment_upload_time: safe(assignmentUploadTime),
     assignment_upload_days: assignmentUploadDaysText,
     upload_limit: safe(assignmentUploadTime),
@@ -211,12 +213,12 @@ const mapRow = (r = {}) => {
     delivery_methods: deliveryMethodsText,
     delivery_methods_array: deliveryMethods,
     is_active: isActive,
-    created_at: safe(r.created_at),
-    updated_at: safe(r.updated_at),
+    created_at: safe(row.created_at),
+    updated_at: safe(row.updated_at),
     categoryId,
 
     // ✅ duration undefined 방어 (대소문자/캐시 불일치 모두 대응)
-    duration: safe(r.duration ?? r.DURATION ?? r.Duration ?? ''),
+    duration: safe(row.duration ?? row.DURATION ?? row.Duration ?? ''),
   };
 };
 
