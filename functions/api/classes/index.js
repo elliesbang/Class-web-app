@@ -78,7 +78,7 @@ const buildInsertStatement = (db, payload) => {
   const values = columns.map((column) => payload[column] ?? null);
 
   const statement = db.prepare(
-    `INSERT INTO class (${columns.join(', ')}) VALUES (${placeholders})`,
+    `INSERT INTO classes (${columns.join(', ')}) VALUES (${placeholders})`,
   );
 
   return { statement, values };
