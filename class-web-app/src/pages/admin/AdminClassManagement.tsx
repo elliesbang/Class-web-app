@@ -105,28 +105,46 @@ const AdminClassManagement = () => {
     const loadCategories = async () => {
       try {
         const payload = await apiFetch('/api/categories', { signal: controller.signal });
-        const rawList = Array.isArray(payload)
-          ? payload
-          : Array.isArray((payload as { data?: unknown }).data)
-          ? ((payload as { data?: unknown }).data as unknown[])
-          : Array.isArray((payload as { results?: unknown }).results)
-          ? ((payload as { results?: unknown }).results as unknown[])
-          : [];
+
+        const rawList: unknown[] = (() => {
+          try {
+            if (Array.isArray(payload)) {
+              return payload;
+            }
+
+            if (payload && typeof payload === 'object') {
+              const candidate = payload as { data?: unknown; results?: unknown };
+              if (Array.isArray(candidate.data)) {
+                return candidate.data;
+              }
+              if (Array.isArray(candidate.results)) {
+                return candidate.results;
+              }
+            }
+          } catch (parseError) {
+            console.warn('[admin-class] 카테고리 응답 파싱 실패, 빈 배열로 대체합니다.', parseError);
+          }
+          return [];
+        })();
 
         const names = rawList
           .map((item) => {
-            if (item && typeof item === 'object' && 'name' in item) {
-              const value = (item as { name: unknown }).name;
-              if (typeof value === 'string') {
-                return value.trim();
+            try {
+              if (item && typeof item === 'object' && 'name' in item) {
+                const value = (item as { name: unknown }).name;
+                if (typeof value === 'string') {
+                  return value.trim();
+                }
+                if (value == null) {
+                  return '';
+                }
+                return String(value).trim();
               }
-              if (value == null) {
-                return '';
+              if (typeof item === 'string') {
+                return item.trim();
               }
-              return String(value).trim();
-            }
-            if (typeof item === 'string') {
-              return item.trim();
+            } catch (parseError) {
+              console.warn('[admin-class] 카테고리 항목 파싱 실패, 항목을 건너뜁니다.', parseError);
             }
             return '';
           })
@@ -139,6 +157,7 @@ const AdminClassManagement = () => {
           return;
         }
         console.error('[admin-class] failed to load categories', caught);
+        setCategoryOptions([]);
       }
     };
 
