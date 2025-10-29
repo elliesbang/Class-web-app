@@ -1,17 +1,19 @@
 /**
- * ✅ DB 연결 보장 함수
- * D1 인스턴스를 받아서 기본 테이블 구조를 확인/생성합니다.
+ * ✅ DB 연결 보장 함수 (Cloudflare D1 전용)
+ * exec() 대신 batch()를 사용해야 합니다.
  */
 export const ensureDb = async (DB) => {
-  await DB.exec(`
-    CREATE TABLE IF NOT EXISTS classes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      category TEXT,
-      code TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  await DB.batch([
+    DB.prepare(`
+      CREATE TABLE IF NOT EXISTS classes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category TEXT,
+        code TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `),
+  ]);
 };
 
 /**
@@ -50,7 +52,6 @@ export const errorResponse = (error, status = 500) => {
 
 /**
  * ⚙️ 공통 에러 핸들러
- * (기존 handleError 역할)
  */
 export const handleError = (error) => {
   console.error("❌ API Error:", error);
