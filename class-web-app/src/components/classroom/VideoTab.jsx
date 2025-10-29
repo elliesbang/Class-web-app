@@ -103,7 +103,8 @@ function VideoTab({ courseId, courseName }) {
       setError(null);
 
       try {
-        const response = await fetch(`/api/classes/${courseId}/videos`);
+        const query = new URLSearchParams({ classId: String(courseId) });
+        const response = await fetch(`/api/videos?${query.toString()}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch videos. status=${response.status}`);
         }

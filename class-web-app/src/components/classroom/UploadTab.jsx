@@ -114,7 +114,8 @@ function UploadTab({ courseId, courseName }) {
       setError(null);
 
       try {
-        const response = await fetch(`/api/classes/${courseId}/assignments`);
+        const query = new URLSearchParams({ classId: String(courseId) });
+        const response = await fetch(`/api/assignments?${query.toString()}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch assignments. status=${response.status}`);
         }
