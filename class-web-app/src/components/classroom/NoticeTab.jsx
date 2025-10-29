@@ -88,7 +88,8 @@ function NoticeTab({ courseId, courseName }) {
       setError(null);
 
       try {
-        const response = await fetch(`/api/classes/${courseId}/notices`);
+        const query = new URLSearchParams({ classId: String(courseId) });
+        const response = await fetch(`/api/notices?${query.toString()}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch notices. status=${response.status}`);
         }

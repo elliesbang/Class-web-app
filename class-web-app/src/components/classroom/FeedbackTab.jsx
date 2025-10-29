@@ -88,7 +88,8 @@ function FeedbackTab({ courseId, courseName }) {
       setError(null);
 
       try {
-        const response = await fetch(`/api/classes/${courseId}/feedback`);
+        const query = new URLSearchParams({ classId: String(courseId) });
+        const response = await fetch(`/api/feedback?${query.toString()}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch feedback. status=${response.status}`);
         }

@@ -99,7 +99,8 @@ function MaterialTab({ courseId, courseName }) {
       setError(null);
 
       try {
-        const response = await fetch(`/api/classes/${courseId}/materials`);
+        const query = new URLSearchParams({ classId: String(courseId) });
+        const response = await fetch(`/api/materials?${query.toString()}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch materials. status=${response.status}`);
         }
