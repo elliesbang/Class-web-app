@@ -1,5 +1,21 @@
 /**
- * ✅ 공통 JSON 응답 헬퍼
+ * ✅ DB 연결 보장 함수
+ * D1 인스턴스를 받아서 기본 테이블 구조를 확인/생성합니다.
+ */
+export const ensureDb = async (DB) => {
+  await DB.exec(`
+    CREATE TABLE IF NOT EXISTS classes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      category TEXT,
+      code TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+};
+
+/**
+ * ✅ 정상 응답 포맷
  */
 export const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -11,7 +27,7 @@ export const jsonResponse = (data, status = 200) =>
   });
 
 /**
- * ❌ 공통 에러 응답 헬퍼
+ * ❌ 오류 응답 포맷
  */
 export const errorResponse = (error, status = 500) => {
   const message =
@@ -33,17 +49,10 @@ export const errorResponse = (error, status = 500) => {
 };
 
 /**
- * 🧩 DB 스키마 보장 함수 (선택적으로 유지)
- * → 다른 곳에서 ensureBaseSchema() 불러올 때 사용됨
+ * ⚙️ 공통 에러 핸들러
+ * (기존 handleError 역할)
  */
-export const ensureBaseSchema = async (DB) => {
-  await DB.exec(`
-    CREATE TABLE IF NOT EXISTS classes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      category TEXT,
-      code TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+export const handleError = (error) => {
+  console.error("❌ API Error:", error);
+  return errorResponse(error);
 };
