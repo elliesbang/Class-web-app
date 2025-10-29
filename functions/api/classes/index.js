@@ -1,4 +1,4 @@
-// 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
+// 🔄 Force Cloudflare Functions redeploy - 2024-08-27T00:00:00.000Z
 import { ensureBaseSchema } from '../../_utils/index.js';
 
 const json = (payload, status = 200) =>
@@ -115,7 +115,14 @@ const normaliseClassPayload = (input = {}) => {
   const categoryId = toNumberOrNull(source.category_id ?? source.categoryId);
   const startDate = toTrimmedStringOrNull(source.start_date ?? source.startDate);
   const endDate = toTrimmedStringOrNull(source.end_date ?? source.endDate);
-  const duration = toTrimmedStringOrNull(source.duration ?? source.class_duration);
+  const duration = toTrimmedStringOrNull(source.duration ?? source.class_duration) ?? '';
+  const description =
+    toTrimmedStringOrNull(
+      source.description ??
+        source.class_description ??
+        source.details ??
+        source.summary,
+    ) ?? '';
 
   const assignmentUploadTime =
     toTrimmedStringOrNull(
@@ -152,6 +159,7 @@ const normaliseClassPayload = (input = {}) => {
     delivery_methods: deliveryMethods,
     is_active: isActive,
     duration,
+    description,
   };
 };
 
@@ -188,11 +196,15 @@ const mapRow = (r = {}) => {
 
   const assignmentUploadDaysText = Array.isArray(assignmentUploadDaysRaw)
     ? JSON.stringify(parseArrayInput(assignmentUploadDaysRaw))
-    : safe(assignmentUploadDaysRaw);
+    : typeof assignmentUploadDaysRaw === 'string'
+    ? assignmentUploadDaysRaw.trim() || '[]'
+    : '[]';
 
   const deliveryMethodsText = Array.isArray(deliveryMethodsRaw)
     ? JSON.stringify(parseArrayInput(deliveryMethodsRaw))
-    : safe(deliveryMethodsRaw);
+    : typeof deliveryMethodsRaw === 'string'
+    ? deliveryMethodsRaw.trim() || '[]'
+    : '[]';
 
   const categoryId = toNumberOrNull(row.category_id ?? row.categoryId);
   const isActive = normaliseBoolean(row.is_active ?? row.isActive, 1);
@@ -202,15 +214,15 @@ const mapRow = (r = {}) => {
     name: safe(row.name),
     code: safe(row.code),
     category: safe(row.category),
-    category_id: categoryId,
+    category_id: categoryId ?? '',
     start_date: safe(row.start_date),
     end_date: safe(row.end_date),
     assignment_upload_time: safe(assignmentUploadTime),
-    assignment_upload_days: assignmentUploadDaysText,
+    assignment_upload_days: assignmentUploadDaysText || '[]',
     upload_limit: safe(assignmentUploadTime),
-    upload_day: assignmentUploadDaysText,
+    upload_day: assignmentUploadDaysText || '[]',
     assignment_upload_days_array: assignmentUploadDays,
-    delivery_methods: deliveryMethodsText,
+    delivery_methods: deliveryMethodsText || '[]',
     delivery_methods_array: deliveryMethods,
     is_active: isActive,
     created_at: safe(row.created_at),
@@ -219,6 +231,7 @@ const mapRow = (r = {}) => {
 
     // ✅ duration undefined 방어 (대소문자/캐시 불일치 모두 대응)
     duration: safe(row.duration ?? row.DURATION ?? row.Duration ?? ''),
+    description: safe(row.description ?? row.Description ?? row.details ?? ''),
   };
 };
 
@@ -227,7 +240,7 @@ const selectCols = `
   id, name, code, category, category_id,
   start_date, end_date, assignment_upload_time, assignment_upload_days,
   upload_limit, upload_day, delivery_methods, is_active,
-  duration, created_at, updated_at
+  duration, description, created_at, updated_at
 `;
 
 const fetchAll = async (db) => {
@@ -265,9 +278,9 @@ export const onRequestPost = async ({ request, env }) => {
         name, code, category, category_id,
         start_date, end_date, assignment_upload_time,
         assignment_upload_days, upload_limit, upload_day,
-        delivery_methods, is_active, duration,
+        delivery_methods, is_active, duration, description,
         created_at, updated_at
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING ${selectCols}
     `;
 
@@ -286,6 +299,7 @@ export const onRequestPost = async ({ request, env }) => {
         payload.delivery_methods,
         payload.is_active,
         payload.duration,
+        payload.description,
       )
       .all();
 
@@ -322,8 +336,9 @@ export const onRequestPut = async ({ request, env }) => {
         delivery_methods = ?11,
         is_active = ?12,
         duration = ?13,
+        description = ?14,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?14
+      WHERE id = ?15
       RETURNING ${selectCols}
     `;
 
@@ -342,6 +357,7 @@ export const onRequestPut = async ({ request, env }) => {
         payload.delivery_methods,
         payload.is_active,
         payload.duration,
+        payload.description,
         body.id,
       )
       .all();
