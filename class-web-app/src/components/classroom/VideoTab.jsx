@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 const getVideoLink = (video) => {
   if (!video || typeof video !== 'object') {
@@ -38,101 +38,56 @@ const formatDateTime = (value) => {
   }
 };
 
-const parseJsonResponse = async (response, contextLabel) => {
-  const text = await response.text();
-  if (!text) {
-    return null;
+const normaliseType = (value) => {
+  if (typeof value === 'string') {
+    return value.trim().toLowerCase();
   }
-
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    console.error(`[${contextLabel}] JSON parse error`, {
-      url: response.url,
-      status: response.status,
-      headers: Object.fromEntries(response.headers.entries()),
-      body: text,
-      error,
-    });
-    throw error;
+  if (value == null) {
+    return '';
   }
+  return String(value).trim().toLowerCase();
 };
 
-const normaliseItems = (payload) => {
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-  if (!payload || typeof payload !== 'object') {
+const normaliseVideos = (items) => {
+  if (!Array.isArray(items)) {
     return [];
   }
-  const candidates = [payload.items, payload.data, payload.results, payload.videos];
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      return candidate;
-    }
-  }
-  return [];
+
+  return items
+    .filter((item) => {
+      const type = normaliseType(item?.type ?? item?.category ?? item?.contentType);
+      return type === 'video' || type === '영상' || type === 'videos';
+    })
+    .map((item, index) => {
+      const id = item?.id ?? item?.content_id ?? item?.contentId ?? `video-${index}`;
+      const titleCandidate =
+        item?.title ?? item?.name ?? item?.content_title ?? item?.contentTitle ?? `영상 ${index + 1}`;
+      const descriptionCandidate =
+        item?.description ?? item?.summary ?? item?.content ?? item?.text ?? '';
+      const urlCandidate =
+        item?.file_url ?? item?.fileUrl ?? item?.url ?? item?.link ?? item?.linkUrl ?? null;
+      const createdAtCandidate =
+        item?.created_at ?? item?.createdAt ?? item?.published_at ?? item?.publishedAt ?? null;
+
+      return {
+        id,
+        title: typeof titleCandidate === 'string' ? titleCandidate : String(titleCandidate ?? ''),
+        description:
+          typeof descriptionCandidate === 'string'
+            ? descriptionCandidate
+            : descriptionCandidate != null
+            ? String(descriptionCandidate)
+            : '',
+        url: urlCandidate,
+        createdAt: createdAtCandidate,
+      };
+    });
 };
 
-const getItemKey = (item, index) => {
-  const candidates = [item?.id, item?.videoId, item?.slug, item?.url, item?.title];
-  for (const candidate of candidates) {
-    if (candidate) {
-      return candidate;
-    }
-  }
-  return `video-${index}`;
-};
-
-function VideoTab({ courseId, courseName }) {
-  const [videos, setVideos] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!courseId) {
-      setVideos([]);
-      setError('강의 정보를 불러오지 못했습니다.');
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchVideos = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const query = new URLSearchParams({ classId: String(courseId) });
-        const response = await fetch(`/api/videos?${query.toString()}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch videos. status=${response.status}`);
-        }
-
-        const payload = await parseJsonResponse(response, 'VideoTab');
-        if (cancelled) {
-          return;
-        }
-        setVideos(normaliseItems(payload));
-      } catch (fetchError) {
-        console.error('[VideoTab] Failed to load videos', fetchError);
-        if (!cancelled) {
-          setError('영상 정보를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
-          setVideos([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void fetchVideos();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [courseId]);
+function VideoTab({ courseName, contents = [], isLoadingContents = false, contentError = null }) {
+  const videos = useMemo(() => normaliseVideos(contents), [contents]);
+  const isLoading = isLoadingContents;
+  const error = contentError;
 
   const headerDescription = useMemo(() => {
     if (!courseName) {
@@ -162,18 +117,15 @@ function VideoTab({ courseId, courseName }) {
         videos.length > 0 ? (
           <ul className="space-y-4">
             {videos.map((video, index) => {
-              const key = getItemKey(video, index);
               const link = getVideoLink(video);
               const description =
                 typeof video?.description === 'string' && video.description.trim().length > 0
                   ? video.description
-                  : typeof video?.summary === 'string'
-                  ? video.summary
                   : '';
-              const createdAt = formatDateTime(video?.createdAt ?? video?.publishedAt);
+              const createdAt = formatDateTime(video?.createdAt);
 
               return (
-                <li key={key} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
+                <li key={video?.id ?? `video-${index}`} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
                   <h3 className="text-base font-semibold text-ellieGray">
                     {video?.title ?? `영상 ${index + 1}`}
                   </h3>
@@ -201,9 +153,7 @@ function VideoTab({ courseId, courseName }) {
           </ul>
         ) : (
           <div className="rounded-2xl bg-white/70 px-5 py-6 text-center shadow-soft">
-            <p className="text-sm leading-relaxed text-ellieGray/70">
-              아직 {courseName ?? '해당'} 수업에 등록된 영상이 없습니다. 새로운 콘텐츠가 준비되면 이곳에서 안내드릴게요.
-            </p>
+            <p className="text-sm leading-relaxed text-ellieGray/70">등록된 영상이 없습니다.</p>
           </div>
         )
       ) : null}

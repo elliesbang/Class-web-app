@@ -1,48 +1,21 @@
-import DB from '../../_db';
+import DB from '../_db';
 
-const JSON_HEADERS = {
-  'Content-Type': 'application/json; charset=utf-8',
-};
-
-const jsonResponse = (body, init = {}) =>
-  new Response(JSON.stringify(body), {
-    ...init,
-    headers: JSON_HEADERS,
-  });
-
-export async function onRequestGet({ request, env }) {
-  const url = new URL(request.url);
-  const classIdParam = url.searchParams.get('class_id');
-
-  if (!classIdParam) {
-    return jsonResponse(
-      { success: false, message: 'class_id가 필요합니다.' },
-      { status: 400 },
-    );
-  }
-
-  const classId = Number(classIdParam);
-
-  if (!Number.isInteger(classId) || classId <= 0) {
-    return jsonResponse(
-      { success: false, message: '유효한 class_id가 필요합니다.' },
-      { status: 400 },
-    );
-  }
+export async function onRequestGet(context) {
+  const db = new DB(context.env.DB);
+  const url = new URL(context.request.url);
+  const classId = url.searchParams.get('class_id');
 
   try {
-    const db = new DB(env.DB);
-    const statement = db
-      .prepare(`SELECT * FROM contents WHERE class_id = ?1 ORDER BY created_at DESC`)
-      .bind(classId);
-    const { results = [] } = await statement.all();
-
-    return jsonResponse({ success: true, data: results }, { status: 200 });
-  } catch (error) {
-    console.error('Failed to fetch contents:', error);
-    return jsonResponse(
-      { success: false, message: '콘텐츠 조회에 실패했습니다.' },
-      { status: 500 },
+    const { results } = await db.all(
+      'SELECT * FROM contents WHERE class_id = ? ORDER BY created_at DESC',
+      [classId]
     );
+    return new Response(JSON.stringify({ success: true, data: results }), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      status: 200,
+    });
+  } catch (err) {
+    console.error('콘텐츠 목록 오류:', err);
+    return new Response(JSON.stringify({ success: false }), { status: 500 });
   }
 }

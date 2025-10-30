@@ -1,109 +1,82 @@
-const JSON_HEADERS = {
-  "Content-Type": "application/json",
+import DB from '../_db';
+
+const toTrimmedString = (value, fallback = '') => {
+  if (value == null) {
+    return fallback;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => toTrimmedString(item, '')).filter(Boolean).join(',');
+  }
+  const stringValue = String(value).trim();
+  return stringValue.length > 0 ? stringValue : fallback;
 };
 
-export async function onRequestPut({ request, env }) {
-  let payload;
-
-  try {
-    payload = await request.json();
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ success: false, message: "유효한 JSON 본문이 필요합니다." }),
-      {
-        status: 400,
-        headers: JSON_HEADERS,
-      }
-    );
+const toNullableNumber = (value) => {
+  if (value == null || value === '') {
+    return null;
   }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
-  const {
-    id,
-    name,
-    category_id,
-    start_date = null,
-    end_date = null,
-    upload_limit = null,
-    upload_day = null,
-    code = null,
-    category = null,
-    duration = null,
-  } = payload ?? {};
+export async function onRequestPut(context) {
+  const db = new DB(context.env.DB);
+  const body = await context.request.json();
 
-  const numericId = Number(id);
+  const id = toNullableNumber(body.id ?? body.class_id ?? body.classId);
+  const title = toTrimmedString(
+    body.title ?? body.name ?? body.class_name ?? body.className ?? body.code ?? '',
+  );
+  const categoryId = toNullableNumber(
+    body.category_id ?? body.categoryId ?? body.categoryID ?? body.category ?? null,
+  );
+  const type = toTrimmedString(
+    body.type ??
+      body.class_type ??
+      body.classType ??
+      body.assignment_upload_time ??
+      body.assignmentUploadTime ??
+      body.delivery_methods ??
+      body.deliveryMethods ??
+      '',
+  );
+  const uploadLimit = toTrimmedString(
+    body.upload_limit ??
+      body.uploadLimit ??
+      body.assignment_upload_days ??
+      body.assignmentUploadDays ??
+      body.upload_day ??
+      body.uploadDay ??
+      '',
+    '',
+  );
 
-  if (!numericId || !Number.isInteger(numericId) || numericId <= 0) {
-    return new Response(
-      JSON.stringify({ success: false, message: "수정할 수업 ID가 필요합니다." }),
-      {
-        status: 400,
-        headers: JSON_HEADERS,
-      }
-    );
-  }
-
-  if (!name || category_id === undefined || category_id === null) {
-    return new Response(
-      JSON.stringify({ success: false, message: "필수 입력값이 누락되었습니다." }),
-      {
-        status: 400,
-        headers: JSON_HEADERS,
-      }
-    );
+  if (!id) {
+    return new Response(JSON.stringify({ success: false, message: '수업 ID가 필요합니다.' }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 400,
+    });
   }
 
   try {
-    const result = await env.DB.prepare(`
-      UPDATE classes
-         SET name = ?1,
-             category_id = ?2,
-             start_date = ?3,
-             end_date = ?4,
-             upload_limit = ?5,
-             upload_day = ?6,
-             code = ?7,
-             category = ?8,
-             duration = ?9
-       WHERE id = ?10
-    `)
-      .bind(
-        name,
-        Number(category_id),
-        start_date,
-        end_date,
-        upload_limit,
-        upload_day,
-        code,
-        category,
-        duration,
-        numericId
-      )
-      .run();
+    await db.run(
+      `UPDATE classes
+          SET title = ?, category_id = ?, type = ?, upload_limit = ?, updated_at = datetime('now')
+        WHERE id = ?`,
+      [title, categoryId, type, uploadLimit, id]
+    );
 
-    if (!result.meta || result.meta.changes === 0) {
-      return new Response(
-        JSON.stringify({ success: false, message: "해당 수업을 찾을 수 없습니다." }),
-        {
-          status: 404,
-          headers: JSON_HEADERS,
-        }
-      );
-    }
+    const record = await db.first('SELECT * FROM classes WHERE id = ?', [id]);
 
     return new Response(
-      JSON.stringify({ success: true, message: "수업이 성공적으로 수정되었습니다." }),
+      JSON.stringify({ success: true, data: record ? [record] : [] }),
       {
+        headers: { 'Content-Type': 'application/json' },
         status: 200,
-        headers: JSON_HEADERS,
       }
     );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      {
-        status: 500,
-        headers: JSON_HEADERS,
-      }
-    );
+  } catch (err) {
+    console.error('수업 수정 오류:', err);
+    return new Response(JSON.stringify({ success: false }), { status: 500 });
   }
 }

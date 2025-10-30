@@ -1,62 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-const parseJsonResponse = async (response, contextLabel) => {
-  const text = await response.text();
-  if (!text) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    console.error(`[${contextLabel}] JSON parse error`, {
-      url: response.url,
-      status: response.status,
-      headers: Object.fromEntries(response.headers.entries()),
-      body: text,
-      error,
-    });
-    throw error;
-  }
-};
-
-const normaliseItems = (payload) => {
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-  if (!payload || typeof payload !== 'object') {
-    return [];
-  }
-  const candidates = [payload.items, payload.data, payload.results, payload.materials];
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      return candidate;
-    }
-  }
-  return [];
-};
-
-const getMaterialLink = (material) => {
+const parseMaterialLink = (material) => {
   if (!material || typeof material !== 'object') {
     return null;
   }
-  const candidates = [material.url, material.link, material.linkUrl, material.fileUrl, material.downloadUrl];
+  const candidates = [material.fileUrl, material.file_url, material.url, material.link, material.linkUrl];
   for (const candidate of candidates) {
     if (typeof candidate === 'string' && candidate.trim().length > 0) {
       return candidate;
     }
   }
   return null;
-};
-
-const getItemKey = (item, index) => {
-  const candidates = [item?.id, item?.slug, item?.url, item?.fileUrl, item?.title];
-  for (const candidate of candidates) {
-    if (candidate) {
-      return candidate;
-    }
-  }
-  return `material-${index}`;
 };
 
 const formatDateTime = (value) => {
@@ -80,55 +34,53 @@ const formatDateTime = (value) => {
   }
 };
 
-function MaterialTab({ courseId, courseName }) {
-  const [materials, setMaterials] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+const normaliseType = (value) => {
+  if (typeof value === 'string') {
+    return value.trim().toLowerCase();
+  }
+  if (value == null) {
+    return '';
+  }
+  return String(value).trim().toLowerCase();
+};
 
-  useEffect(() => {
-    if (!courseId) {
-      setMaterials([]);
-      setError('강의 정보를 불러오지 못했습니다.');
-      return;
-    }
+const normaliseMaterials = (items) => {
+  if (!Array.isArray(items)) {
+    return [];
+  }
 
-    let cancelled = false;
+  return items
+    .filter((item) => {
+      const type = normaliseType(item?.type ?? item?.category ?? item?.contentType);
+      return type === 'material' || type === '자료' || type === 'file' || type === 'document';
+    })
+    .map((item, index) => {
+      const id = item?.id ?? item?.content_id ?? item?.contentId ?? `material-${index}`;
+      const titleCandidate =
+        item?.title ?? item?.name ?? item?.fileName ?? item?.content_title ?? `자료 ${index + 1}`;
+      const descriptionCandidate =
+        item?.description ?? item?.summary ?? item?.content ?? item?.text ?? '';
+      const createdAtCandidate = item?.created_at ?? item?.createdAt ?? item?.uploaded_at ?? item?.uploadedAt;
 
-    const fetchMaterials = async () => {
-      setIsLoading(true);
-      setError(null);
+      return {
+        id,
+        title: typeof titleCandidate === 'string' ? titleCandidate : String(titleCandidate ?? ''),
+        description:
+          typeof descriptionCandidate === 'string'
+            ? descriptionCandidate
+            : descriptionCandidate != null
+            ? String(descriptionCandidate)
+            : '',
+        link: parseMaterialLink(item),
+        createdAt: createdAtCandidate ?? null,
+      };
+    });
+};
 
-      try {
-        const query = new URLSearchParams({ classId: String(courseId) });
-        const response = await fetch(`/api/materials?${query.toString()}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch materials. status=${response.status}`);
-        }
-
-        const payload = await parseJsonResponse(response, 'MaterialTab');
-        if (cancelled) {
-          return;
-        }
-        setMaterials(normaliseItems(payload));
-      } catch (fetchError) {
-        console.error('[MaterialTab] Failed to load materials', fetchError);
-        if (!cancelled) {
-          setError('수업 자료를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
-          setMaterials([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void fetchMaterials();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [courseId]);
+function MaterialTab({ courseName, contents = [], isLoadingContents = false, contentError = null }) {
+  const materials = useMemo(() => normaliseMaterials(contents), [contents]);
+  const isLoading = isLoadingContents;
+  const error = contentError;
 
   const headerDescription = useMemo(() => {
     if (!courseName) {
@@ -158,27 +110,19 @@ function MaterialTab({ courseId, courseName }) {
         materials.length > 0 ? (
           <ul className="space-y-4">
             {materials.map((material, index) => {
-              const key = getItemKey(material, index);
-              const link = getMaterialLink(material);
-              const description =
-                typeof material?.description === 'string' && material.description.trim().length > 0
-                  ? material.description
-                  : typeof material?.summary === 'string'
-                  ? material.summary
-                  : '';
-              const createdAt = formatDateTime(material?.createdAt ?? material?.uploadedAt);
+              const createdAt = formatDateTime(material?.createdAt);
 
               return (
-                <li key={key} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
+                <li key={material?.id ?? `material-${index}`} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
                   <h3 className="text-base font-semibold text-ellieGray">
-                    {material?.title ?? material?.fileName ?? `자료 ${index + 1}`}
+                    {material?.title ?? `자료 ${index + 1}`}
                   </h3>
-                  {description ? (
-                    <p className="mt-2 text-sm leading-relaxed text-ellieGray/70">{description}</p>
+                  {material?.description ? (
+                    <p className="mt-2 text-sm leading-relaxed text-ellieGray/70">{material.description}</p>
                   ) : null}
-                  {link ? (
+                  {material?.link ? (
                     <a
-                      href={link}
+                      href={material.link}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-ellieYellow hover:underline"

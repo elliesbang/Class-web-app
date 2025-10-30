@@ -18,6 +18,9 @@ const TAB_CONFIG = [
 function ClassroomTabs({ courseId, courseName, className = '' }) {
   const [activeTab, setActiveTab] = useState(TAB_CONFIG[0]?.id ?? 'video');
   const [hasAccess, setHasAccess] = useState(() => hasCourseAccess(courseId));
+  const [contents, setContents] = useState([]);
+  const [isLoadingContents, setIsLoadingContents] = useState(false);
+  const [contentError, setContentError] = useState(null);
 
   useEffect(() => {
     const updateAccess = () => {
@@ -32,6 +35,71 @@ function ClassroomTabs({ courseId, courseName, className = '' }) {
     return () => {
       unsubscribeAccess();
       unsubscribeAdmin();
+    };
+  }, [courseId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadContents = async () => {
+      if (!courseId) {
+        setContents([]);
+        setContentError('강의 정보를 불러오지 못했습니다.');
+        return;
+      }
+
+      setIsLoadingContents(true);
+      setContentError(null);
+
+      try {
+        const query = new URLSearchParams({ class_id: String(courseId) });
+        const response = await fetch(`/api/students/contents?${query.toString()}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch contents. status=${response.status}`);
+        }
+
+        const text = await response.text();
+        if (cancelled) {
+          return;
+        }
+
+        if (!text) {
+          setContents([]);
+          return;
+        }
+
+        try {
+          const payload = JSON.parse(text);
+          const data = Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.results)
+            ? payload.results
+            : Array.isArray(payload?.contents)
+            ? payload.contents
+            : [];
+          setContents(data);
+        } catch (error) {
+          console.error('[ClassroomTabs] Failed to parse contents response', error);
+          setContentError('콘텐츠 정보를 불러오는 중 문제가 발생했습니다.');
+          setContents([]);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('[ClassroomTabs] Failed to load contents', error);
+          setContentError('콘텐츠 정보를 불러오는 중 문제가 발생했습니다.');
+          setContents([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingContents(false);
+        }
+      }
+    };
+
+    void loadContents();
+
+    return () => {
+      cancelled = true;
     };
   }, [courseId]);
 
@@ -83,7 +151,13 @@ function ClassroomTabs({ courseId, courseName, className = '' }) {
       </nav>
 
       <section className="rounded-3xl bg-ivory p-6 shadow-soft">
-        <ActiveComponent courseId={courseId} courseName={courseName} />
+        <ActiveComponent
+          courseId={courseId}
+          courseName={courseName}
+          contents={contents}
+          isLoadingContents={isLoadingContents}
+          contentError={contentError}
+        />
       </section>
     </div>
   );
