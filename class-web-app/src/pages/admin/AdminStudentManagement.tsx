@@ -50,13 +50,14 @@ type StudentsApiRow = {
   id: number | string;
   name: string;
   email: string;
+  class_code?: string | null;
   joined_at?: string | null;
 };
 
 type StudentsApiResponse = {
   success?: boolean;
   data?: StudentsApiRow[];
-  count?: number;
+  total?: number;
 };
 
 const DEFAULT_COURSE_NAME = '미지정';
@@ -88,12 +89,21 @@ const normaliseJoinedAt = (value?: string | null) => {
   return datePart ?? sanitised;
 };
 
+const normaliseCourseName = (value?: string | null) => {
+  if (typeof value !== 'string') {
+    return DEFAULT_COURSE_NAME;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : DEFAULT_COURSE_NAME;
+};
+
 const adaptStudentsFromApi = (rows: StudentsApiRow[]): Student[] =>
   rows.map((row) => ({
     id: ensureNumericId(row.id),
     name: typeof row.name === 'string' ? row.name : '',
     email: typeof row.email === 'string' ? row.email : '',
-    course: DEFAULT_COURSE_NAME,
+    course: normaliseCourseName(row.class_code),
     status: DEFAULT_STATUS,
     assignment: { submitted: 0, total: 0 },
     feedback: { completed: 0, total: 0 },

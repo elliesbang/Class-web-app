@@ -9,15 +9,56 @@ const jsonResponse = (data, status = 200) =>
     },
   });
 
+const handleErrorResponse = (error) => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return jsonResponse({ success: false, error: message }, 500);
+};
+
 const ensureStudentsTable = async (db) => {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS students (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       email TEXT NOT NULL,
+      class_code TEXT,
       joined_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
   `);
+};
+
+const getValidDatabase = (env) => {
+  const db = getDB(env);
+  if (!db || typeof db.prepare !== "function") {
+    throw new Error("D1 Database binding(DB)이 유효하지 않습니다.");
+  }
+
+  return db;
+};
+
+const listStudents = async (db) => {
+  const { results } = await db
+    .prepare(
+      `SELECT id, name, email, class_code, joined_at
+       FROM students
+       ORDER BY joined_at DESC, id DESC`,
+    )
+    .all();
+
+  const rows = Array.isArray(results) ? results : [];
+  return rows.map((row) => ({
+    ...row,
+    class_code:
+      typeof row.class_code === "string" ? row.class_code : row.class_code ?? null,
+  }));
+};
+
+const respondWithStudents = async (db) => {
+  const students = await listStudents(db);
+  return jsonResponse({
+    success: true,
+    total: students.length,
+    data: students,
+  });
 };
 
 const normaliseString = (value) => {
@@ -35,11 +76,7 @@ export async function onRequest(context) {
   const { request } = context;
 
   try {
-    const db = getDB(context.env);
-    if (!db || typeof db.prepare !== "function") {
-      throw new Error("D1 Database binding(DB)이 유효하지 않습니다.");
-    }
-
+    const db = getValidDatabase(context.env);
     await ensureStudentsTable(db);
 
     if (request.method === "POST") {
@@ -127,17 +164,7 @@ export async function onRequest(context) {
     }
 
     if (request.method === "GET") {
-      const { results } = await db
-        .prepare(
-          "SELECT id, name, email, joined_at FROM students ORDER BY datetime(joined_at) DESC, id DESC",
-        )
-        .all();
-
-      return jsonResponse({
-        success: true,
-        count: results?.length ?? 0,
-        data: results ?? [],
-      });
+      return respondWithStudents(db);
     }
 
     return jsonResponse(
@@ -145,7 +172,16 @@ export async function onRequest(context) {
       405,
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error ?? "");
-    return jsonResponse({ success: false, error: message }, 500);
+    return handleErrorResponse(error);
+  }
+}
+
+export async function onRequestGet(context) {
+  try {
+    const db = getValidDatabase(context.env);
+    await ensureStudentsTable(db);
+    return respondWithStudents(db);
+  } catch (error) {
+    return handleErrorResponse(error);
   }
 }
