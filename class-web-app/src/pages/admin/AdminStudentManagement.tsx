@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type StudentStatus = '수강 중' | '완료' | '중단';
 
@@ -46,6 +46,63 @@ type Student = {
   contents: StudentContentLink[];
 };
 
+type StudentsApiRow = {
+  id: number | string;
+  name: string;
+  email: string;
+  joined_at?: string | null;
+};
+
+type StudentsApiResponse = {
+  success?: boolean;
+  data?: StudentsApiRow[];
+  count?: number;
+};
+
+const DEFAULT_COURSE_NAME = '미지정';
+const DEFAULT_STATUS: StudentStatus = '수강 중';
+
+let fallbackStudentIdSeed = Date.now();
+
+const ensureNumericId = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  const parsed = Number(value);
+  if (Number.isFinite(parsed)) {
+    return parsed;
+  }
+
+  fallbackStudentIdSeed += 1;
+  return fallbackStudentIdSeed;
+};
+
+const normaliseJoinedAt = (value?: string | null) => {
+  if (!value) {
+    return '';
+  }
+
+  const sanitised = value.replace('T', ' ').replace('Z', '').trim();
+  const [datePart] = sanitised.split('.');
+  return datePart ?? sanitised;
+};
+
+const adaptStudentsFromApi = (rows: StudentsApiRow[]): Student[] =>
+  rows.map((row) => ({
+    id: ensureNumericId(row.id),
+    name: typeof row.name === 'string' ? row.name : '',
+    email: typeof row.email === 'string' ? row.email : '',
+    course: DEFAULT_COURSE_NAME,
+    status: DEFAULT_STATUS,
+    assignment: { submitted: 0, total: 0 },
+    feedback: { completed: 0, total: 0 },
+    registeredDate: normaliseJoinedAt(row.joined_at),
+    assignments: [],
+    feedbacks: [],
+    contents: [],
+  }));
+
 const statusBadgeClassNames: Record<StudentStatus, string> = {
   '수강 중': 'bg-green-100 text-green-700 border border-green-200',
   완료: 'bg-blue-100 text-blue-700 border border-blue-200',
@@ -54,12 +111,59 @@ const statusBadgeClassNames: Record<StudentStatus, string> = {
 
  const AdminStudentManagement = () => {
   // TODO: Replace with D1 DB integration and sync with course upload pipeline.
-  const [students] = useState<Student[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [courseFilter, setCourseFilter] = useState<string>('전체');
   const [statusFilter, setStatusFilter] = useState<'전체' | StudentStatus>('전체');
   const [showOnlyMissingAssignments, setShowOnlyMissingAssignments] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    const fetchStudents = async () => {
+      try {
+        const response = await fetch('/api/students', { signal: abortController.signal });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch students: ${response.status}`);
+        }
+
+        const payload: StudentsApiResponse = await response.json();
+        if (payload?.success && Array.isArray(payload.data)) {
+          if (!abortController.signal.aborted) {
+            setStudents(adaptStudentsFromApi(payload.data));
+          }
+        } else if (!abortController.signal.aborted) {
+          setStudents([]);
+        }
+      } catch (error) {
+        if ((error as Error)?.name === 'AbortError') {
+          return;
+        }
+        console.error('[AdminStudentManagement] 수강생 목록을 불러오지 못했습니다.', error);
+        if (!abortController.signal.aborted) {
+          setStudents([]);
+        }
+      }
+    };
+
+    fetchStudents();
+
+    return () => {
+      abortController.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedStudentId == null) {
+      return;
+    }
+
+    const isExistingStudent = students.some((student) => student.id === selectedStudentId);
+    if (!isExistingStudent) {
+      setSelectedStudentId(null);
+    }
+  }, [selectedStudentId, students]);
 
   const courseOptions = useMemo(() => {
     const uniqueCourses = Array.from(new Set(students.map((student) => student.course)));
