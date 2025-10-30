@@ -1,3 +1,5 @@
+import { getDB } from "../_db";
+
 const jsonResponse = ({ success, data, status = 200, count }) => {
   const resolvedCount =
     typeof count === "number"
@@ -43,7 +45,7 @@ const toBoolean = (value) => {
 
 export const onRequestGet = async (context) => {
   try {
-    const { DB } = context.env;
+    const DB = getDB(context.env);
     const url = new URL(context.request.url);
     const classId = url.searchParams.get("class_id") ?? url.searchParams.get("classId");
     const role = url.searchParams.get("role");

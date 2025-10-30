@@ -1,8 +1,10 @@
-import { DB } from '../../_db';
+import { getDB } from '../_db';
 
-export async function onRequestGet({ params }) {
+export async function onRequestGet(context) {
+  const { params } = context;
   const { id } = params;
   try {
+    const DB = getDB(context.env);
     const result = await DB.prepare('SELECT * FROM classes WHERE id = ?').bind(id).first();
     return Response.json(result);
   } catch (err) {
@@ -10,9 +12,11 @@ export async function onRequestGet({ params }) {
   }
 }
 
-export async function onRequestPut({ params, request }) {
+export async function onRequestPut(context) {
+  const { params } = context;
   const { id } = params;
-  const data = await request.json();
+  const DB = getDB(context.env);
+  const data = await context.request.json();
   const { title, category_id, duration, upload_time, type } = data;
 
   try {
@@ -26,9 +30,11 @@ export async function onRequestPut({ params, request }) {
   }
 }
 
-export async function onRequestDelete({ params }) {
+export async function onRequestDelete(context) {
+  const { params } = context;
   const { id } = params;
   try {
+    const DB = getDB(context.env);
     await DB.prepare('DELETE FROM classes WHERE id = ?').bind(id).run();
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (err) {

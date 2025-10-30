@@ -1,3 +1,5 @@
+import { getDB } from "../_db";
+
 const jsonResponse = ({ success, data, status = 200, count }) => {
   const resolvedCount =
     typeof count === "number"
@@ -26,7 +28,7 @@ const handleError = (error, status = 500) =>
 
 export const onRequestPut = async (context) => {
   try {
-    const { DB } = context.env;
+    const DB = getDB(context.env);
     const body = await context.request.json();
 
     const id = body.id;
