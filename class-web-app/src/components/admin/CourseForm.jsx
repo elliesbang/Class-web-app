@@ -31,7 +31,7 @@ export default function CourseForm({ onSaved }) {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/classes', {
+      const res = await fetch('/api/classes/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -41,7 +41,10 @@ export default function CourseForm({ onSaved }) {
       if (!data.success) throw new Error(data.message || '수업 저장 실패');
 
       alert('✅ 수업이 저장되었습니다!');
-      if (onSaved) onSaved(data.data);
+      if (onSaved) {
+        const record = Array.isArray(data.data) ? data.data[0] : data.data ?? null;
+        onSaved(record);
+      }
 
       // 폼 초기화
       setForm({

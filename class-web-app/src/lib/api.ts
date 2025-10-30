@@ -460,7 +460,7 @@ const toClassMutationResult = (
 };
 
 export const createClass = async (payload: ClassFormPayload): Promise<ClassMutationResult> => {
-  const data = (await apiFetch('/api/classes', {
+  const data = (await apiFetch('/api/classes/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(serialiseClassPayload(payload)),
@@ -470,7 +470,7 @@ export const createClass = async (payload: ClassFormPayload): Promise<ClassMutat
 };
 
 export const updateClass = async (id: number, payload: ClassFormPayload): Promise<ClassMutationResult> => {
-  const data = (await apiFetch('/api/classes', {
+  const data = (await apiFetch('/api/classes/update', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, ...serialiseClassPayload(payload) }),
@@ -480,10 +480,8 @@ export const updateClass = async (id: number, payload: ClassFormPayload): Promis
 };
 
 export const deleteClass = async (id: number): Promise<ClassMutationResult> => {
-  const data = (await apiFetch('/api/classes', {
+  const data = (await apiFetch(`/api/classes/remove?id=${id}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
   })) as ApiResponse<unknown> | null;
 
   if (!data || typeof data !== 'object') {

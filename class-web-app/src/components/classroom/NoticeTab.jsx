@@ -1,40 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-
-const parseJsonResponse = async (response, contextLabel) => {
-  const text = await response.text();
-  if (!text) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    console.error(`[${contextLabel}] JSON parse error`, {
-      url: response.url,
-      status: response.status,
-      headers: Object.fromEntries(response.headers.entries()),
-      body: text,
-      error,
-    });
-    throw error;
-  }
-};
-
-const normaliseItems = (payload) => {
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-  if (!payload || typeof payload !== 'object') {
-    return [];
-  }
-  const candidates = [payload.items, payload.data, payload.results, payload.notices];
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      return candidate;
-    }
-  }
-  return [];
-};
+import { useMemo } from 'react';
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -59,65 +23,57 @@ const formatDateTime = (value) => {
   }
 };
 
-const getItemKey = (item, index) => {
-  const candidates = [item?.id, item?.noticeId, item?.slug, item?.title];
-  for (const candidate of candidates) {
-    if (candidate) {
-      return candidate;
-    }
+const normaliseType = (value) => {
+  if (typeof value === 'string') {
+    return value.trim().toLowerCase();
   }
-  return `notice-${index}`;
+  if (value == null) {
+    return '';
+  }
+  return String(value).trim().toLowerCase();
 };
 
-function NoticeTab({ courseId, courseName }) {
-  const [notices, setNotices] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+const normaliseNotices = (items) => {
+  if (!Array.isArray(items)) {
+    return [];
+  }
 
-  useEffect(() => {
-    if (!courseId) {
-      setNotices([]);
-      setError('강의 정보를 불러오지 못했습니다.');
-      return;
-    }
+  return items
+    .filter((item) => {
+      const type = normaliseType(item?.type ?? item?.category ?? item?.contentType);
+      return type === 'notice' || type === '공지' || type === 'announcement';
+    })
+    .map((item, index) => {
+      const id = item?.id ?? item?.content_id ?? item?.contentId ?? `notice-${index}`;
+      const titleCandidate = item?.title ?? item?.name ?? item?.content_title ?? `공지 ${index + 1}`;
+      const contentCandidate = item?.description ?? item?.content ?? item?.text ?? '';
+      const authorCandidate = item?.author ?? item?.writer ?? item?.creator ?? '';
+      const createdAtCandidate = item?.created_at ?? item?.createdAt ?? item?.published_at ?? item?.publishedAt;
 
-    let cancelled = false;
+      return {
+        id,
+        title: typeof titleCandidate === 'string' ? titleCandidate : String(titleCandidate ?? ''),
+        content:
+          typeof contentCandidate === 'string'
+            ? contentCandidate
+            : contentCandidate != null
+            ? String(contentCandidate)
+            : '',
+        author:
+          typeof authorCandidate === 'string'
+            ? authorCandidate
+            : authorCandidate != null
+            ? String(authorCandidate)
+            : '',
+        createdAt: createdAtCandidate ?? null,
+      };
+    });
+};
 
-    const fetchNotices = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const query = new URLSearchParams({ classId: String(courseId) });
-        const response = await fetch(`/api/notices?${query.toString()}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch notices. status=${response.status}`);
-        }
-
-        const payload = await parseJsonResponse(response, 'NoticeTab');
-        if (cancelled) {
-          return;
-        }
-        setNotices(normaliseItems(payload));
-      } catch (fetchError) {
-        console.error('[NoticeTab] Failed to load notices', fetchError);
-        if (!cancelled) {
-          setError('공지사항을 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
-          setNotices([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void fetchNotices();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [courseId]);
+function NoticeTab({ courseName, contents = [], isLoadingContents = false, contentError = null }) {
+  const notices = useMemo(() => normaliseNotices(contents), [contents]);
+  const isLoading = isLoadingContents;
+  const error = contentError;
 
   const headerDescription = useMemo(() => {
     if (!courseName) {
@@ -147,32 +103,19 @@ function NoticeTab({ courseId, courseName }) {
         notices.length > 0 ? (
           <ul className="space-y-4">
             {notices.map((notice, index) => {
-              const key = getItemKey(notice, index);
-              const description =
-                typeof notice?.content === 'string' && notice.content.trim().length > 0
-                  ? notice.content
-                  : typeof notice?.description === 'string'
-                  ? notice.description
-                  : '';
-              const author =
-                typeof notice?.author === 'string'
-                  ? notice.author
-                  : typeof notice?.writer === 'string'
-                  ? notice.writer
-                  : '';
-              const createdAt = formatDateTime(notice?.createdAt ?? notice?.publishedAt);
+              const createdAt = formatDateTime(notice?.createdAt);
 
               return (
-                <li key={key} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
+                <li key={notice?.id ?? `notice-${index}`} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
                   <div className="space-y-2">
                     <h3 className="text-base font-semibold text-ellieGray">
                       {notice?.title ?? `공지 ${index + 1}`}
                     </h3>
-                    {author ? (
-                      <p className="text-xs font-medium text-ellieGray/60">작성자: {author}</p>
+                    {notice?.author ? (
+                      <p className="text-xs font-medium text-ellieGray/60">작성자: {notice.author}</p>
                     ) : null}
-                    {description ? (
-                      <p className="whitespace-pre-line text-sm leading-relaxed text-ellieGray/80">{description}</p>
+                    {notice?.content ? (
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-ellieGray/80">{notice.content}</p>
                     ) : (
                       <p className="text-sm text-ellieGray/60">등록된 공지 내용이 없습니다.</p>
                     )}

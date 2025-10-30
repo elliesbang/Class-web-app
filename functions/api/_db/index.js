@@ -1,33 +1,24 @@
-// ✅ Cloudflare Pages + D1 완전 호환 버전
 export default class DB {
   constructor(d1) {
     this.d1 = d1;
   }
 
   async run(query, params = []) {
-    try {
-      return await this.d1.prepare(query).bind(...params).run();
-    } catch (err) {
-      console.error('DB run error:', err);
-      throw err;
-    }
+    return await this.d1.prepare(query).bind(...params).run();
   }
 
   async all(query, params = []) {
-    try {
-      return await this.d1.prepare(query).bind(...params).all();
-    } catch (err) {
-      console.error('DB all error:', err);
-      throw err;
-    }
+    return await this.d1.prepare(query).bind(...params).all();
   }
 
   async first(query, params = []) {
-    try {
-      return await this.d1.prepare(query).bind(...params).first();
-    } catch (err) {
-      console.error('DB first error:', err);
-      throw err;
-    }
+    return await this.d1.prepare(query).bind(...params).first();
   }
 }
+
+export const getDB = (env) => {
+  if (!env || !env.DB) {
+    throw new Error('D1 Database binding(DB)이 설정되지 않았습니다.');
+  }
+  return env.DB;
+};
