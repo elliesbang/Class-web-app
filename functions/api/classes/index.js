@@ -1,7 +1,8 @@
-import { DB } from '../../_db';
+import { getDB } from '../_db';
 
-export async function onRequestGet() {
+export async function onRequestGet(context) {
   try {
+    const DB = getDB(context.env);
     const result = await DB.prepare('SELECT * FROM classes ORDER BY id DESC').all();
     return Response.json(result.results);
   } catch (err) {
@@ -9,9 +10,10 @@ export async function onRequestGet() {
   }
 }
 
-export async function onRequestPost({ request }) {
+export async function onRequestPost(context) {
   try {
-    const data = await request.json();
+    const DB = getDB(context.env);
+    const data = await context.request.json();
     const { title, category_id, duration, upload_time, type } = data;
 
     await DB.prepare(

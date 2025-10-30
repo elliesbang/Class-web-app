@@ -1,4 +1,6 @@
 // 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
+import { getDB } from "../_db";
+
 const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -16,7 +18,8 @@ const errorResponse = (error) =>
 
 export const onRequestGet = async (context) => {
   try {
-    const { DB, CLOUDFLARE_API_TOKEN, DATABASE_ID, DATABASE_NAME } = context.env;
+    const DB = getDB(context.env);
+    const { CLOUDFLARE_API_TOKEN, DATABASE_ID, DATABASE_NAME } = context.env;
 
     if (!CLOUDFLARE_API_TOKEN || !DATABASE_ID || !DATABASE_NAME || !DB) {
       return jsonResponse(

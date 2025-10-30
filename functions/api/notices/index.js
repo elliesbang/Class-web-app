@@ -1,3 +1,5 @@
+import { getDB } from "../_db";
+
 const jsonResponse = ({ success, data, status = 200, count }) => {
   const resolvedCount =
     typeof count === "number"
@@ -53,7 +55,7 @@ const mapNoticeRecord = (row) => ({
 
 export const onRequestGet = async (context) => {
   try {
-    const { DB } = context.env;
+    const DB = getDB(context.env);
     const url = new URL(context.request.url);
     const classIdParam =
       url.searchParams.get("class_id") ?? url.searchParams.get("classId");
@@ -79,7 +81,7 @@ export const onRequestGet = async (context) => {
 
 export const onRequestPost = async (context) => {
   try {
-    const { DB } = context.env;
+    const DB = getDB(context.env);
     const body = await context.request.json();
 
     const title = body.title;

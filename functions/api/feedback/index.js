@@ -1,5 +1,6 @@
 // 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 import { rowsToCamelCase } from "../../_utils/index.js";
+import { getDB } from "../_db";
 
 /**
  * 💬 Feedback API - 수업별 과제 피드백 등록 / 조회
@@ -35,7 +36,7 @@ const normaliseClassId = (value) => {
 
 export const onRequestGet = async (context) => {
   try {
-    const { DB } = context.env;
+    const DB = getDB(context.env);
     const url = new URL(context.request.url);
     const classIdRaw =
       url.searchParams.get("classId") ?? url.searchParams.get("class_id");
@@ -60,7 +61,7 @@ export const onRequestGet = async (context) => {
 
 export const onRequestPost = async (context) => {
   try {
-    const { DB } = context.env;
+    const DB = getDB(context.env);
     const body = await context.request.json();
 
     const { content, writer, class_id } = body;

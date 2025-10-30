@@ -1,7 +1,9 @@
 // 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
+import { getDB } from "../_db";
+
 export const onRequestGet = async (context) => {
   try {
-    const { DB } = context.env;
+    const DB = getDB(context.env);
     const { results } = await DB.prepare(`
       SELECT id, name
       FROM categories

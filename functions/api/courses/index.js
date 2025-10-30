@@ -1,15 +1,16 @@
 // 🔄 Force Cloudflare Functions redeploy - 2025-10-29
 import { ensureBaseSchema } from "../../_utils/index.js";
 import { jsonResponse, errorResponse } from "../classes/utils.js";
+import { getDB } from "../_db";
 
 /**
  * 코스 코드 검증 API
  * POST /api/courses
  * body: { courseId: string|number, code: string }
  */
-export const onRequest = async (context) => {
+export async function onRequestPost(context) {
   try {
-    const { DB } = context.env;
+    const DB = getDB(context.env);
     await ensureBaseSchema(DB);
 
     // 🔹 요청 JSON 파싱
@@ -115,7 +116,7 @@ export const onRequest = async (context) => {
   } catch (error) {
     return errorResponse(error);
   }
-};
+}
 
 /* -------------------------------------------------------------------------- */
 /* ✅ 헬퍼 함수들 */
