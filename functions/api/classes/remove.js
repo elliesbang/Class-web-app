@@ -2,13 +2,14 @@ const JSON_HEADERS = {
   "Content-Type": "application/json",
 };
 
-export async function onRequestGet({ params, env }) {
-  const rawId = params?.id;
+export async function onRequestDelete({ request, env }) {
+  const url = new URL(request.url);
+  const rawId = url.searchParams.get("id");
   const id = Number(rawId);
 
   if (!rawId || Number.isNaN(id) || !Number.isInteger(id) || id <= 0) {
     return new Response(
-      JSON.stringify({ success: false, message: "유효한 수업 ID가 필요합니다." }),
+      JSON.stringify({ success: false, message: "삭제할 수업 ID가 없습니다." }),
       {
         status: 400,
         headers: JSON_HEADERS,
@@ -17,16 +18,14 @@ export async function onRequestGet({ params, env }) {
   }
 
   try {
-    const classData = await env.DB.prepare(`
-      SELECT id, name, category_id, start_date, end_date, upload_limit,
-             upload_day, code, category, duration, created_at
-        FROM classes
+    const result = await env.DB.prepare(`
+      DELETE FROM classes
        WHERE id = ?1
     `)
       .bind(id)
-      .first();
+      .run();
 
-    if (!classData) {
+    if (!result.meta || result.meta.changes === 0) {
       return new Response(
         JSON.stringify({ success: false, message: "해당 수업을 찾을 수 없습니다." }),
         {
@@ -37,7 +36,7 @@ export async function onRequestGet({ params, env }) {
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: classData }),
+      JSON.stringify({ success: true, message: "수업이 삭제되었습니다." }),
       {
         status: 200,
         headers: JSON_HEADERS,

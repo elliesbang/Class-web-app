@@ -1,27 +1,32 @@
-import { getDB } from '../_db';
+const JSON_HEADERS = {
+  "Content-Type": "application/json",
+};
 
-export async function onRequestGet(context) {
+export async function onRequestGet({ env }) {
   try {
-    const DB = getDB(context.env);
-    const result = await DB.prepare('SELECT * FROM classes ORDER BY id DESC').all();
-    return Response.json(result.results);
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
-  }
-}
+    const statement = env.DB.prepare(`
+      SELECT id, name, category_id, start_date, end_date, upload_limit,
+             upload_day, code, category, duration, created_at
+        FROM classes
+    ORDER BY created_at DESC
+    `);
 
-export async function onRequestPost(context) {
-  try {
-    const DB = getDB(context.env);
-    const data = await context.request.json();
-    const { title, category_id, duration, upload_time, type } = data;
+    const { results } = await statement.all();
 
-    await DB.prepare(
-      'INSERT INTO classes (title, category_id, duration, upload_time, type) VALUES (?, ?, ?, ?, ?)'
-    ).bind(title, category_id, duration, upload_time, type).run();
-
-    return new Response(JSON.stringify({ success: true }), { status: 201 });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(
+      JSON.stringify({ success: true, data: results ?? [] }),
+      {
+        status: 200,
+        headers: JSON_HEADERS,
+      }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      {
+        status: 500,
+        headers: JSON_HEADERS,
+      }
+    );
   }
 }
