@@ -17,10 +17,10 @@ const errorResponse = (error) =>
     },
   );
 
-export const onRequest = async () => {
+export async function onRequest(context) {
   try {
     return methodNotAllowed();
   } catch (error) {
     return errorResponse(error);
   }
-};
+}

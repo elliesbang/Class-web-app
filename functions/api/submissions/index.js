@@ -43,7 +43,15 @@ const toBoolean = (value) => {
   return false;
 };
 
-export const onRequestGet = async (context) => {
+export async function onRequest(context) {
+  if (context.request.method.toUpperCase() !== "GET") {
+    return jsonResponse({
+      success: false,
+      data: { message: "허용되지 않은 메서드입니다." },
+      status: 405,
+      count: 0,
+    });
+  }
   try {
     const DB = getDB(context.env);
     const url = new URL(context.request.url);
@@ -84,4 +92,4 @@ export const onRequestGet = async (context) => {
   } catch (error) {
     return handleError(error);
   }
-};
+}

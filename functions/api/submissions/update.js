@@ -26,7 +26,15 @@ const handleError = (error, status = 500) =>
     count: 0,
   });
 
-export const onRequestPut = async (context) => {
+export async function onRequest(context) {
+  if (context.request.method.toUpperCase() !== "PUT") {
+    return jsonResponse({
+      success: false,
+      data: { message: "허용되지 않은 메서드입니다." },
+      status: 405,
+      count: 0,
+    });
+  }
   try {
     const DB = getDB(context.env);
     const body = await context.request.json();
@@ -76,4 +84,4 @@ export const onRequestPut = async (context) => {
   } catch (error) {
     return handleError(error);
   }
-};
+}

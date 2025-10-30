@@ -21,7 +21,14 @@ const parseJson = async (request) => {
 const toTrimmedString = (value) =>
   typeof value === 'string' ? value.trim() : '';
 
-export async function onRequestPost({ request, env }) {
+export async function onRequest(context) {
+  const { request } = context;
+  if (request.method.toUpperCase() !== 'POST') {
+    return jsonResponse(
+      { success: false, message: '허용되지 않은 메서드입니다.' },
+      { status: 405 },
+    );
+  }
   let body;
 
   try {
@@ -49,7 +56,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    const db = new DB(env.DB);
+    const db = new DB(context.env.DB);
 
     await db
       .prepare(

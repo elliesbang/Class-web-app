@@ -36,7 +36,7 @@ const normaliseClassId = (value) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-export const onRequestGet = async (context) => {
+const handleGet = async (context) => {
   try {
     const DB = getDB(context.env);
     const url = new URL(context.request.url);
@@ -61,7 +61,7 @@ export const onRequestGet = async (context) => {
   }
 };
 
-export const onRequestPost = async (context) => {
+const handlePost = async (context) => {
   try {
     const DB = getDB(context.env);
     const body = await context.request.json();
@@ -99,3 +99,20 @@ export const onRequestPost = async (context) => {
     );
   }
 };
+
+export async function onRequest(context) {
+  const method = context.request.method.toUpperCase();
+
+  if (method === "GET") {
+    return handleGet(context);
+  }
+
+  if (method === "POST") {
+    return handlePost(context);
+  }
+
+  return new Response(
+    JSON.stringify({ success: false, message: "허용되지 않은 메서드입니다." }),
+    { status: 405, headers: { "Content-Type": "application/json; charset=utf-8" } },
+  );
+}

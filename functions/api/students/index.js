@@ -176,12 +176,3 @@ export async function onRequest(context) {
   }
 }
 
-export async function onRequestGet(context) {
-  try {
-    const db = getValidDatabase(context.env);
-    await ensureStudentsTable(db);
-    return respondWithStudents(db);
-  } catch (error) {
-    return handleErrorResponse(error);
-  }
-}

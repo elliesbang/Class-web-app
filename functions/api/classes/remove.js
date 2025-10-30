@@ -2,7 +2,17 @@ const JSON_HEADERS = {
   "Content-Type": "application/json",
 };
 
-export async function onRequestDelete({ request, env }) {
+export async function onRequest(context) {
+  const { request } = context;
+  if (request.method.toUpperCase() !== "DELETE") {
+    return new Response(
+      JSON.stringify({ success: false, message: "허용되지 않은 메서드입니다." }),
+      {
+        status: 405,
+        headers: JSON_HEADERS,
+      },
+    );
+  }
   const url = new URL(request.url);
   const rawId = url.searchParams.get("id");
   const id = Number(rawId);
@@ -18,7 +28,8 @@ export async function onRequestDelete({ request, env }) {
   }
 
   try {
-    const result = await env.DB.prepare(`
+    const db = context.env.DB;
+    const result = await db.prepare(`
       DELETE FROM classes
        WHERE id = ?1
     `)

@@ -16,7 +16,13 @@ const errorResponse = (error) =>
     },
   );
 
-export const onRequestGet = async (context) => {
+export async function onRequest(context) {
+  if (context.request.method.toUpperCase() !== 'GET') {
+    return jsonResponse(
+      { success: false, message: '허용되지 않은 메서드입니다.' },
+      405,
+    );
+  }
   try {
     const DB = getDB(context.env);
     const statement = DB.prepare('SELECT name FROM sqlite_master WHERE type = ?1').bind('table');
@@ -28,4 +34,4 @@ export const onRequestGet = async (context) => {
     // console.debug('[api] Failed to fetch tables', error)
     return errorResponse(error);
   }
-};
+}

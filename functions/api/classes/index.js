@@ -55,7 +55,7 @@ const jsonResponse = (body, init = {}) =>
     headers: JSON_HEADERS,
   });
 
-export async function onRequestGet(context) {
+const handleGet = async (context) => {
   try {
     const DB = getDB(context.env);
     const statement = DB.prepare(`
@@ -70,9 +70,9 @@ export async function onRequestGet(context) {
   } catch (error) {
     return jsonResponse({ success: false, error: error.message }, { status: 500 });
   }
-}
+};
 
-export async function onRequestPost(context) {
+const handlePost = async (context) => {
   try {
     const DB = getDB(context.env);
     const body = await parseRequestBody(context.request);
@@ -143,4 +143,21 @@ export async function onRequestPost(context) {
   } catch (error) {
     return jsonResponse({ success: false, error: error.message }, { status: 500 });
   }
+};
+
+export async function onRequest(context) {
+  const method = context.request.method.toUpperCase();
+
+  if (method === "GET") {
+    return handleGet(context);
+  }
+
+  if (method === "POST") {
+    return handlePost(context);
+  }
+
+  return jsonResponse(
+    { success: false, error: "허용되지 않은 메서드입니다." },
+    { status: 405 },
+  );
 }

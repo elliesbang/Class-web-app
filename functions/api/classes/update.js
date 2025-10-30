@@ -2,7 +2,17 @@ const JSON_HEADERS = {
   "Content-Type": "application/json",
 };
 
-export async function onRequestPut({ request, env }) {
+export async function onRequest(context) {
+  const { request } = context;
+  if (request.method.toUpperCase() !== "PUT") {
+    return new Response(
+      JSON.stringify({ success: false, message: "허용되지 않은 메서드입니다." }),
+      {
+        status: 405,
+        headers: JSON_HEADERS,
+      },
+    );
+  }
   let payload;
 
   try {
@@ -53,7 +63,8 @@ export async function onRequestPut({ request, env }) {
   }
 
   try {
-    const result = await env.DB.prepare(`
+    const db = context.env.DB;
+    const result = await db.prepare(`
       UPDATE classes
          SET name = ?1,
              category_id = ?2,

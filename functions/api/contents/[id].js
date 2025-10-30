@@ -15,64 +15,67 @@ const parseId = (value) => {
   return Number.isInteger(id) && id > 0 ? id : null;
 };
 
-export async function onRequestGet({ params, env }) {
+export async function onRequest(context) {
+  const { request, params } = context;
+  const method = request.method.toUpperCase();
   const id = parseId(params?.id);
 
   if (!id) {
     return jsonResponse({ success: false, message: '유효한 id가 필요합니다.' }, { status: 400 });
   }
 
-  try {
-    const db = new DB(env.DB);
-    const content = await db
-      .prepare(`SELECT * FROM contents WHERE id = ?1`)
-      .bind(id)
-      .first();
+  if (method === 'GET') {
+    try {
+      const db = new DB(context.env.DB);
+      const content = await db
+        .prepare(`SELECT * FROM contents WHERE id = ?1`)
+        .bind(id)
+        .first();
 
-    if (!content) {
-      return jsonResponse(
-        { success: false, message: '콘텐츠를 찾을 수 없습니다.' },
-        { status: 404 },
-      );
+      if (!content) {
+        return jsonResponse(
+          { success: false, message: '콘텐츠를 찾을 수 없습니다.' },
+          { status: 404 },
+        );
+      }
+
+      return jsonResponse({ success: true, data: content }, { status: 200 });
+    } catch (error) {
+      console.error('Failed to fetch content:', error);
+      return jsonResponse({ success: false, message: '콘텐츠 조회에 실패했습니다.' }, { status: 500 });
     }
-
-    return jsonResponse({ success: true, data: content }, { status: 200 });
-  } catch (error) {
-    console.error('Failed to fetch content:', error);
-    return jsonResponse({ success: false, message: '콘텐츠 조회에 실패했습니다.' }, { status: 500 });
-  }
-}
-
-export async function onRequestDelete({ params, env }) {
-  const id = parseId(params?.id);
-
-  if (!id) {
-    return jsonResponse({ success: false, message: '유효한 id가 필요합니다.' }, { status: 400 });
   }
 
-  try {
-    const db = new DB(env.DB);
-    const result = await db
-      .prepare(`DELETE FROM contents WHERE id = ?1`)
-      .bind(id)
-      .run();
+  if (method === 'DELETE') {
+    try {
+      const db = new DB(context.env.DB);
+      const result = await db
+        .prepare(`DELETE FROM contents WHERE id = ?1`)
+        .bind(id)
+        .run();
 
-    if (!result || result.changes === 0) {
+      if (!result || result.changes === 0) {
+        return jsonResponse(
+          { success: false, message: '삭제할 데이터가 없습니다.' },
+          { status: 404 },
+        );
+      }
+
       return jsonResponse(
-        { success: false, message: '삭제할 데이터가 없습니다.' },
-        { status: 404 },
+        {
+          success: true,
+          data: { message: '삭제 완료' },
+        },
+        { status: 200 },
       );
+    } catch (error) {
+      console.error('Failed to delete content:', error);
+      return jsonResponse({ success: false, message: '콘텐츠 삭제에 실패했습니다.' }, { status: 500 });
     }
-
-    return jsonResponse(
-      {
-        success: true,
-        data: { message: '삭제 완료' },
-      },
-      { status: 200 },
-    );
-  } catch (error) {
-    console.error('Failed to delete content:', error);
-    return jsonResponse({ success: false, message: '콘텐츠 삭제에 실패했습니다.' }, { status: 500 });
   }
+
+  return jsonResponse(
+    { success: false, message: '허용되지 않은 메서드입니다.' },
+    { status: 405 },
+  );
 }

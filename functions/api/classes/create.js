@@ -2,7 +2,17 @@ const JSON_HEADERS = {
   "Content-Type": "application/json",
 };
 
-export async function onRequestPost({ request, env }) {
+export async function onRequest(context) {
+  const { request } = context;
+  if (request.method.toUpperCase() !== "POST") {
+    return new Response(
+      JSON.stringify({ success: false, message: "허용되지 않은 메서드입니다." }),
+      {
+        status: 405,
+        headers: JSON_HEADERS,
+      },
+    );
+  }
   let payload;
 
   try {
@@ -40,7 +50,8 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    const result = await env.DB.prepare(`
+    const db = context.env.DB;
+    const result = await db.prepare(`
       INSERT INTO classes (
         name, category_id, start_date, end_date, upload_limit,
         upload_day, code, category, duration, created_at

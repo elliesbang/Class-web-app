@@ -16,7 +16,13 @@ const errorResponse = (error) =>
     },
   );
 
-export const onRequestGet = async (context) => {
+export async function onRequest(context) {
+  if (context.request.method.toUpperCase() !== 'GET') {
+    return jsonResponse(
+      { success: false, count: 0, data: [], message: '허용되지 않은 메서드입니다.' },
+      405,
+    );
+  }
   try {
     const DB = getDB(context.env);
     const { CLOUDFLARE_API_TOKEN, DATABASE_ID, DATABASE_NAME } = context.env;
@@ -36,4 +42,4 @@ export const onRequestGet = async (context) => {
     // console.debug('[admin-dashboard] Failed to load dashboard data', error)
     return errorResponse(error);
   }
-};
+}

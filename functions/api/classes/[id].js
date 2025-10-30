@@ -65,7 +65,7 @@ const parseClassId = (rawId) => {
   return id;
 };
 
-export async function onRequestGet(context) {
+const handleGet = async (context) => {
   let id;
 
   try {
@@ -96,9 +96,9 @@ export async function onRequestGet(context) {
   } catch (error) {
     return jsonResponse({ success: false, error: error.message }, { status: 500 });
   }
-}
+};
 
-export async function onRequestPut(context) {
+const handlePut = async (context) => {
   let id;
 
   try {
@@ -196,9 +196,9 @@ export async function onRequestPut(context) {
   } catch (error) {
     return jsonResponse({ success: false, error: error.message }, { status: 500 });
   }
-}
+};
 
-export async function onRequestDelete(context) {
+const handleDelete = async (context) => {
   let id;
 
   try {
@@ -239,4 +239,25 @@ export async function onRequestDelete(context) {
   } catch (error) {
     return jsonResponse({ success: false, error: error.message }, { status: 500 });
   }
+};
+
+export async function onRequest(context) {
+  const method = context.request.method.toUpperCase();
+
+  if (method === "GET") {
+    return handleGet(context);
+  }
+
+  if (method === "PUT") {
+    return handlePut(context);
+  }
+
+  if (method === "DELETE") {
+    return handleDelete(context);
+  }
+
+  return jsonResponse(
+    { success: false, message: "허용되지 않은 메서드입니다." },
+    { status: 405 },
+  );
 }

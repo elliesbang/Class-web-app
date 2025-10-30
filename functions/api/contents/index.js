@@ -10,7 +10,14 @@ const jsonResponse = (body, init = {}) =>
     headers: JSON_HEADERS,
   });
 
-export async function onRequestGet({ request, env }) {
+export async function onRequest(context) {
+  const { request } = context;
+  if (request.method.toUpperCase() !== 'GET') {
+    return jsonResponse(
+      { success: false, message: '허용되지 않은 메서드입니다.' },
+      { status: 405 },
+    );
+  }
   const url = new URL(request.url);
   const classIdParam = url.searchParams.get('class_id');
 
@@ -31,7 +38,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   try {
-    const db = new DB(env.DB);
+    const db = new DB(context.env.DB);
     const statement = db
       .prepare(`SELECT * FROM contents WHERE class_id = ?1 ORDER BY created_at DESC`)
       .bind(classId);

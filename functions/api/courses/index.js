@@ -8,7 +8,13 @@ import { getDB } from "../_db";
  * POST /api/courses
  * body: { courseId: string|number, code: string }
  */
-export async function onRequestPost(context) {
+export async function onRequest(context) {
+  if (context.request.method.toUpperCase() !== "POST") {
+    return jsonResponse(
+      { success: false, message: "허용되지 않은 메서드입니다." },
+      405,
+    );
+  }
   try {
     const DB = getDB(context.env);
     await ensureBaseSchema(DB);

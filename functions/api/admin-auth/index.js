@@ -14,7 +14,13 @@ const errorResponse = (error) =>
     },
   );
 
-export const onRequestPost = async (context) => {
+export async function onRequest(context) {
+  if (context.request.method.toUpperCase() !== 'POST') {
+    return jsonResponse(
+      { success: false, count: 0, data: [], message: '허용되지 않은 메서드입니다.' },
+      405,
+    );
+  }
   try {
     const { ADMIN_EMAIL, ADMIN_PASSWORD } = context.env;
     const adminEmail = typeof ADMIN_EMAIL === 'string' ? ADMIN_EMAIL.trim() : '';
@@ -61,4 +67,4 @@ export const onRequestPost = async (context) => {
     // console.debug('[admin-auth] Failed to authenticate admin', error)
     return errorResponse(error);
   }
-};
+}
