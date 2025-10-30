@@ -1,5 +1,3 @@
-import { D1Database } from "@cloudflare/workers-types";
-
 /**
  * Cloudflare D1 Database 연결 헬퍼
  * - 모든 API 파일에서 import { getDB } from "../_db"; 형태로 호출됨
