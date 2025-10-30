@@ -1,4 +1,4 @@
-import { getDB } from "../../_db";
+import { getDB } from "../../_db.js";
 
 const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
