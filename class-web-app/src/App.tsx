@@ -11,7 +11,7 @@ import AdminFeedbackManagement from './pages/admin/AdminFeedbackManagement';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminStatistics from './pages/admin/AdminStatistics';
 import Home from './pages/Home.jsx';
-import InternalCourses from './pages/InternalCourses.jsx';
+import Classroom from './pages/Classroom.jsx';
 import Michina from './pages/Michina.jsx';
 import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/Notices.jsx';
@@ -24,7 +24,7 @@ function App() {
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/internal" element={<InternalCourses />} />
+        <Route path="/internal" element={<Classroom />} />
         <Route path="/vod" element={<VOD />} />
         <Route path="/notices" element={<Notices />} />
         <Route path="/mypage" element={<MyPage />} />

@@ -1,0 +1,54 @@
+[
+  {
+    "category": "캘굿즈",
+    "classes": [
+      {
+        "title": "한캘굿",
+        "desc": "한글 캘리그라피로 굿즈 제작",
+        "videoUrl": "https://vimeo.com/XXXX",
+        "notice": [
+          { "title": "1주차 안내", "content": "준비물 확인하세요." }
+        ],
+        "resources": [
+          { "name": "1주차 실습 파일", "url": "/files/hangul_week1.pdf", "type": "file" },
+          { "name": "참고 노션 링크", "url": "https://notion.so/example", "type": "link" }
+        ],
+        "feedback": [
+          { "week": 1, "content": "붓 터치가 자연스러워졌어요!" }
+        ]
+      },
+      {
+        "title": "중캘굿",
+        "desc": "중국어 캘리그라피로 굿즈 제작",
+        "videoUrl": ""
+      }
+    ]
+  },
+  {
+    "category": "캔굿즈",
+    "classes": [
+      {
+        "title": "캔굿즈",
+        "desc": "캔바로 디지털·실물 굿즈 제작",
+        "videoUrl": ""
+      }
+    ]
+  },
+  {
+    "category": "출판 라인",
+    "classes": [
+      { "title": "에그작", "videoUrl": "" },
+      { "title": "에그작챌", "videoUrl": "" },
+      { "title": "나컬작", "videoUrl": "" },
+      { "title": "나컬작챌", "videoUrl": "" }
+    ]
+  },
+  {
+    "category": "미치나",
+    "classSingle": {
+      "title": "미치나",
+      "desc": "AI+캔바 기반 창작 챌린지",
+      "videoUrl": "https://vimeo.com/AAAA"
+    }
+  }
+]
