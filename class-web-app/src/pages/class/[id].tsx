@@ -1,28 +1,89 @@
 import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import ClassroomTabs from '@/components/classroom/ClassroomTabs';
+import ClassDetail from '@/components/ClassDetail.jsx';
+import classData from '../../../data/classData.json';
+
+type ClassRecord = {
+  category: string;
+  classes?: Array<{
+    title: string;
+    desc?: string;
+    videoUrl?: string;
+    notice?: Array<{ title: string; content: string }>;
+    resources?: Array<{ name: string; url: string; type: 'file' | 'link' }>;
+    feedback?: Array<{ week?: number; content: string }>;
+  }>;
+  classSingle?: {
+    title: string;
+    desc?: string;
+    videoUrl?: string;
+    notice?: Array<{ title: string; content: string }>;
+    resources?: Array<{ name: string; url: string; type: 'file' | 'link' }>;
+    feedback?: Array<{ week?: number; content: string }>;
+  };
+};
+
+type ClassItem = {
+  title: string;
+  desc?: string;
+  videoUrl?: string;
+  notice?: Array<{ title: string; content: string }>;
+  resources?: Array<{ name: string; url: string; type: 'file' | 'link' }>;
+  feedback?: Array<{ week?: number; content: string }>;
+  category?: string;
+};
+
+const catalogue = classData as ClassRecord[];
+
+function findClassByTitle(title: string | null): ClassItem | null {
+  if (!title) {
+    return null;
+  }
+
+  for (const entry of catalogue) {
+    if (entry.classes) {
+      const match = entry.classes.find((item) => item.title === title);
+      if (match) {
+        return { ...match, category: entry.category };
+      }
+    }
+
+    if (entry.classSingle && entry.classSingle.title === title) {
+      return { ...entry.classSingle, category: entry.category };
+    }
+  }
+
+  return null;
+}
 
 function ClassDetailPage() {
   const { id } = useParams();
-  const courseId = id ?? '';
-  const courseName = useMemo(() => {
-    if (!courseId) {
-      return '강의 정보를 찾을 수 없습니다.';
+  const decodedTitle = useMemo(() => {
+    if (!id) {
+      return '';
     }
-    return `클래스 ${courseId}`;
-  }, [courseId]);
 
-  if (!courseId) {
+    try {
+      return decodeURIComponent(id);
+    } catch (error) {
+      console.error('강의 타이틀 디코딩 실패', error);
+      return id;
+    }
+  }, [id]);
+
+  const classItem = useMemo(() => findClassByTitle(decodedTitle) ?? null, [decodedTitle]);
+
+  if (!decodedTitle || !classItem) {
     return (
-      <div className="mx-auto flex max-w-4xl flex-col gap-5 pb-12">
+      <div className="mx-auto flex max-w-4xl flex-col gap-5 pb-12 text-ellieGray">
         <header className="rounded-3xl bg-white px-6 py-5 shadow-soft">
-          <h1 className="text-xl font-bold text-ellieGray">{courseName}</h1>
+          <h1 className="text-xl font-bold text-ellieGray">강의 정보를 찾을 수 없습니다.</h1>
           <p className="mt-2 text-sm leading-relaxed text-ellieGray/70">올바른 강의실 주소를 확인해주세요.</p>
         </header>
 
-        <section className="rounded-3xl bg-ivory p-6 text-center shadow-soft">
+        <section className="rounded-3xl bg-[#fffdf6] p-6 text-center shadow-soft">
           <p className="text-sm leading-relaxed text-ellieGray/70">
-            강의 ID가 제공되지 않아 강의실을 표시할 수 없습니다. 링크를 다시 확인한 뒤 접속해 주세요.
+            강의 정보가 등록되지 않았습니다. 강의실 목록에서 다시 선택해 주세요.
           </p>
         </section>
       </div>
@@ -30,15 +91,15 @@ function ClassDetailPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-5 pb-12">
+    <div className="mx-auto flex max-w-4xl flex-col gap-5 pb-12 text-ellieGray">
       <header className="rounded-3xl bg-white px-6 py-5 shadow-soft">
-        <h1 className="text-xl font-bold text-ellieGray">{courseName}</h1>
+        <h1 className="text-xl font-bold text-ellieGray">{classItem.title}</h1>
         <p className="mt-2 text-sm leading-relaxed text-ellieGray/70">
-          수강 중인 클래스의 영상, 자료, 과제, 피드백, 공지를 한 곳에서 확인하세요.
+          영상, 공지, 과제, 자료, 피드백을 한 화면에서 확인해보세요.
         </p>
       </header>
 
-      <ClassroomTabs courseId={courseId} courseName={courseName} />
+      <ClassDetail classItem={classItem} />
     </div>
   );
 }
