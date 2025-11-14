@@ -119,35 +119,36 @@ export async function apiFetch<T = unknown>(url: string, options: ApiFetchOption
 
   const requestUrl = resolveRequestUrl(url);
 
-  const response = await fetch(requestUrl, mergedOptions);
+  // const response = await fetch(requestUrl, mergedOptions);
+  // if (!response.ok) {
+  //   const errorMessage = await extractErrorMessage(response.clone());
+  //   console.error(`[API ERROR] ${requestUrl} →`, errorMessage);
+  //   throw new Error(`API 요청 실패: ${response.status} ${errorMessage}`.trim());
+  // }
 
-  if (!response.ok) {
-    const errorMessage = await extractErrorMessage(response.clone());
-    console.error(`[API ERROR] ${requestUrl} →`, errorMessage);
-    throw new Error(`API 요청 실패: ${response.status} ${errorMessage}`.trim());
-  }
+  // if (skipJsonParse) {
+  //   return null as T;
+  // }
 
-  if (skipJsonParse) {
-    return null as T;
-  }
+  // const contentLength = response.headers.get('content-length');
+  // if (response.status === 204 || contentLength === '0') {
+  //   return null as T;
+  // }
 
-  const contentLength = response.headers.get('content-length');
-  if (response.status === 204 || contentLength === '0') {
-    return null as T;
-  }
+  // const text = await response.text();
 
-  const text = await response.text();
+  // if (!text) {
+  //   return null as T;
+  // }
 
-  if (!text) {
-    return null as T;
-  }
+  // try {
+  //   return JSON.parse(text) as T;
+  // } catch (error) {
+  //   console.error('[JSON PARSE ERROR]', error);
+  //   throw new Error('서버에서 JSON 응답을 받지 못했습니다.');
+  // }
 
-  try {
-    return JSON.parse(text) as T;
-  } catch (error) {
-    console.error('[JSON PARSE ERROR]', error);
-    throw new Error('서버에서 JSON 응답을 받지 못했습니다.');
-  }
+  return null as T;
 }
 
 export type { ApiFetchOptions };

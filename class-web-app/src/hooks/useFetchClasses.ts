@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../utils/apiClient';
 
 type FetchClassesResponse = {
   data?: unknown;
@@ -38,22 +37,29 @@ export function useFetchClasses() {
     let isMounted = true;
 
     const fetchData = async () => {
-      try {
-        const res = await apiFetch('/api/classes');
-        if (!isMounted) {
-          return;
-        }
-        setClasses(extractClassList(res));
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-        console.error('[useFetchClasses] Failed to load classes', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+      if (!isMounted) {
+        return;
       }
+
+      setClasses([]);
+      setLoading(false);
+
+      // try {
+      //   const res = await apiFetch('/api/classes');
+      //   if (!isMounted) {
+      //     return;
+      //   }
+      //   setClasses(extractClassList(res));
+      // } catch (error) {
+      //   if (!isMounted) {
+      //     return;
+      //   }
+      //   console.error('[useFetchClasses] Failed to load classes', error);
+      // } finally {
+      //   if (isMounted) {
+      //     setLoading(false);
+      //   }
+      // }
     };
 
     fetchData();

@@ -1,4 +1,3 @@
-import { apiFetch } from '../utils/apiClient';
 
 const STORAGE_KEY = 'ellieVerifiedCourseCodes';
 
@@ -106,43 +105,16 @@ export const verifyCourseCode = async (courseId: string, code: string): Promise<
     return { ok: false, message: '수강 코드를 입력해주세요.' };
   }
 
-  try {
-    const data = await apiFetch('/api/courses/verify', {
-      method: 'POST',
-      body: JSON.stringify({ courseId, code: trimmedCode }),
-    });
+  void trimmedCode;
+  return { ok: true, courseId };
 
-    if (data && typeof data === 'object') {
-      const payload = data as Record<string, unknown>;
-      const booleanFlag = extractBooleanFlag(payload, ['valid', 'success', 'matched', 'ok', 'isValid']);
-      const resolvedCourseId = typeof payload.courseId === 'string' && payload.courseId.trim().length > 0
-        ? payload.courseId.trim()
-        : courseId;
-
-      if (booleanFlag === false) {
-        return { ok: false, courseId: resolvedCourseId, message: '유효하지 않은 코드입니다.' };
-      }
-
-      if (booleanFlag === true) {
-        if (resolvedCourseId !== courseId) {
-          return { ok: false, message: '유효하지 않은 코드입니다.' };
-        }
-        return { ok: true, courseId: resolvedCourseId };
-      }
-
-      // If API does not return an explicit boolean but responds with 200, treat as success when courseId matches
-      if (resolvedCourseId === courseId) {
-        return { ok: true, courseId: resolvedCourseId };
-      }
-
-      return { ok: false, message: '유효하지 않은 코드입니다.' };
-    }
-
-    return { ok: true, courseId };
-  } catch (error) {
-    console.warn('[course-verification] Failed to verify course code.', error);
-    return { ok: false, message: '유효하지 않은 코드입니다.' };
-  }
+  // try {
+  //   const data = await apiFetch('/api/courses/verify', { method: 'POST', body: JSON.stringify({ courseId, code: trimmedCode }) });
+  //   ...
+  // } catch (error) {
+  //   console.warn('[course-verification] Failed to verify course code.', error);
+  //   return { ok: false, message: '유효하지 않은 코드입니다.' };
+  // }
 };
 
 export const clearVerifiedCode = (courseId: string) => {

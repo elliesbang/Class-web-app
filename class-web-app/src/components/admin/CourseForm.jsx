@@ -15,7 +15,6 @@ export default function CourseForm({ onSaved }) {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -27,41 +26,23 @@ export default function CourseForm({ onSaved }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/classes/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
+      // const res = await fetch('/api/classes/create', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(form),
+      // });
 
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message || '수업 저장 실패');
+      // const data = await res.json();
+      // if (!data.success) throw new Error(data.message || '수업 저장 실패');
 
-      alert('✅ 수업이 저장되었습니다!');
-      if (onSaved) {
-        const record = Array.isArray(data.data) ? data.data[0] : data.data ?? null;
-        onSaved(record);
-      }
-
-      // 폼 초기화
-      setForm({
-        name: '',
-        code: '',
-        category: '',
-        duration: '',
-        startDate: '',
-        endDate: '',
-        assignmentUploadTime: 'all_day',
-        assignmentUploadDays: [],
-        deliveryMethods: [],
-        isActive: true,
-      });
-    } catch (err) {
-      console.error('저장 오류:', err);
-      setError(err.message);
+      // alert('✅ 수업이 저장되었습니다!');
+      // if (onSaved) {
+      //   const record = Array.isArray(data.data) ? data.data[0] : data.data ?? null;
+      //   onSaved(record);
+      // }
     } finally {
       setIsSubmitting(false);
     }
@@ -114,7 +95,7 @@ export default function CourseForm({ onSaved }) {
         {isSubmitting ? '저장 중...' : '저장'}
       </button>
 
-      {error && <p style={{ color: 'red' }}>⚠️ {error}</p>}
+      {/* 데이터 오류 안내 비활성화 */}
     </form>
   );
 }

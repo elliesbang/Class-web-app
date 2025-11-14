@@ -1,4 +1,4 @@
-import { apiFetch, type ApiFetchOptions } from '../utils/apiClient';
+import { type ApiFetchOptions } from '../utils/apiClient';
 
 export type AssignmentUploadTimeOption = 'all_day' | 'same_day';
 
@@ -126,34 +126,13 @@ type ApiResponse<T> = {
 };
 
 export async function fetchCategories(options: ApiFetchOptions = {}): Promise<unknown[]> {
-  try {
-    const payload = await apiFetch('/api/categories', options);
+  void options;
+  return [];
 
-    if (!payload) {
-      return [];
-    }
-
-    if (Array.isArray(payload)) {
-      return payload;
-    }
-
-    if (typeof payload === 'object') {
-      const candidate = payload as { data?: unknown; results?: unknown };
-
-      if (Array.isArray(candidate.data)) {
-        return candidate.data;
-      }
-
-      if (Array.isArray(candidate.results)) {
-        return candidate.results;
-      }
-    }
-
-    return [];
-  } catch (error) {
-    console.error('⚠️ 카테고리 불러오기 실패:', error);
-    return [];
-  }
+  // try {
+  //   const payload = await apiFetch('/api/categories', options);
+  //   ...
+  // }
 }
 
 const parseDateValue = (value: unknown): string | null => {
@@ -367,58 +346,12 @@ const toNormalisedClassList = (input: unknown): ClassInfo[] => {
 };
 
 export const getClasses = async (): Promise<ClassInfo[]> => {
-  try {
-    const payload = (await apiFetch('/api/classes')) as
-      | ApiResponse<ClassInfo[]>
-      | ClassInfo[]
-      | { results?: unknown }
-      | null;
-
-    if (!payload) {
-      return [];
-    }
-
-    if (Array.isArray(payload)) {
-      return normaliseClassList(payload);
-    }
-
-    if (typeof payload === 'object') {
-      const data = payload as ApiResponse<ClassInfo[]>;
-
-      if (data.success === false && data.message) {
-        console.warn('⚠️ /api/classes 응답이 실패 상태를 반환했습니다:', data.message);
-      }
-
-      if ('data' in data) {
-        const rawData = data.data;
-        if (Array.isArray(rawData)) {
-          return normaliseClassList(rawData);
-        }
-
-        if (rawData == null) {
-          return [];
-        }
-
-        console.warn('⚠️ /api/classes 응답 data 형식이 예상과 다릅니다:', rawData);
-        return [];
-      }
-
-      const fromLegacy = normaliseClassList((data as { classes?: unknown }).classes);
-      if (fromLegacy.length > 0) {
-        return fromLegacy;
-      }
-
-      const fromResults = normaliseClassList((payload as { results?: unknown }).results);
-      if (fromResults.length > 0) {
-        return fromResults;
-      }
-    }
-  } catch (error) {
-    console.error('❌ 수업 목록 불러오기 실패:', error);
-    return [];
-  }
-
   return [];
+
+  // try {
+  //   const payload = await apiFetch('/api/classes');
+  //   ...
+  // }
 };
 
 const serialiseClassPayload = (payload: ClassFormPayload) => ({
@@ -460,81 +393,68 @@ const toClassMutationResult = (
 };
 
 export const createClass = async (payload: ClassFormPayload): Promise<ClassMutationResult> => {
-  const data = (await apiFetch('/api/classes/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(serialiseClassPayload(payload)),
-  })) as ApiResponse<ClassInfo | ClassInfo[]>;
+  void payload;
+  return { success: false, message: '데이터 연동이 비활성화되었습니다.', classInfo: null };
 
-  return toClassMutationResult(data, '수업을 등록하지 못했습니다.', '생성된 수업 정보를 확인할 수 없습니다.');
+  // const data = await apiFetch('/api/classes/create', { ... });
+  // return toClassMutationResult(data, '수업을 등록하지 못했습니다.', '생성된 수업 정보를 확인할 수 없습니다.');
 };
 
 export const updateClass = async (id: number, payload: ClassFormPayload): Promise<ClassMutationResult> => {
-  const data = (await apiFetch('/api/classes/update', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, ...serialiseClassPayload(payload) }),
-  })) as ApiResponse<ClassInfo | ClassInfo[]>;
+  void id;
+  void payload;
+  return { success: false, message: '데이터 연동이 비활성화되었습니다.', classInfo: null };
 
-  return toClassMutationResult(data, '수업 정보를 수정하지 못했습니다.', '수정된 수업 정보를 확인할 수 없습니다.');
+  // const data = await apiFetch('/api/classes/update', { ... });
+  // return toClassMutationResult(data, '수업 정보를 수정하지 못했습니다.', '수정된 수업 정보를 확인할 수 없습니다.');
 };
 
 export const deleteClass = async (id: number): Promise<ClassMutationResult> => {
-  const data = (await apiFetch(`/api/classes/remove?id=${id}`, {
-    method: 'DELETE',
-  })) as ApiResponse<unknown> | null;
+  void id;
+  return { success: false, message: '데이터 연동이 비활성화되었습니다.', classInfo: null };
 
-  if (!data || typeof data !== 'object') {
-    return { success: false, message: '수업 삭제에 실패했습니다.' };
-  }
-
-  if (data.success === false) {
-    return { success: false, message: data.message ?? '수업 삭제에 실패했습니다.' };
-  }
-
-  return { success: true, message: data.message ?? null };
+  // const data = await apiFetch(`/api/classes/remove?id=${id}`, { method: 'DELETE' });
 };
 
 export const getVideos = async (params: { classId?: number } = {}) => {
-  const searchParams = new URLSearchParams();
-  if (typeof params.classId === 'number') {
-    searchParams.set('classId', String(params.classId));
-  }
+  void params;
+  return [] as VideoPayload[];
 
-  const query = searchParams.toString();
-  const data = (await apiFetch(`/api/videos${query ? `?${query}` : ''}`)) as ApiResponse<unknown>;
-  return data.videos ?? [];
+  // const data = await apiFetch(`/api/videos${query ? `?${query}` : ''}`);
+  // return data.videos ?? [];
 };
 
-export const createVideo = async (payload: { title: string; url: string; description?: string | null; classId: number }) => {
-  const data = (await apiFetch('/api/videos', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })) as ApiResponse<unknown>;
-  if (!data.video || Array.isArray(data.video)) {
-    throw new Error('영상 정보를 확인할 수 없습니다.');
-  }
-  return data.video;
+export const createVideo = async (payload: {
+  title: string;
+  url: string;
+  description?: string | null;
+  classId: number;
+}) => {
+  void payload;
+  return null;
+
+  // const data = await apiFetch('/api/videos', { method: 'POST', body: JSON.stringify(payload) });
+  // return data.video;
 };
 
 export const reorderVideos = async (payload: { classId: number; orderedIds: number[] }) => {
-  const data = (await apiFetch('/api/videos/order', {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  })) as ApiResponse<unknown>;
-  return data.videos ?? [];
+  void payload;
+  return [] as VideoPayload[];
+
+  // const data = await apiFetch('/api/videos/order', { method: 'PUT', body: JSON.stringify(payload) });
+  // return data.videos ?? [];
 };
 
 export const deleteVideo = async (id: number) => {
-  await apiFetch(`/api/videos/${id}`, {
-    method: 'DELETE',
-    skipJsonParse: true,
-  });
+  void id;
+  // await apiFetch(`/api/videos/${id}`, { method: 'DELETE', skipJsonParse: true });
 };
 
 export const getMaterials = async () => {
-  const data = (await apiFetch('/api/materials')) as ApiResponse<unknown>;
-  return data.materials ?? [];
+  return [] as MaterialPayload[];
+
+  // const data = await apiFetch('/api/materials');
+  // return data.materials ?? [];
 };
 
 export const createMaterial = async (payload: {
@@ -546,80 +466,53 @@ export const createMaterial = async (payload: {
   mimeType?: string | null;
   fileSize?: number | null;
 }) => {
-  const data = (await apiFetch('/api/materials', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })) as ApiResponse<unknown>;
-  if (!data.material || Array.isArray(data.material)) {
-    throw new Error('자료 정보를 확인할 수 없습니다.');
-  }
-  return data.material;
+  void payload;
+  return null;
+
+  // const data = await apiFetch('/api/materials', { method: 'POST', body: JSON.stringify(payload) });
+  // return data.material;
 };
 
 export const deleteMaterial = async (id: number) => {
-  await apiFetch(`/api/materials/${id}`, {
-    method: 'DELETE',
-    skipJsonParse: true,
-  });
+  void id;
+  // await apiFetch(`/api/materials/${id}`, { method: 'DELETE', skipJsonParse: true });
 };
 
 export const getNotices = async (params: { classId?: number } = {}) => {
-  const searchParams = new URLSearchParams();
-  if (typeof params.classId === 'number') {
-    searchParams.set('classId', String(params.classId));
-  }
+  void params;
+  return [] as NoticePayload[];
 
-  const query = searchParams.toString();
-  const data = (await apiFetch(`/api/notices${query ? `?${query}` : ''}`)) as ApiResponse<unknown>;
-  return data.notices ?? [];
+  // const data = await apiFetch(`/api/notices${query ? `?${query}` : ''}`);
+  // return data.notices ?? [];
 };
 
 export const createNotice = async (payload: { title: string; content: string; classId: number; author?: string }) => {
-  const data = (await apiFetch('/api/notices', {
-    method: 'POST',
-    body: JSON.stringify({
-      title: payload.title,
-      content: payload.content,
-      author: payload.author,
-      classId: payload.classId,
-    }),
-  })) as ApiResponse<unknown>;
-  if (!data.notice || Array.isArray(data.notice)) {
-    throw new Error('공지 정보를 확인할 수 없습니다.');
-  }
-  return data.notice;
+  void payload;
+  return null;
+
+  // const data = await apiFetch('/api/notices', { method: 'POST', body: JSON.stringify({...}) });
+  // return data.notice;
 };
 
 export const deleteNotice = async (id: number) => {
-  await apiFetch(`/api/notices/${id}`, {
-    method: 'DELETE',
-    skipJsonParse: true,
-  });
+  void id;
+  // await apiFetch(`/api/notices/${id}`, { method: 'DELETE', skipJsonParse: true });
 };
 
 export const createFeedback = async (payload: { userName: string; comment: string; classId: number }) => {
-  const data = (await apiFetch('/api/feedback', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })) as ApiResponse<unknown>;
-  if (!data.feedback || Array.isArray(data.feedback)) {
-    throw new Error('피드백 정보를 확인할 수 없습니다.');
-  }
-  return data.feedback;
+  void payload;
+  return null;
+
+  // const data = await apiFetch('/api/feedback', { method: 'POST', body: JSON.stringify(payload) });
+  // return data.feedback;
 };
 
 export const getAssignments = async (params: { classId?: number; limit?: number } = {}) => {
-  const searchParams = new URLSearchParams();
-  if (typeof params.classId === 'number') {
-    searchParams.set('classId', String(params.classId));
-  }
-  if (typeof params.limit === 'number') {
-    searchParams.set('limit', String(params.limit));
-  }
+  void params;
+  return [] as AssignmentListItem[];
 
-  const query = searchParams.toString();
-  const data = (await apiFetch(`/api/assignments${query ? `?${query}` : ''}`)) as ApiResponse<unknown>;
-  return (data.assignments ?? []) as AssignmentListItem[];
+  // const data = await apiFetch(`/api/assignments${query ? `?${query}` : ''}`);
+  // return (data.assignments ?? []) as AssignmentListItem[];
 };
 
 export const createAssignmentSubmission = async (payload: {
@@ -634,12 +527,9 @@ export const createAssignmentSubmission = async (payload: {
   status?: AssignmentStatus;
   submittedAt?: string | null;
 }) => {
-  const data = (await apiFetch('/api/assignments', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })) as ApiResponse<unknown>;
-  if (!data.assignment || Array.isArray(data.assignment)) {
-    throw new Error('과제 정보를 확인할 수 없습니다.');
-  }
-  return data.assignment as AssignmentListItem;
+  void payload;
+  return null;
+
+  // const data = await apiFetch('/api/assignments', { method: 'POST', body: JSON.stringify(payload) });
+  // return data.assignment as AssignmentListItem;
 };

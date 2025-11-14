@@ -2,21 +2,7 @@ import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from 
 import { GripVertical, Trash2 } from 'lucide-react';
 
 import { useAdminClasses } from '../../data/AdminClassContext';
-import {
-  createMaterial,
-  createNotice,
-  createVideo,
-  deleteMaterial,
-  deleteNotice,
-  deleteVideo,
-  getMaterials,
-  getNotices,
-  getVideos,
-  reorderVideos,
-  type MaterialPayload,
-  type NoticePayload,
-  type VideoPayload,
-} from '../../../../lib/api';
+import { type MaterialPayload, type NoticePayload, type VideoPayload } from '../../../../lib/api';
 
 const TAB_ITEMS = [
   { key: 'video' as const, label: '영상' },
@@ -44,8 +30,6 @@ type MaterialFormState = {
   linkUrl: string;
   uploadType: 'file' | 'link';
 };
-
-const createFallbackId = () => Number(new Date());
 
 const sortByCreatedAtDesc = <T extends { createdAt?: string }>(list: T[]) =>
   [...list].sort((a, b) => {
@@ -96,22 +80,6 @@ const reorderVideoDisplayOrder = (
   );
 };
 
-const readFileAsDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error('파일을 읽는 데 실패했습니다.'));
-      }
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error('파일을 읽는 데 실패했습니다.'));
-    };
-    reader.readAsDataURL(file);
-  });
-
 const ContentManager = () => {
   const { classes } = useAdminClasses();
   const [activeTab, setActiveTab] = useState<TabKey>('video');
@@ -132,33 +100,21 @@ const ContentManager = () => {
   const [isReorderingVideos, setIsReorderingVideos] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
+    setVideos([]);
+    setNotices([]);
+    setMaterials([]);
 
-    const loadContent = async () => {
-      try {
-        const [videoList, noticeList, materialList] = await Promise.all([
-          getVideos(),
-          getNotices(),
-          getMaterials(),
-        ]);
-
-        if (!mounted) {
-          return;
-        }
-
-        setVideos(videoList);
-        setNotices(sortByCreatedAtDesc(noticeList));
-        setMaterials(sortByCreatedAtDesc(materialList));
-      } catch (error) {
-        console.error('[ContentManager] 콘텐츠 정보를 불러오는 데 실패했습니다.', error);
-      }
-    };
-
-    void loadContent();
-
-    return () => {
-      mounted = false;
-    };
+    // const loadContent = async () => {
+    //   const [videoList, noticeList, materialList] = await Promise.all([
+    //     getVideos(),
+    //     getNotices(),
+    //     getMaterials(),
+    //   ]);
+    //   setVideos(videoList);
+    //   setNotices(sortByCreatedAtDesc(noticeList));
+    //   setMaterials(sortByCreatedAtDesc(materialList));
+    // };
+    // void loadContent();
   }, []);
 
   useEffect(() => {
@@ -209,37 +165,7 @@ const ContentManager = () => {
       return;
     }
 
-    const title = videoForm.title.trim();
-    const url = videoForm.url.trim();
-    const description = videoForm.description.trim();
-
-    if (!title || !url) {
-      return;
-    }
-
-    try {
-      const created = await createVideo({
-        title,
-        url,
-        description: description || null,
-        classId: selectedClassId,
-      });
-      setVideos((prev) => [...prev.filter((item) => item.id !== created.id), created]);
-      resetVideoForm();
-    } catch (error) {
-      console.error('[ContentManager] 영상 저장 실패 – 임시 데이터로 대체합니다.', error);
-      const fallback: VideoPayload = {
-        id: createFallbackId(),
-        title,
-        url,
-        description: description || null,
-        classId: selectedClassId,
-        createdAt: new Date().toISOString(),
-        displayOrder: filteredVideos.length,
-      };
-      setVideos((prev) => [...prev, fallback]);
-      resetVideoForm();
-    }
+    // 콘텐츠 업로드 기능 비활성화
   };
 
   const handleNoticeSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -248,35 +174,7 @@ const ContentManager = () => {
       return;
     }
 
-    const title = noticeForm.title.trim();
-    const content = noticeForm.content.trim();
-
-    if (!title || !content) {
-      return;
-    }
-
-    try {
-      const created = await createNotice({
-        title,
-        content,
-        classId: selectedClassId,
-        author: '관리자',
-      });
-      setNotices((prev) => sortByCreatedAtDesc([created, ...prev.filter((item) => item.id !== created.id)]));
-      resetNoticeForm();
-    } catch (error) {
-      console.error('[ContentManager] 공지 저장 실패 – 임시 데이터로 대체합니다.', error);
-      const fallback: NoticePayload = {
-        id: createFallbackId(),
-        title,
-        content,
-        author: '관리자',
-        classId: selectedClassId,
-        createdAt: new Date().toISOString(),
-      };
-      setNotices((prev) => sortByCreatedAtDesc([fallback, ...prev]));
-      resetNoticeForm();
-    }
+    // 콘텐츠 업로드 기능 비활성화
   };
 
   const handleMaterialSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -285,146 +183,30 @@ const ContentManager = () => {
       return;
     }
 
-    const title = materialForm.title.trim();
-    const description = materialForm.description.trim();
-    const file = materialForm.file;
-    const linkUrl = materialForm.linkUrl.trim();
-    const uploadType = materialForm.uploadType;
-
-    if (!title) {
-      return;
-    }
-
-    if (uploadType === 'file' && !file) {
-      return;
-    }
-
-    if (uploadType === 'link' && !linkUrl) {
-      return;
-    }
-
-    try {
-      if (uploadType === 'link') {
-        const created = await createMaterial({
-          title,
-          description: description || null,
-          fileUrl: linkUrl,
-          classId: selectedClassId,
-          fileName: null,
-          mimeType: 'link',
-          fileSize: null,
-        });
-        setMaterials((prev) => sortByCreatedAtDesc([created, ...prev.filter((item) => item.id !== created.id)]));
-        resetMaterialForm();
-        return;
-      }
-
-      if (!file) {
-        return;
-      }
-
-      const fileUrl = await readFileAsDataUrl(file);
-      const created = await createMaterial({
-        title,
-        description: description || null,
-        fileUrl,
-        classId: selectedClassId,
-        fileName: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
-      });
-      setMaterials((prev) => sortByCreatedAtDesc([created, ...prev.filter((item) => item.id !== created.id)]));
-      resetMaterialForm();
-    } catch (error) {
-      console.error('[ContentManager] 자료 저장 실패 – 임시 데이터로 대체합니다.', error);
-      if (uploadType === 'link') {
-        const fallback: MaterialPayload = {
-          id: createFallbackId(),
-          title,
-          description: description || null,
-          fileUrl: linkUrl,
-          classId: selectedClassId,
-          createdAt: new Date().toISOString(),
-          fileName: null,
-          mimeType: 'link',
-          fileSize: null,
-        };
-        setMaterials((prev) => sortByCreatedAtDesc([fallback, ...prev]));
-        resetMaterialForm();
-        return;
-      }
-
-      if (!file) {
-        return;
-      }
-      const fallback: MaterialPayload = {
-        id: createFallbackId(),
-        title,
-        description: description || null,
-        fileUrl: URL.createObjectURL(file),
-        classId: selectedClassId,
-        createdAt: new Date().toISOString(),
-        fileName: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
-      };
-      setMaterials((prev) => sortByCreatedAtDesc([fallback, ...prev]));
-      resetMaterialForm();
-    }
+    // 콘텐츠 업로드 기능 비활성화
   };
 
   const handleDeleteVideo = async (id: number) => {
-    try {
-      await deleteVideo(id);
-    } catch (error) {
-      console.error('[ContentManager] 영상 삭제 중 문제가 발생했습니다.', error);
-    }
-    setVideos((prev) => prev.filter((video) => video.id !== id));
+    void id;
+    // 콘텐츠 삭제 기능 비활성화
   };
 
   const handleDeleteNotice = async (id: number) => {
-    try {
-      await deleteNotice(id);
-    } catch (error) {
-      console.error('[ContentManager] 공지 삭제 중 문제가 발생했습니다.', error);
-    }
-    setNotices((prev) => prev.filter((notice) => notice.id !== id));
+    void id;
+    // 콘텐츠 삭제 기능 비활성화
   };
 
   const handleDeleteMaterial = async (id: number) => {
-    try {
-      await deleteMaterial(id);
-    } catch (error) {
-      console.error('[ContentManager] 자료 삭제 중 문제가 발생했습니다.', error);
-    }
-    setMaterials((prev) => prev.filter((material) => material.id !== id));
+    void id;
+    // 콘텐츠 삭제 기능 비활성화
   };
 
   const handleVideoDrop = async (targetId: number) => {
-    if (selectedClassId == null || draggedVideoId == null || draggedVideoId === targetId) {
-      return;
-    }
+    void targetId;
+    setIsReorderingVideos(false);
+    setDraggedVideoId(null);
 
-    const locallyUpdated = reorderVideoDisplayOrder(videos, selectedClassId, draggedVideoId, targetId);
-    setVideos(locallyUpdated);
-    setIsReorderingVideos(true);
-
-    const orderedIds = sortVideosForDisplay(
-      locallyUpdated.filter((video) => video.classId === selectedClassId),
-    ).map((video) => video.id);
-
-    try {
-      const updated = await reorderVideos({ classId: selectedClassId, orderedIds });
-      setVideos((prev) => {
-        const others = prev.filter((video) => video.classId !== selectedClassId);
-        return [...others, ...updated];
-      });
-    } catch (error) {
-      console.error('[ContentManager] 영상 순서를 저장하지 못했습니다.', error);
-    } finally {
-      setIsReorderingVideos(false);
-      setDraggedVideoId(null);
-    }
+    // 영상 순서 저장 기능 비활성화
   };
 
   const handleVideoDragStart = (id: number) => () => {

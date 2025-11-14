@@ -132,29 +132,31 @@ const statusBadgeClassNames: Record<StudentStatus, string> = {
     const abortController = new AbortController();
 
     const fetchStudents = async () => {
-      try {
-        const response = await fetch('/api/students', { signal: abortController.signal });
-        if (!response.ok) {
-          throw new Error(`Failed to fetch students: ${response.status}`);
-        }
+      setStudents([]);
 
-        const payload: StudentsApiResponse = await response.json();
-        if (payload?.success && Array.isArray(payload.data)) {
-          if (!abortController.signal.aborted) {
-            setStudents(adaptStudentsFromApi(payload.data));
-          }
-        } else if (!abortController.signal.aborted) {
-          setStudents([]);
-        }
-      } catch (error) {
-        if ((error as Error)?.name === 'AbortError') {
-          return;
-        }
-        console.error('[AdminStudentManagement] 수강생 목록을 불러오지 못했습니다.', error);
-        if (!abortController.signal.aborted) {
-          setStudents([]);
-        }
-      }
+      // try {
+      //   const response = await fetch('/api/students', { signal: abortController.signal });
+      //   if (!response.ok) {
+      //     throw new Error(`Failed to fetch students: ${response.status}`);
+      //   }
+      //
+      //   const payload: StudentsApiResponse = await response.json();
+      //   if (payload?.success && Array.isArray(payload.data)) {
+      //     if (!abortController.signal.aborted) {
+      //       setStudents(adaptStudentsFromApi(payload.data));
+      //     }
+      //   } else if (!abortController.signal.aborted) {
+      //     setStudents([]);
+      //   }
+      // } catch (error) {
+      //   if ((error as Error)?.name === 'AbortError') {
+      //     return;
+      //   }
+      //   console.error('[AdminStudentManagement] 수강생 목록을 불러오지 못했습니다.', error);
+      //   if (!abortController.signal.aborted) {
+      //     setStudents([]);
+      //   }
+      // }
     };
 
     fetchStudents();
