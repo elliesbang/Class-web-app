@@ -1,7 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, GraduationCap, PlayCircle, User } from 'lucide-react';
+import { Bell, GraduationCap, Home, PlayCircle, User } from 'lucide-react';
 
 const navItems = [
+  { label: '홈', to: '/', Icon: Home },
   { label: '강의실', to: '/internal', Icon: GraduationCap },
   { label: 'VOD', to: '/vod', Icon: PlayCircle },
   { label: '공지', to: '/notices', Icon: Bell },
@@ -17,9 +18,9 @@ const NavbarBottom = () => {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 bg-[#fefaf4] px-5 pb-6 pt-3 shadow-[0_-6px_20px_rgba(0,0,0,0.05)]">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-5 gap-3">
         {navItems.map(({ label, to, Icon }) => {
-          const isActive = location.pathname.startsWith(to);
+          const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
           const iconColor = isActive ? '#404040' : '#8e8e8e';
           const textColor = isActive ? 'text-[#404040]' : 'text-[#8e8e8e]';
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95 },
@@ -26,6 +27,7 @@ type ActiveForm = "buttons" | "student" | "admin";
 const LoginModal = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<ActiveForm>("buttons");
+  const navigate = useNavigate();
 
   const closeModal = useCallback(() => {
     setIsOpen(false);
@@ -69,6 +71,13 @@ const LoginModal = () => {
         }}
       >
         관리자 로그인
+      </button>
+      <button
+        type="button"
+        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full transition-colors"
+        onClick={() => navigate("/vod-login")}
+      >
+        VOD 로그인
       </button>
     </motion.div>
   );

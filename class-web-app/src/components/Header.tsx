@@ -35,9 +35,9 @@ const Header = () => {
   return (
     <header className="fixed top-0 z-30 w-full bg-white/90 shadow-md backdrop-blur">
       <div className="flex h-16 items-center justify-between px-5">
-        <a href="/" className="text-lg font-semibold text-gray-800">
+        <span className="pointer-events-none text-lg font-semibold text-gray-800">
           엘리의방 클래스
-        </a>
+        </span>
         {isAdminAuthenticated ? (
           <button
             type="button"
