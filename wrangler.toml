@@ -5,15 +5,15 @@ compatibility_date = "2024-10-20"
 pages_build_output_dir = "./class-web-app/dist"
 
 # ✅ D1 Database 연결
-[[d1_databases]]
-binding = "DB"
-database_name = "elliesbang_class"
-database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "elliesbang_class"
+# database_id = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
 
 [vars]
 NODE_VERSION = "20"
-D1_DATABASE_ID = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
-DATABASE_NAME = "elliesbang_class"
-DB_NAME = "elliesbang_class"
+# D1_DATABASE_ID = "2a518bb3-9a4f-437e-a740-79a6ae96ead5"
+# DATABASE_NAME = "elliesbang_class"
+# DB_NAME = "elliesbang_class"
 VITE_API_BASE_URL = "/api"
 VITE_APP_ENV = "production"

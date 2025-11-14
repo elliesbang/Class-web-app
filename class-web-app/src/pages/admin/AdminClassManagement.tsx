@@ -1,5 +1,4 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
-import { fetchCategories } from '../../lib/api';
 import type { AssignmentUploadTimeOption, ClassFormPayload, ClassInfo } from '../../lib/api';
 import { useAdminClasses } from './data/AdminClassContext';
 
@@ -100,10 +99,6 @@ const AdminClassManagement = () => {
     classes,
     isLoading: isClassListLoading,
     error,
-    refresh,
-    createClass,
-    updateClass,
-    deleteClass,
   } = useAdminClasses();
   const [filters, setFilters] = useState({ name: '', code: '', category: '전체' });
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -140,38 +135,39 @@ const AdminClassManagement = () => {
     let isMounted = true;
 
     const loadCategories = async () => {
-      setIsCategoryLoading(true);
+      if (!isMounted) {
+        return;
+      }
+
+      setIsCategoryLoading(false);
+      setCategoryOptions([]);
       setCategoryError(null);
 
-      try {
-        const payload = await fetchCategories({ signal: controller.signal });
-
-        if (!isMounted) {
-          return;
-        }
-
-        const names = toUniqueCategoryNames(payload);
-        setCategoryOptions(names);
-        setCategoryError(names.length === 0 ? '카테고리 불러오기 실패' : null);
-      } catch (caught) {
-        if (!isMounted) {
-          return;
-        }
-
-        const errorLike = caught as { name?: string } | null;
-        if (errorLike?.name === 'AbortError') {
-          return;
-        }
-
-        console.error('[admin-class] failed to load categories', caught);
-        setCategoryOptions([]);
-        setCategoryError('카테고리 불러오기 실패');
-      } finally {
-        if (!isMounted) {
-          return;
-        }
-        setIsCategoryLoading(false);
-      }
+      // try {
+      //   const payload = await fetchCategories({ signal: controller.signal });
+      //   if (!isMounted) {
+      //     return;
+      //   }
+      //   const names = toUniqueCategoryNames(payload);
+      //   setCategoryOptions(names);
+      //   setCategoryError(names.length === 0 ? '카테고리 불러오기 실패' : null);
+      // } catch (caught) {
+      //   if (!isMounted) {
+      //     return;
+      //   }
+      //   const errorLike = caught as { name?: string } | null;
+      //   if (errorLike?.name === 'AbortError') {
+      //     return;
+      //   }
+      //   console.error('[admin-class] failed to load categories', caught);
+      //   setCategoryOptions([]);
+      //   setCategoryError('카테고리 불러오기 실패');
+      // } finally {
+      //   if (!isMounted) {
+      //     return;
+      //   }
+      //   setIsCategoryLoading(false);
+      // }
     };
 
     void loadCategories();
@@ -331,28 +327,30 @@ const AdminClassManagement = () => {
     setFormError(null);
 
     try {
-      const payload = buildPayload();
-      const result = editingClass
-        ? await updateClass(editingClass.id, payload)
-        : await createClass(payload);
+      void buildPayload();
+      void editingClass;
+      // const result = editingClass
+      //   ? await updateClass(editingClass.id, payload)
+      //   : await createClass(payload);
 
-      if (result.success) {
-        const successMessage = '저장 완료';
-        setFeedbackMessage(successMessage);
-        alert(successMessage);
-        closeModal();
-        resetForm();
-      } else {
-        const message = result.message ?? '수업 정보를 저장하지 못했습니다.';
-        console.error('[admin-class] failed to save class', message);
-        setFormError(message);
-        alert(message);
-      }
+      // if (result.success) {
+      //   const successMessage = '저장 완료';
+      //   setFeedbackMessage(successMessage);
+      //   alert(successMessage);
+      //   closeModal();
+      //   resetForm();
+      // } else {
+      //   const message = result.message ?? '수업 정보를 저장하지 못했습니다.';
+      //   console.error('[admin-class] failed to save class', message);
+      //   setFormError(message);
+      //   alert(message);
+      // }
     } catch (caught) {
-      console.error('[admin-class] failed to save class', caught);
-      const message = caught instanceof Error ? caught.message : '수업 정보를 저장하지 못했습니다.';
-      setFormError(message);
-      alert(message);
+      void caught;
+      // console.error('[admin-class] failed to save class', caught);
+      // const message = caught instanceof Error ? caught.message : '수업 정보를 저장하지 못했습니다.';
+      // setFormError(message);
+      // alert(message);
     } finally {
       setIsSaving(false);
       setIsLoading(false);
@@ -361,11 +359,7 @@ const AdminClassManagement = () => {
 
   const handleRefresh = async () => {
     setFeedbackMessage(null);
-    try {
-      await refresh();
-    } catch (caught) {
-      console.error('[admin-class] failed to refresh class list', caught);
-    }
+    // await refresh();
   };
 
   const handleDelete = async () => {
@@ -376,20 +370,21 @@ const AdminClassManagement = () => {
     setIsDeleting(true);
     setIsLoading(true);
     try {
-      const result = await deleteClass(deleteTarget.id);
-
-      if (result.success) {
-        setFeedbackMessage(result.message ?? '수업이 삭제되었습니다.');
-        setDeleteTarget(null);
-      } else {
-        const message = result.message ?? '수업 삭제에 실패했습니다. 다시 시도해주세요.';
-        console.error('[admin-class] failed to delete class', message);
-        alert(message);
-      }
+      void deleteTarget;
+      // const result = await deleteClass(deleteTarget.id);
+      // if (result.success) {
+      //   setFeedbackMessage(result.message ?? '수업이 삭제되었습니다.');
+      //   setDeleteTarget(null);
+      // } else {
+      //   const message = result.message ?? '수업 삭제에 실패했습니다. 다시 시도해주세요.';
+      //   console.error('[admin-class] failed to delete class', message);
+      //   alert(message);
+      // }
     } catch (caught) {
-      console.error('[admin-class] failed to delete class', caught);
-      const message = caught instanceof Error ? caught.message : '수업 삭제에 실패했습니다. 다시 시도해주세요.';
-      alert(message);
+      void caught;
+      // console.error('[admin-class] failed to delete class', caught);
+      // const message = caught instanceof Error ? caught.message : '수업 삭제에 실패했습니다. 다시 시도해주세요.';
+      // alert(message);
     } finally {
       setIsDeleting(false);
       setIsLoading(false);
@@ -563,7 +558,7 @@ const formatDateTime = (value: string | null | undefined) => {
         {categoryError && !isCategoryLoading && (
           <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{categoryError}</p>
         )}
-        {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{error}</p>}
+        {/* 데이터 오류 안내 비활성화 */}
       </section>
 
       <section className="rounded-2xl bg-white p-6 shadow-md">

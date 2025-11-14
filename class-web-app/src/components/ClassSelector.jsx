@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { apiFetch } from "../utils/apiClient";
 
 const normaliseCategoryItem = (item) => {
   if (item == null) {
@@ -97,41 +96,48 @@ export default function ClassSelector() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    async function fetchCategories() {
-      setLoading((prev) => ({ ...prev, categories: true }));
-      try {
-        const payload = await apiFetch("/api/categories");
-        const nextCategories = extractArrayPayload(payload)
-          .map((item) => normaliseCategoryItem(item))
-          .filter((item) => item !== null);
-        setCategories(nextCategories);
-      } catch (err) {
-        console.error("Error fetching categories:", err);
-        setError("카테고리 정보를 불러오지 못했습니다.");
-      } finally {
-        setLoading((prev) => ({ ...prev, categories: false }));
-      }
-    }
+    setCategories([]);
+    setLoading((prev) => ({ ...prev, categories: false }));
+    setError(null);
 
-    fetchCategories();
+    // async function fetchCategories() {
+    //   setLoading((prev) => ({ ...prev, categories: true }));
+    //   try {
+    //     const payload = await apiFetch("/api/categories");
+    //     const nextCategories = extractArrayPayload(payload)
+    //       .map((item) => normaliseCategoryItem(item))
+    //       .filter((item) => item !== null);
+    //     setCategories(nextCategories);
+    //   } catch (err) {
+    //     console.error("Error fetching categories:", err);
+    //     setError("카테고리 정보를 불러오지 못했습니다.");
+    //   } finally {
+    //     setLoading((prev) => ({ ...prev, categories: false }));
+    //   }
+    // }
+
+    // fetchCategories();
   }, []);
 
   useEffect(() => {
-    async function fetchClasses() {
-      setLoading((prev) => ({ ...prev, classes: true }));
-      try {
-        const payload = await apiFetch("/api/classes");
-        const nextClasses = extractArrayPayload(payload);
-        setClasses(nextClasses);
-      } catch (err) {
-        console.error("Error fetching classes:", err);
-        setError("클래스 정보를 불러오지 못했습니다.");
-      } finally {
-        setLoading((prev) => ({ ...prev, classes: false }));
-      }
-    }
+    setClasses([]);
+    setLoading((prev) => ({ ...prev, classes: false }));
 
-    fetchClasses();
+    // async function fetchClasses() {
+    //   setLoading((prev) => ({ ...prev, classes: true }));
+    //   try {
+    //     const payload = await apiFetch("/api/classes");
+    //     const nextClasses = extractArrayPayload(payload);
+    //     setClasses(nextClasses);
+    //   } catch (err) {
+    //     console.error("Error fetching classes:", err);
+    //     setError("클래스 정보를 불러오지 못했습니다.");
+    //   } finally {
+    //     setLoading((prev) => ({ ...prev, classes: false }));
+    //   }
+    // }
+
+    // fetchClasses();
   }, []);
 
   useEffect(() => {
@@ -161,7 +167,7 @@ export default function ClassSelector() {
         <p>카테고리를 선택하면 해당 클래스 목록이 자동으로 표시됩니다.</p>
       </header>
 
-      {error && <p className="class-selector__error">{error}</p>}
+      {/* 데이터 오류 안내 비활성화 */}
 
       <div className="class-selector__controls">
         <label htmlFor="category-select">카테고리</label>

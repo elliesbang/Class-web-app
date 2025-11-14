@@ -39,68 +39,66 @@ function ClassroomTabs({ courseId, courseName, className = '' }) {
   }, [courseId]);
 
   useEffect(() => {
-    let cancelled = false;
+    setContents([]);
+    setIsLoadingContents(false);
+    setContentError(null);
 
-    const loadContents = async () => {
-      if (!courseId) {
-        setContents([]);
-        setContentError('강의 정보를 불러오지 못했습니다.');
-        return;
-      }
+    // const loadContents = async () => {
+    //   if (!courseId) {
+    //     setContents([]);
+    //     setContentError('강의 정보를 불러오지 못했습니다.');
+    //     return;
+    //   }
+    //
+    //   setIsLoadingContents(true);
+    //   setContentError(null);
+    //
+    //   try {
+    //     const query = new URLSearchParams({ class_id: String(courseId) });
+    //     const response = await fetch(`/api/students/contents?${query.toString()}`);
+    //     if (!response.ok) {
+    //       throw new Error(`Failed to fetch contents. status=${response.status}`);
+    //     }
+    //
+    //     const text = await response.text();
+    //     if (cancelled) {
+    //       return;
+    //     }
+    //
+    //     if (!text) {
+    //       setContents([]);
+    //       return;
+    //     }
+    //
+    //     try {
+    //       const payload = JSON.parse(text);
+    //       const data = Array.isArray(payload?.data)
+    //         ? payload.data
+    //         : Array.isArray(payload?.results)
+    //         ? payload.results
+    //         : Array.isArray(payload?.contents)
+    //         ? payload.contents
+    //         : [];
+    //       setContents(data);
+    //     } catch (error) {
+    //       console.error('[ClassroomTabs] Failed to parse contents response', error);
+    //       setContentError('콘텐츠 정보를 불러오는 중 문제가 발생했습니다.');
+    //       setContents([]);
+    //     }
+    //   } catch (error) {
+    //     if (!cancelled) {
+    //       console.error('[ClassroomTabs] Failed to load contents', error);
+    //       setContentError('콘텐츠 정보를 불러오는 중 문제가 발생했습니다.');
+    //       setContents([]);
+    //     }
+    //   } finally {
+    //     if (!cancelled) {
+    //       setIsLoadingContents(false);
+    //     }
+    //   }
+    // };
 
-      setIsLoadingContents(true);
-      setContentError(null);
-
-      try {
-        const query = new URLSearchParams({ class_id: String(courseId) });
-        const response = await fetch(`/api/students/contents?${query.toString()}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch contents. status=${response.status}`);
-        }
-
-        const text = await response.text();
-        if (cancelled) {
-          return;
-        }
-
-        if (!text) {
-          setContents([]);
-          return;
-        }
-
-        try {
-          const payload = JSON.parse(text);
-          const data = Array.isArray(payload?.data)
-            ? payload.data
-            : Array.isArray(payload?.results)
-            ? payload.results
-            : Array.isArray(payload?.contents)
-            ? payload.contents
-            : [];
-          setContents(data);
-        } catch (error) {
-          console.error('[ClassroomTabs] Failed to parse contents response', error);
-          setContentError('콘텐츠 정보를 불러오는 중 문제가 발생했습니다.');
-          setContents([]);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error('[ClassroomTabs] Failed to load contents', error);
-          setContentError('콘텐츠 정보를 불러오는 중 문제가 발생했습니다.');
-          setContents([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingContents(false);
-        }
-      }
-    };
-
-    void loadContents();
-
-    return () => {
-      cancelled = true;
-    };
+    // void loadContents();
   }, [courseId]);
 
   const containerClassName = `space-y-4 ${className}`.trim();

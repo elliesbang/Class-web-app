@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { getClasses } from '../lib/api';
 import { hasCourseAccess, subscribeCourseAccessChanges } from '../lib/course-access';
 
 const formatDate = (value) => {
@@ -80,33 +79,10 @@ function MyPage() {
         return;
       }
 
-      setIsLoading(true);
+      setIsLoading(false);
       setError(null);
-
-      try {
-        const classes = await getClasses();
-
-        if (signal?.aborted) {
-          return;
-        }
-
-        setAllClasses(classes);
-        updateVisibleClasses(classes);
-      } catch (caught) {
-        if (signal?.aborted) {
-          return;
-        }
-
-        const message =
-          caught instanceof Error ? caught.message : '강의 목록을 불러오지 못했습니다.';
-        setError(message);
-        setAllClasses([]);
-        updateVisibleClasses([]);
-      } finally {
-        if (!signal?.aborted) {
-          setIsLoading(false);
-        }
-      }
+      setAllClasses([]);
+      updateVisibleClasses([]);
     },
     [updateVisibleClasses],
   );
@@ -114,11 +90,8 @@ function MyPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchClasses(controller.signal).catch((caught) => {
-      if (controller.signal.aborted) {
-        return;
-      }
-      console.error('[MyPage] 강의 불러오기 실패', caught);
+    fetchClasses(controller.signal).catch(() => {
+      // 데이터 로딩 비활성화
     });
 
     return () => {
@@ -133,8 +106,8 @@ function MyPage() {
   }, [allClasses, updateVisibleClasses]);
 
   const handleRetry = () => {
-    fetchClasses().catch((caught) => {
-      console.error('[MyPage] 강의 재요청 실패', caught);
+    fetchClasses().catch(() => {
+      // 데이터 로딩 비활성화
     });
   };
 
@@ -161,24 +134,12 @@ function MyPage() {
           ) : null}
         </div>
 
-        {isLoading ? (
-          <p className="mt-4 text-sm text-ellieGray/70">강의 정보를 불러오는 중입니다...</p>
-        ) : error ? (
-          <div className="mt-4 space-y-3">
-            <p className="text-sm text-red-500">{error}</p>
-            <button
-              type="button"
-              onClick={handleRetry}
-              className="rounded-full border border-ellieGray/20 px-4 py-2 text-xs font-semibold text-ellieGray transition-colors hover:bg-ellieGray/5"
-            >
-              다시 시도하기
-            </button>
-          </div>
-        ) : visibleClasses.length === 0 ? (
+        {/* 데이터 로딩 및 오류 안내 비활성화 */}
+        {!isLoading && !error ? (
           <p className="mt-4 text-sm text-ellieGray/70">
             아직 접근 가능한 강의가 없습니다. 수강 중인 클래스가 보이지 않는다면 관리자에게 문의해 주세요.
           </p>
-        ) : (
+        ) : !isLoading && error ? null : (
           <ul className="mt-4 space-y-3 text-sm text-ellieGray/80">
             {visibleClasses.map((course) => {
               const periodLabel = formatDateRange(course.startDate, course.endDate);

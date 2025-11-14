@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { getNotices } from '../lib/api';
 
 const formatDisplayDate = (value) => {
   if (!value) {
@@ -34,31 +33,9 @@ function Notices() {
         return;
       }
 
-      setIsLoading(true);
+      setIsLoading(false);
       setError(null);
-
-      try {
-        const fetched = await getNotices();
-
-        if (signal?.aborted) {
-          return;
-        }
-
-        setNotices(fetched);
-      } catch (caught) {
-        if (signal?.aborted) {
-          return;
-        }
-
-        const message =
-          caught instanceof Error ? caught.message : '공지사항을 불러오지 못했습니다.';
-        setError(message);
-        setNotices([]);
-      } finally {
-        if (!signal?.aborted) {
-          setIsLoading(false);
-        }
-      }
+      setNotices([]);
     },
     [],
   );
@@ -66,11 +43,8 @@ function Notices() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchNotices(controller.signal).catch((caught) => {
-      if (controller.signal.aborted) {
-        return;
-      }
-      console.error('[Notices] 초기 공지 불러오기 실패', caught);
+    fetchNotices(controller.signal).catch(() => {
+      // 데이터 로딩 비활성화
     });
 
     return () => {
@@ -79,8 +53,8 @@ function Notices() {
   }, [fetchNotices]);
 
   const handleRetry = () => {
-    fetchNotices().catch((caught) => {
-      console.error('[Notices] 공지 재시도 실패', caught);
+    fetchNotices().catch(() => {
+      // 데이터 로딩 비활성화
     });
   };
 
@@ -93,22 +67,8 @@ function Notices() {
         </p>
       </header>
       <section className="space-y-4">
-        {isLoading ? (
-          <article className="rounded-3xl bg-white p-5 shadow-soft">
-            <p className="text-sm text-ellieGray/70">공지사항을 불러오는 중입니다...</p>
-          </article>
-        ) : error ? (
-          <article className="rounded-3xl bg-white p-5 shadow-soft">
-            <p className="text-sm text-red-500">{error}</p>
-            <button
-              type="button"
-              onClick={handleRetry}
-              className="mt-3 rounded-full border border-ellieGray/20 px-4 py-2 text-xs font-semibold text-ellieGray transition-colors hover:bg-ellieGray/5"
-            >
-              다시 시도하기
-            </button>
-          </article>
-        ) : notices.length === 0 ? (
+        {/* 데이터 로딩 및 오류 안내 비활성화 */}
+        {notices.length === 0 ? (
           <article className="rounded-3xl bg-white p-5 shadow-soft">
             <p className="text-sm text-ellieGray/70">등록된 공지가 없습니다.</p>
           </article>

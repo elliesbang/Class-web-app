@@ -101,48 +101,38 @@ function UploadTab({ courseId, courseName }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!courseId) {
-      setAssignments([]);
-      setError('강의 정보를 불러오지 못했습니다.');
-      return;
-    }
+    setAssignments([]);
+    setIsLoading(false);
+    setError(null);
 
-    let cancelled = false;
-
-    const fetchAssignments = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const query = new URLSearchParams({ classId: String(courseId) });
-        const response = await fetch(`/api/assignments?${query.toString()}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch assignments. status=${response.status}`);
-        }
-
-        const payload = await parseJsonResponse(response, 'UploadTab');
-        if (cancelled) {
-          return;
-        }
-        setAssignments(normaliseItems(payload));
-      } catch (fetchError) {
-        console.error('[UploadTab] Failed to load assignments', fetchError);
-        if (!cancelled) {
-          setError('과제 정보를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
-          setAssignments([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void fetchAssignments();
-
-    return () => {
-      cancelled = true;
-    };
+    // const fetchAssignments = async () => {
+    //   setIsLoading(true);
+    //   setError(null);
+    //
+    //   try {
+    //     const query = new URLSearchParams({ classId: String(courseId) });
+    //     const response = await fetch(`/api/assignments?${query.toString()}`);
+    //     if (!response.ok) {
+    //       throw new Error(`Failed to fetch assignments. status=${response.status}`);
+    //     }
+    //
+    //     const payload = await parseJsonResponse(response, 'UploadTab');
+    //     if (cancelled) {
+    //       return;
+    //     }
+    //     setAssignments(normaliseItems(payload));
+    //   } catch (fetchError) {
+    //     console.error('[UploadTab] Failed to load assignments', fetchError);
+    //     if (!cancelled) {
+    //       setError('과제 정보를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    //       setAssignments([]);
+    //     }
+    //   } finally {
+    //     if (!cancelled) {
+    //       setIsLoading(false);
+    //     }
+    //   }
+    // };
   }, [courseId]);
 
   const headerDescription = useMemo(() => {
@@ -159,15 +149,7 @@ function UploadTab({ courseId, courseName }) {
         <p className="text-sm leading-relaxed text-ellieGray/80">{headerDescription}</p>
       </header>
 
-      {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600 shadow-soft">{error}</p>
-      ) : null}
-
-      {isLoading ? (
-        <p className="rounded-2xl bg-white/70 px-4 py-3 text-center text-sm text-ellieGray/70 shadow-soft">
-          과제 정보를 불러오는 중입니다…
-        </p>
-      ) : null}
+      {/* 데이터 오류 및 로딩 상태 표시 비활성화 */}
 
       {!isLoading && !error ? (
         assignments.length > 0 ? (

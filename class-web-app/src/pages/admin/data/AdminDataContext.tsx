@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { getAssignments, type AssignmentListItem } from '../../../lib/api';
+import { type AssignmentListItem } from '../../../lib/api';
 
 export type AssignmentStatus = '미제출' | '제출됨' | '피드백 완료';
 export type AssignmentFileType = 'image' | 'pdf' | 'link' | 'other';
@@ -103,15 +103,18 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     let ignore = false;
 
     const fetchAssignments = async () => {
-      try {
-        const items = await getAssignments();
-        if (ignore) return;
+      if (ignore) return;
+      setAssignments(initialAssignments);
 
-        const normalised = items.map(normaliseAssignment);
-        setAssignments(normalised);
-      } catch (error) {
-        console.error('과제 목록을 불러오지 못했습니다.', error);
-      }
+      // try {
+      //   const items = await getAssignments();
+      //   if (ignore) return;
+      //
+      //   const normalised = items.map(normaliseAssignment);
+      //   setAssignments(normalised);
+      // } catch (error) {
+      //   console.error('과제 목록을 불러오지 못했습니다.', error);
+      // }
     };
 
     fetchAssignments();

@@ -75,48 +75,38 @@ function FeedbackTab({ courseId, courseName }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!courseId) {
-      setFeedbackItems([]);
-      setError('강의 정보를 불러오지 못했습니다.');
-      return;
-    }
+    setFeedbackItems([]);
+    setIsLoading(false);
+    setError(null);
 
-    let cancelled = false;
-
-    const fetchFeedback = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const query = new URLSearchParams({ classId: String(courseId) });
-        const response = await fetch(`/api/feedback?${query.toString()}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch feedback. status=${response.status}`);
-        }
-
-        const payload = await parseJsonResponse(response, 'FeedbackTab');
-        if (cancelled) {
-          return;
-        }
-        setFeedbackItems(normaliseItems(payload));
-      } catch (fetchError) {
-        console.error('[FeedbackTab] Failed to load feedback', fetchError);
-        if (!cancelled) {
-          setError('피드백 정보를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
-          setFeedbackItems([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void fetchFeedback();
-
-    return () => {
-      cancelled = true;
-    };
+    // const fetchFeedback = async () => {
+    //   setIsLoading(true);
+    //   setError(null);
+    //
+    //   try {
+    //     const query = new URLSearchParams({ classId: String(courseId) });
+    //     const response = await fetch(`/api/feedback?${query.toString()}`);
+    //     if (!response.ok) {
+    //       throw new Error(`Failed to fetch feedback. status=${response.status}`);
+    //     }
+    //
+    //     const payload = await parseJsonResponse(response, 'FeedbackTab');
+    //     if (cancelled) {
+    //       return;
+    //     }
+    //     setFeedbackItems(normaliseItems(payload));
+    //   } catch (fetchError) {
+    //     console.error('[FeedbackTab] Failed to load feedback', fetchError);
+    //     if (!cancelled) {
+    //       setError('피드백 정보를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    //       setFeedbackItems([]);
+    //     }
+    //   } finally {
+    //     if (!cancelled) {
+    //       setIsLoading(false);
+    //     }
+    //   }
+    // };
   }, [courseId]);
 
   const headerDescription = useMemo(() => {
@@ -133,15 +123,7 @@ function FeedbackTab({ courseId, courseName }) {
         <p className="text-sm leading-relaxed text-ellieGray/80">{headerDescription}</p>
       </header>
 
-      {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600 shadow-soft">{error}</p>
-      ) : null}
-
-      {isLoading ? (
-        <p className="rounded-2xl bg-white/70 px-4 py-3 text-center text-sm text-ellieGray/70 shadow-soft">
-          피드백을 불러오는 중입니다…
-        </p>
-      ) : null}
+      {/* 데이터 오류 및 로딩 상태 표시 비활성화 */}
 
       {!isLoading && !error ? (
         feedbackItems.length > 0 ? (
