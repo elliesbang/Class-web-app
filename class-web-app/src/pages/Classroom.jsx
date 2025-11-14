@@ -57,10 +57,10 @@ function Classroom() {
                     <ClassroomPreviewCard key={course} courseName={course} />
                   ))}
                 </div>
-              </div>
-            </section>
-          );
-        })}
+              </article>
+            );
+          })}
+        </section>
       </div>
     </div>
   );
