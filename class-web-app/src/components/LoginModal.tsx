@@ -22,21 +22,18 @@ const panelVariants = {
   exit: { opacity: 0, y: 20, transition: { duration: 0.2, ease: "easeIn" } }
 };
 
-type ActiveForm = "buttons" | "student" | "admin";
+type ActiveForm = "buttons" | "student" | "admin" | "vod";  // ✅ vod 추가
 
-const LoginModal = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const LoginModal = ({ onClose }: { onClose: () => void }) => {
   const [activeForm, setActiveForm] = useState<ActiveForm>("buttons");
   const navigate = useNavigate();
 
   const closeModal = useCallback(() => {
-    setIsOpen(false);
+    onClose();
     setActiveForm("buttons");
-  }, []);
+  }, [onClose]);
 
   useEffect(() => {
-    if (!isOpen) return;
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeModal();
@@ -45,7 +42,7 @@ const LoginModal = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [closeModal, isOpen]);
+  }, [closeModal]);
 
   const renderButtons = () => (
     <motion.div
@@ -58,26 +55,26 @@ const LoginModal = () => {
     >
       <button
         type="button"
-        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 mt-4 w-full transition-colors"
+        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 mt-4 w-full"
         onClick={() => setActiveForm("student")}
       >
-        수강생 로그인
+        수강생   {/* 🔥 로그인 텍스트 제거 */}
       </button>
+
       <button
         type="button"
-        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full transition-colors"
-        onClick={() => {
-          window.open("/admin", "_blank");
-        }}
+        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
+        onClick={() => setActiveForm("vod")}   // 🔥 VOD 버튼 제대로 표시
       >
-        관리자 로그인
+        VOD
       </button>
+
       <button
         type="button"
-        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full transition-colors"
-        onClick={() => navigate("/vod-login")}
+        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
+        onClick={() => setActiveForm("admin")}
       >
-        VOD 로그인
+        관리자
       </button>
     </motion.div>
   );
@@ -93,38 +90,37 @@ const LoginModal = () => {
   );
 
   const renderStudentForm = () => (
-    <motion.div
-      key="student-form"
-      variants={panelVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      className="relative"
+    <motion.div key="student-form" variants={panelVariants}
+      initial="hidden" animate="visible" exit="exit" className="relative"
     >
       {renderBackButton()}
       <div className="mt-6">
-        <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="student-name">
-          이름
-        </label>
-        <input
-          id="student-name"
-          type="text"
-          className="border border-gray-300 rounded-md w-full p-2 mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-          placeholder="이름을 입력하세요"
-        />
-        <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="student-email">
-          이메일
-        </label>
-        <input
-          id="student-email"
-          type="email"
-          className="border border-gray-300 rounded-md w-full p-2 mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-          placeholder="이메일을 입력하세요"
-        />
-        <button
-          type="button"
-          className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full transition-colors"
-        >
+        <label className="block text-sm font-medium mb-1">이름</label>
+        <input className="border rounded-md w-full p-2 mb-3" />
+
+        <label className="block text-sm font-medium mb-1">이메일</label>
+        <input className="border rounded-md w-full p-2 mb-3" />
+
+        <button className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full">
+          로그인
+        </button>
+      </div>
+    </motion.div>
+  );
+
+  const renderVodForm = () => (
+    <motion.div key="vod-form" variants={panelVariants}
+      initial="hidden" animate="visible" exit="exit" className="relative"
+    >
+      {renderBackButton()}
+      <div className="mt-6">
+        <label className="block text-sm font-medium mb-1">이름</label>
+        <input className="border rounded-md w-full p-2 mb-3" />
+
+        <label className="block text-sm font-medium mb-1">이메일</label>
+        <input className="border rounded-md w-full p-2 mb-3" />
+
+        <button className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full">
           로그인
         </button>
       </div>
@@ -132,29 +128,16 @@ const LoginModal = () => {
   );
 
   const renderAdminForm = () => (
-    <motion.div
-      key="admin-form"
-      variants={panelVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
+    <motion.div key="admin-form"
+      variants={panelVariants} initial="hidden" animate="visible" exit="exit"
       className="relative"
     >
       {renderBackButton()}
       <div className="mt-6">
-        <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="admin-password">
-          관리자 비밀번호
-        </label>
-        <input
-          id="admin-password"
-          type="password"
-          className="border border-gray-300 rounded-md w-full p-2 mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-          placeholder="비밀번호를 입력하세요"
-        />
-        <button
-          type="button"
-          className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full transition-colors"
-        >
+        <label className="block font-medium mb-1">관리자 비밀번호</label>
+        <input type="password" className="border rounded-md w-full p-2 mb-3" />
+
+        <button className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full">
           로그인
         </button>
       </div>
@@ -162,48 +145,26 @@ const LoginModal = () => {
   );
 
   return (
-    <div className="relative">
-      <nav className="flex justify-end p-4">
-        <button
-          type="button"
-          className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 px-6 transition-colors"
-          onClick={() => setIsOpen(true)}
-        >
-          로그인
-        </button>
-      </nav>
+    <motion.div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={closeModal}
+    >
+      <motion.div className="bg-white rounded-2xl shadow-xl p-6 w-[400px]"
+        variants={modalVariants} initial="hidden" animate="visible" exit="exit"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-semibold">로그인</h2>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closeModal}
-          >
-            <motion.div
-              className="relative bg-white rounded-2xl shadow-xl p-6 w-[400px]"
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <h2 className="text-xl font-semibold text-gray-900">로그인</h2>
-
-              <div className="mt-4 min-h-[220px]">
-                <AnimatePresence mode="wait">
-                  {activeForm === "buttons" && renderButtons()}
-                  {activeForm === "student" && renderStudentForm()}
-                  {activeForm === "admin" && renderAdminForm()}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+        <div className="mt-4 min-h-[220px]">
+          <AnimatePresence mode="wait">
+            {activeForm === "buttons" && renderButtons()}
+            {activeForm === "student" && renderStudentForm()}
+            {activeForm === "vod" && renderVodForm()}
+            {activeForm === "admin" && renderAdminForm()}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
