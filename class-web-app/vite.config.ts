@@ -10,10 +10,9 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../dist',
+    outDir: 'dist', // ✅ Cloudflare가 읽을 수 있는 경로
     emptyOutDir: true,
 
-    // 🔥 HERE: Add hashed filenames so Cloudflare re-uploads them
     rollupOptions: {
       output: {
         entryFileNames: `assets/[name].[hash].js`,
