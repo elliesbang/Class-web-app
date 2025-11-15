@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { emitAdminAuthChange } from '../lib/auth';
+import { emitAdminAuthChange } from '../../lib/auth';
 
 type LoginMode = 'student' | 'admin';
 

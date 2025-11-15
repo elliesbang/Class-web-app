@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { hasCourseAccess, subscribeCourseAccessChanges } from '../lib/course-access';
+import { hasCourseAccess, subscribeCourseAccessChanges } from '../../lib/course-access';
 
 const formatDate = (value: any) => {
   if (!value) {

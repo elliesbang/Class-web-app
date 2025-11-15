@@ -1,5 +1,5 @@
 import React from 'react';
-import AccordionCategory from '../components/AccordionCategory';
+import AccordionCategory from '../../components/AccordionCategory';
 
 const categories = [
   {

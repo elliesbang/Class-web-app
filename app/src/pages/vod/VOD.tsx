@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 
-import { getVodVideosByCategory, vodCategories } from '../lib/contentLibrary';
+import { getVodVideosByCategory, vodCategories } from '../../lib/contentLibrary';
 
 function VOD() {
   const [activeCategoryId, setActiveCategoryId] = useState<string>(vodCategories[0]?.id ?? '');
