@@ -11,10 +11,11 @@ import AdminAssignmentsManagement from './pages/admin/AdminAssignmentsManagement
 import AdminFeedbackManagement from './pages/admin/AdminFeedbackManagement';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminStatistics from './pages/admin/AdminStatistics';
+import AdminMyPage from './pages/admin/AdminMyPage.jsx';
 import Home from './pages/home/Home';
 import Classroom from './pages/classroom/Classroom';
 import Michina from './pages/classroom/Michina';
-import MyPage from './pages/mypage/MyPage';
+import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/admin/Notices';
 import VOD from './pages/vod/VOD';
 import ClassDetailPage from './pages/class/[id].tsx';
@@ -28,8 +29,11 @@ function App() {
         <Route path="/internal" element={<Classroom />} />
         <Route path="/vod" element={<VOD />} />
         <Route path="/notices" element={<Notices />} />
+        <Route path="/my" element={<MyPage />} />
         <Route path="/mypage" element={<MyPage />} />
+        <Route path="/admin/my" element={<AdminMyPage />} />
         <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/login" element={<AdminLogin />} />
         <Route path="/internal/michina" element={<Michina />} />
         <Route path="/class/:id" element={<ClassDetailPage />} />
       </Route>

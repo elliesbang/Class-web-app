@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import AdminMyPage from './Admin/MyPage.jsx';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AdminMyPage from './admin/AdminMyPage.jsx';
 import StudentMyPage from './Student/MyPage.jsx';
 import VodMyPage from './Vod/MyPage.jsx';
 
@@ -9,58 +10,74 @@ const ROLE_COMPONENTS = {
   vod: VodMyPage,
 };
 
-function resolveRoleFromStorage() {
-  if (typeof window === 'undefined') {
+function normaliseRole(role) {
+  if (!role) {
     return null;
   }
 
-  try {
-    const storedRole = localStorage.getItem('userRole');
-    if (storedRole) {
-      return storedRole;
-    }
-
-    const rawUser = localStorage.getItem('user');
-    if (rawUser) {
-      const parsed = JSON.parse(rawUser);
-      if (parsed?.role) {
-        return parsed.role;
-      }
-    }
-  } catch (error) {
-    console.warn('[MyPage] failed to read role from storage', error);
-  }
-
-  return null;
+  return role.toString().toLowerCase();
 }
 
-export default function MyPage() {
-  const [role, setRole] = useState(null);
+const MyPage = () => {
+  const navigate = useNavigate();
+  const [state, setState] = useState({ ready: false, role: null });
 
   useEffect(() => {
-    setRole(resolveRoleFromStorage());
-  }, []);
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
 
-  const RoleComponent = useMemo(() => {
-    if (!role) {
+    let isMounted = true;
+
+    const evaluate = () => {
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const storedRole = normaliseRole(localStorage.getItem('role'));
+
+      if (!storedRole) {
+        navigate('/login');
+        return;
+      }
+
+      if (!ROLE_COMPONENTS[storedRole]) {
+        navigate('/login');
+        return;
+      }
+
+      if (isMounted) {
+        setState({ ready: true, role: storedRole });
+      }
+    };
+
+    evaluate();
+    window.addEventListener('storage', evaluate);
+    window.addEventListener('auth-change', evaluate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('storage', evaluate);
+      window.removeEventListener('auth-change', evaluate);
+    };
+  }, [navigate]);
+
+  const Component = useMemo(() => {
+    if (!state.ready || !state.role) {
       return null;
     }
 
-    return ROLE_COMPONENTS[role?.toLowerCase()] ?? null;
-  }, [role]);
+    return ROLE_COMPONENTS[state.role] ?? null;
+  }, [state.ready, state.role]);
 
-  if (!role || !RoleComponent) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
-        <header className="rounded-3xl bg-white px-6 py-5 shadow-soft">
-          <h1 className="text-xl font-bold text-ellieGray">마이페이지</h1>
-          <p className="mt-2 text-sm text-ellieGray/70">
-            로그인 정보가 없습니다. 다시 로그인 후 이용해 주세요.
-          </p>
-        </header>
-      </div>
-    );
+  if (!state.ready || !Component) {
+    return null;
   }
 
-  return <RoleComponent />;
-}
+  return <Component />;
+};
+
+export default MyPage;
