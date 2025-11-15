@@ -1,4 +1,4 @@
-import DB from '../_db';
+import DB from '../utils/db';
 
 export async function onRequestPut(context) {
   const db = new DB(context.env.DB);

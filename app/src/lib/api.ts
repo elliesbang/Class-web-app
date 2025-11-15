@@ -1,4 +1,4 @@
-import { type ApiFetchOptions } from '../utils/apiClient';
+import { type ApiFetchOptions } from '../api/client';
 import type {
   ClassroomMaterialRecord,
   ClassroomNoticeRecord,

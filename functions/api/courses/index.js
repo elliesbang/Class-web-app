@@ -1,7 +1,7 @@
 // 🔄 Force Cloudflare Functions redeploy - 2025-10-29
 import { ensureBaseSchema } from "../../_utils/index.js";
 import { jsonResponse, errorResponse } from "../../utils.js";
-import { getDB } from "../../_db.js";
+import { getDB } from "../utils/db";
 
 /**
  * 코스 코드 검증 API

@@ -1,4 +1,4 @@
-import DB from '../_db';
+import DB from '../utils/db';
 
 const toTrimmedString = (value, fallback = '') => {
   if (value == null) {

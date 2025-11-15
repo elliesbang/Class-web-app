@@ -1,4 +1,4 @@
-import { getDB } from '../_db';
+import { getDB } from '../utils/db';
 
 const jsonResponse = (payload, status = 200) =>
   Response.json(payload, {

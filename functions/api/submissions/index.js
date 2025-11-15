@@ -1,4 +1,4 @@
-import { getDB } from "../_db";
+import { getDB } from "../utils/db";
 
 const jsonResponse = ({ success, data, status = 200, count }) => {
   const resolvedCount =

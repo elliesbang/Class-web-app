@@ -1,4 +1,7 @@
-import type { StudentAccountRow, VodAccountRow } from '../../api/notion/getStudents';
+import type {
+  StudentAccountRow,
+  VodAccountRow,
+} from '../../../../functions/api/notion/getStudents';
 
 type StudentTableProps = {
   type: 'student' | 'vod';

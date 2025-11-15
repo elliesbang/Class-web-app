@@ -1,6 +1,6 @@
 // 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
 import { rowsToCamelCase } from "../../_utils/index.js";
-import { getDB } from "../_db";
+import { getDB } from "../utils/db";
 
 /**
  * 💬 Feedback API - 수업별 과제 피드백 등록 / 조회
