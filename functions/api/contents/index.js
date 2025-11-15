@@ -32,6 +32,7 @@ function mapPageToContent(page) {
 
   return {
     id: page.id,
+    notion_id: page.id,
     class_id: getText(properties.class_id),
     type: getText(properties.type),
     title: getTitle(properties.title),
@@ -158,6 +159,7 @@ export async function onRequestPost(context) {
 
     const data = {
       id: page.id,
+      notion_id: page.id,
       class_id: class_id || '',
       type: type || '',
       title: title || '',
@@ -226,6 +228,7 @@ export async function onRequestPut(context) {
 
     const data = {
       id: page.id,
+      notion_id: page.id,
       class_id: class_id || '',
       type: type || '',
       title: title || '',
