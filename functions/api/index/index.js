@@ -1,5 +1,5 @@
 // 🔄 Force Cloudflare Functions redeploy - ${new Date().toISOString()}
-import { getDB } from "../_db";
+import { getDB } from "../utils/db";
 
 const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {

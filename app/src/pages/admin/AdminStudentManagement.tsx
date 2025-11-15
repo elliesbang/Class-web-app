@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import StudentTable from '../../components/admin/StudentTable';
-import { getStudents, getVODStudents } from '../../api/notion/getStudents';
-import type { StudentAccountRow, VodAccountRow } from '../../api/notion/getStudents';
+import {
+  getStudents,
+  getVODStudents,
+  type StudentAccountRow,
+  type VodAccountRow,
+} from '../../../../functions/api/notion/getStudents';
 
 type AccountType = 'student' | 'vod';
 
