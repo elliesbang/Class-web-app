@@ -5,11 +5,54 @@ import {
   jsonResponse,
   notionRequest,
 } from './_utils.ts';
+import { initDB } from '../_utils/index.js';
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const errorResponse = (error) => {
   const message = error instanceof Error ? error.message : String(error ?? '');
   console.error('[material] API error:', error);
   return jsonResponse({ success: false, error: message }, 500);
+};
+
+const getDb = async (env) => initDB(env);
+
+const listStoredMaterialPageIds = async (db) => {
+  const { results } = await db
+    .prepare('SELECT notion_page_id FROM material_pages ORDER BY created_at DESC')
+    .all();
+
+  if (!Array.isArray(results)) {
+    return [];
+  }
+
+  return results
+    .map((row) => (typeof row?.notion_page_id === 'string' ? row.notion_page_id : ''))
+    .filter((value) => value.length > 0);
+};
+
+const insertMaterialPage = async (db, pageId, courseId) => {
+  const createdAt = new Date().toISOString();
+  await db
+    .prepare(
+      `INSERT INTO material_pages (notion_page_id, course_id, created_at)
+       VALUES (?1, ?2, ?3)
+       ON CONFLICT(notion_page_id) DO UPDATE SET
+         course_id = excluded.course_id,
+         created_at = excluded.created_at`
+    )
+    .bind(pageId, courseId || null, createdAt)
+    .run();
+};
+
+const findMaterialPage = async (db, pageId) =>
+  db.prepare('SELECT id, notion_page_id FROM material_pages WHERE notion_page_id = ?1')
+    .bind(pageId)
+    .first();
+
+const deleteMaterialPage = async (db, internalId) => {
+  await db.prepare('DELETE FROM material_pages WHERE id = ?1').bind(internalId).run();
 };
 
 const getNotionDatabaseId = (env) => {
@@ -81,12 +124,13 @@ const getPageIdFromRequest = async (request) => {
   const url = new URL(request.url);
   const searchId = url.searchParams.get('id') || url.searchParams.get('page_id');
   if (searchId) {
-    return searchId;
+    return searchId.trim();
   }
 
   try {
     const body = await request.clone().json();
-    return body?.id || body?.pageId || body?.notion_id || null;
+    const value = body?.id || body?.pageId || body?.notion_id || null;
+    return typeof value === 'string' ? value.trim() : null;
   } catch (error) {
     return null;
   }
@@ -94,6 +138,13 @@ const getPageIdFromRequest = async (request) => {
 
 export async function onRequestGet(context) {
   try {
+    const db = await getDb(context.env);
+    const storedPageIds = await listStoredMaterialPageIds(db);
+    if (storedPageIds.length === 0) {
+      return jsonResponse({ success: true, data: [] });
+    }
+    const idFilter = new Set(storedPageIds);
+
     const dbId = getNotionDatabaseId(context.env);
     const query = {
       sorts: [
@@ -114,7 +165,10 @@ export async function onRequestGet(context) {
         context.env
       )) || {};
 
-    const data = results.map(mapMaterialPage);
+    const data = results
+      .map(mapMaterialPage)
+      .filter((item) => idFilter.size === 0 || idFilter.has(item.notion_id));
+
     return jsonResponse({ success: true, data });
   } catch (error) {
     return errorResponse(error);
@@ -124,6 +178,7 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   try {
     const dbId = getNotionDatabaseId(context.env);
+    const db = await getDb(context.env);
     const body = await context.request.json();
     const {
       title = '',
@@ -182,6 +237,9 @@ export async function onRequestPost(context) {
     );
 
     const data = mapMaterialPage(page);
+    if (UUID_REGEX.test(data.notion_id)) {
+      await insertMaterialPage(db, data.notion_id, data.courseId);
+    }
     return jsonResponse({ success: true, data }, 201);
   } catch (error) {
     return errorResponse(error);
@@ -190,20 +248,34 @@ export async function onRequestPost(context) {
 
 export async function onRequestDelete(context) {
   try {
-    const pageId = await getPageIdFromRequest(context.request);
+    const rawPageId = await getPageIdFromRequest(context.request);
 
-    if (!pageId) {
-      return jsonResponse({ success: false, error: 'id is required' }, 400);
+    if (!rawPageId) {
+      return jsonResponse({ success: false, message: 'id is required' }, 400);
+    }
+
+    const pageId = String(rawPageId).trim();
+    if (!UUID_REGEX.test(pageId)) {
+      return jsonResponse({ success: false, message: 'Invalid page_id' }, 400);
+    }
+
+    const db = await getDb(context.env);
+    const storedRow = await findMaterialPage(db, pageId);
+
+    if (!storedRow) {
+      return jsonResponse({ success: false, message: 'Material not found' }, 404);
     }
 
     await notionRequest(
-      `pages/${pageId}`,
+      `pages/${storedRow.notion_page_id}`,
       {
         method: 'PATCH',
         body: JSON.stringify({ archived: true }),
       },
       context.env
     );
+
+    await deleteMaterialPage(db, storedRow.id);
 
     return jsonResponse({ success: true });
   } catch (error) {
