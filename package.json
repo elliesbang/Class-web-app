@@ -5,12 +5,9 @@
     "app"
   ],
   "scripts": {
-    "build": "npm run build --workspace app",
-    "generate:course-pages": "node backup-2025-11-15/scripts/generate-course-pages.mjs",
-    "prebuild": "npm run generate:course-pages"
+    "build": "npm run build --workspace app"
   },
   "dependencies": {
-    "@hono/d1": "file:backup-2025-11-15/packages/hono-d1",
     "hono": "^4.5.11",
     "zod": "^3.23.8"
   }
