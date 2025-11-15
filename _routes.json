@@ -1,3 +1,5 @@
 {
-  "routes": []
+  "version": 1,
+  "include": ["/*"],
+  "exclude": ["/assets/*", "/favicon.ico"]
 }
