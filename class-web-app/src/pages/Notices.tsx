@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
+
+import { getVisibleGlobalNotices } from '../lib/contentLibrary';
 
 const formatDisplayDate = (value: any) => {
   if (!value) {
@@ -22,40 +24,7 @@ const formatDisplayDate = (value: any) => {
 };
 
 function Notices() {
-  const [notices, setNotices] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
-
-  const fetchNotices = useCallback(
-    async (signal?: any) => {
-      if (signal?.aborted) {
-        return;
-      }
-
-      setIsLoading(false);
-      setError(null);
-      setNotices([]);
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    fetchNotices(controller.signal).catch(() => {
-      // 데이터 로딩 비활성화
-    });
-
-    return () => {
-      controller.abort();
-    };
-  }, [fetchNotices]);
-
-  const handleRetry = () => {
-    fetchNotices().catch(() => {
-      // 데이터 로딩 비활성화
-    });
-  };
+  const notices = useMemo(() => getVisibleGlobalNotices(), []);
 
   return (
     <div className="space-y-4">
@@ -66,30 +35,23 @@ function Notices() {
         </p>
       </header>
       <section className="space-y-4">
-        {/* 데이터 로딩 및 오류 안내 비활성화 */}
         {notices.length === 0 ? (
           <article className="rounded-3xl bg-white p-5 shadow-soft">
             <p className="text-sm text-ellieGray/70">등록된 공지가 없습니다.</p>
           </article>
         ) : (
-          notices.map((notice: any) => (
+          notices.map((notice) => (
             <article key={notice.id} className="rounded-3xl bg-white p-5 shadow-soft">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-lg font-semibold text-ellieGray">{notice.title}</h2>
-                {notice.createdAt ? (
-                  <time className="text-xs text-ellieGray/60" dateTime={notice.createdAt}>
-                    {formatDisplayDate(notice.createdAt)}
-                  </time>
-                ) : null}
+                <time className="text-xs text-ellieGray/60" dateTime={notice.createdAt}>
+                  {formatDisplayDate(notice.createdAt)}
+                </time>
               </div>
-              {notice.content ? (
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ellieGray/70">
-                  {notice.content}
-                </p>
-              ) : null}
-              {notice.author ? (
-                <p className="mt-3 text-xs text-ellieGray/50">작성자: {notice.author}</p>
-              ) : null}
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ellieGray/70">{notice.content}</p>
+              <div className="mt-3 flex items-center gap-2 text-xs text-ellieGray/60">
+                <span>홈 &middot; 공지 탭 노출</span>
+              </div>
             </article>
           ))
         )}

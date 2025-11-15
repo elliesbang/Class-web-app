@@ -1,48 +1,22 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const accordionData = [
-  {
-    name: '스킬',
-    courses: [
-      { title: '캔디마', description: '과정 소개가 여기에 표시됩니다.' },
-      { title: '캔디업', description: '과정 소개가 여기에 표시됩니다.' },
-      { title: '중캘업', description: '과정 소개가 여기에 표시됩니다.' },
-    ],
-  },
-  {
-    name: '수익화',
-    courses: [
-      { title: '캔굿즈', description: '과정 소개가 여기에 표시됩니다.' },
-      { title: '캘굿즈', description: '과정 소개가 여기에 표시됩니다.' },
-    ],
-  },
-  {
-    name: 'AI 창작',
-    courses: [
-      { title: '에그작', description: '과정 소개가 여기에 표시됩니다.' },
-      { title: '에그작챌', description: '과정 소개가 여기에 표시됩니다.' },
-      { title: '나컬작', description: '과정 소개가 여기에 표시됩니다.' },
-      { title: '나컬작챌', description: '과정 소개가 여기에 표시됩니다.' },
-      { title: '미치나', description: '과정 소개가 여기에 표시됩니다.' },
-    ],
-  },
-];
+import { classroomCategories } from '../lib/contentLibrary';
 
 function Classroom() {
   const navigate = useNavigate();
-  const [openCategory, setOpenCategory] = useState<any>(null);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
+  const categories = useMemo(() => classroomCategories, []);
 
-  const handleToggle = (category: any) => {
-    setOpenCategory((current) => (current === category ? null : category));
+  const handleToggle = (categoryId: string) => {
+    setOpenCategory((current) => (current === categoryId ? null : categoryId));
   };
 
-  const handleEnterClass = (title: any) => {
-    if (!title) {
+  const handleEnterClass = (courseId: string) => {
+    if (!courseId) {
       return;
     }
-    const encodedTitle = encodeURIComponent(title);
-    navigate(`/class/${encodedTitle}`);
+    navigate(`/class/${courseId}`);
   };
 
   return (
@@ -56,42 +30,44 @@ function Classroom() {
         </header>
 
         <section className="space-y-4">
-          {accordionData.map((category: any) => {
-            const isOpen = openCategory === category.name;
+          {categories.map((category) => {
+            const isOpen = openCategory === category.id;
 
             return (
-              <article key={category.name} className="rounded-3xl bg-transparent">
+              <article key={category.id} className="rounded-3xl bg-transparent">
                 <button
                   type="button"
-                  onClick={() => handleToggle(category.name)}
+                  onClick={() => handleToggle(category.id)}
                   className="flex w-full items-center justify-between rounded-3xl bg-white px-6 py-5 text-left shadow-soft transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
                   aria-expanded={isOpen}
-                  aria-controls={`${category.name}-panel`}
+                  aria-controls={`${category.id}-panel`}
                 >
                   <span className="text-lg font-semibold">{category.name}</span>
                   <span className="text-xl font-semibold">{isOpen ? '−' : '+'}</span>
                 </button>
 
                 <div
-                  id={`${category.name}-panel`}
+                  id={`${category.id}-panel`}
                   className={`grid overflow-hidden transition-[grid-template-rows] duration-300 ease-in-out ${
                     isOpen ? 'grid-rows-[1fr] pt-4' : 'grid-rows-[0fr]'
                   }`}
                 >
                   <div className="space-y-3 overflow-hidden">
-                    {category.courses.map((course: any) => (
+                    {category.courses.map((course) => (
                       <div
-                        key={course.title}
+                        key={course.id}
                         className="rounded-3xl bg-white p-5 shadow-soft transition-transform duration-200 hover:-translate-y-0.5"
                       >
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <h2 className="text-base font-semibold text-ellieGray">{course.title}</h2>
-                            <p className="mt-1 text-sm leading-relaxed text-ellieGray/70">{course.description}</p>
+                            <h2 className="text-base font-semibold text-ellieGray">{course.name}</h2>
+                            {course.description ? (
+                              <p className="mt-1 text-sm leading-relaxed text-ellieGray/70">{course.description}</p>
+                            ) : null}
                           </div>
                           <button
                             type="button"
-                            onClick={() => handleEnterClass(course.title)}
+                            onClick={() => handleEnterClass(course.id)}
                             className="inline-flex w-full justify-center rounded-full px-5 py-2 text-sm font-semibold text-ellieGray shadow-soft transition-transform duration-200 hover:-translate-y-0.5 sm:w-auto"
                             style={{ backgroundColor: '#ffd331' }}
                           >

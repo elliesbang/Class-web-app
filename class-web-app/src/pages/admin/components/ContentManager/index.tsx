@@ -1,215 +1,221 @@
-import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, DragEvent, FormEvent, useMemo, useState } from 'react';
 import { GripVertical, Trash2 } from 'lucide-react';
 
-import { useAdminClasses } from '../../data/AdminClassContext';
-import { type MaterialPayload, type NoticePayload, type VideoPayload } from '../../../../lib/api';
+import {
+  classroomCategories,
+  defaultClassroomMaterials,
+  defaultClassroomNotices,
+  defaultClassroomVideos,
+  defaultGlobalNotices,
+  defaultVodVideos,
+  vodCategories,
+  type ClassroomMaterialRecord,
+  type ClassroomNoticeRecord,
+  type ClassroomVideoRecord,
+  type GlobalNoticeRecord,
+  type VodVideoRecord,
+} from '../../../../lib/contentLibrary';
 
 const TAB_ITEMS = [
-  { key: 'video' as const, label: '영상' },
-  { key: 'notice' as const, label: '공지' },
+  { key: 'globalNotice' as const, label: '전체 공지' },
+  { key: 'classroomVideo' as const, label: '강의실 영상' },
+  { key: 'vodVideo' as const, label: 'VOD 영상' },
   { key: 'material' as const, label: '자료' },
+  { key: 'classroomNotice' as const, label: '강의실 공지' },
 ];
 
 type TabKey = (typeof TAB_ITEMS)[number]['key'];
 
-type VideoFormState = {
-  title: string;
-  url: string;
-  description: string;
-};
-
-type NoticeFormState = {
+type GlobalNoticeFormState = {
   title: string;
   content: string;
+  thumbnailFile: File | null;
+  isVisible: boolean;
+};
+
+type ClassroomVideoFormState = {
+  title: string;
+  videoUrl: string;
+  description: string;
+  displayOrder: string;
+};
+
+type VodVideoFormState = {
+  title: string;
+  description: string;
+  videoUrl: string;
+  thumbnailFile: File | null;
+  isRecommended: boolean;
+  displayOrder: string;
 };
 
 type MaterialFormState = {
   title: string;
   description: string;
   file: File | null;
+  fileType: 'file' | 'link';
   linkUrl: string;
-  uploadType: 'file' | 'link';
 };
 
-const sortByCreatedAtDesc = <T extends { createdAt?: string }>(list: T[]) =>
-  [...list].sort((a, b) => {
-    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return dateB - dateA;
-  });
+type ClassroomNoticeFormState = {
+  title: string;
+  content: string;
+  isImportant: boolean;
+};
 
-const sortVideosForDisplay = (list: VideoPayload[]) =>
+const formatDisplayDate = (value: string) => {
+  try {
+    return new Date(value).toLocaleDateString('ko-KR');
+  } catch (error) {
+    console.warn('[ContentManager] failed to format date value', value, error);
+    return value;
+  }
+};
+
+const sortVideosForDisplay = (list: ClassroomVideoRecord[]) =>
   [...list].sort((a, b) => {
-    const orderA = typeof a.displayOrder === 'number' ? a.displayOrder : Number.MAX_SAFE_INTEGER;
-    const orderB = typeof b.displayOrder === 'number' ? b.displayOrder : Number.MAX_SAFE_INTEGER;
-    if (orderA !== orderB) {
-      return orderA - orderB;
+    if (a.displayOrder !== b.displayOrder) {
+      return a.displayOrder - b.displayOrder;
     }
-    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return dateB - dateA;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
 const reorderVideoDisplayOrder = (
-  list: VideoPayload[],
-  classId: number,
-  sourceId: number,
-  targetId: number,
+  list: ClassroomVideoRecord[],
+  courseId: string,
+  sourceId: string,
+  targetId: string,
 ) => {
-  const classVideos = sortVideosForDisplay(list.filter((item) => item.classId === classId));
-  const sourceIndex = classVideos.findIndex((item) => item.id === sourceId);
-  const targetIndex = classVideos.findIndex((item) => item.id === targetId);
+  const courseVideos = sortVideosForDisplay(list.filter((item) => item.courseId === courseId));
+  const sourceIndex = courseVideos.findIndex((item) => item.id === sourceId);
+  const targetIndex = courseVideos.findIndex((item) => item.id === targetId);
 
   if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
     return list;
   }
 
-  const updatedClassVideos = [...classVideos];
-  const [moved] = updatedClassVideos.splice(sourceIndex, 1);
-  updatedClassVideos.splice(targetIndex, 0, moved);
+  const updatedVideos = [...courseVideos];
+  const [moved] = updatedVideos.splice(sourceIndex, 1);
+  updatedVideos.splice(targetIndex, 0, moved);
 
-  const orderMap = new Map<number, number>();
-  updatedClassVideos.forEach((video, index) => {
-    orderMap.set(video.id, index);
+  return list.map((video) => {
+    if (video.courseId !== courseId) {
+      return video;
+    }
+
+    const nextIndex = updatedVideos.findIndex((item) => item.id === video.id);
+    return nextIndex === -1 ? video : { ...video, displayOrder: nextIndex };
   });
-
-  return list.map((video) =>
-    video.classId === classId && orderMap.has(video.id)
-      ? { ...video, displayOrder: orderMap.get(video.id)! }
-      : video,
-  );
 };
 
 const ContentManager = () => {
-  const { classes } = useAdminClasses();
-  const [activeTab, setActiveTab] = useState<TabKey>('video');
-  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
-  const [videos, setVideos] = useState<VideoPayload[]>([]);
-  const [notices, setNotices] = useState<NoticePayload[]>([]);
-  const [materials, setMaterials] = useState<MaterialPayload[]>([]);
-  const [videoForm, setVideoForm] = useState<VideoFormState>({ title: '', url: '', description: '' });
-  const [noticeForm, setNoticeForm] = useState<NoticeFormState>({ title: '', content: '' });
+  const [activeTab, setActiveTab] = useState<TabKey>('globalNotice');
+  const [globalNotices] = useState<GlobalNoticeRecord[]>(defaultGlobalNotices);
+  const [classroomVideos, setClassroomVideos] = useState<ClassroomVideoRecord[]>(defaultClassroomVideos);
+  const [vodVideos] = useState<VodVideoRecord[]>(defaultVodVideos);
+  const [materials] = useState<ClassroomMaterialRecord[]>(defaultClassroomMaterials);
+  const [classroomNotices] = useState<ClassroomNoticeRecord[]>(defaultClassroomNotices);
+
+  const [selectedClassCategoryId, setSelectedClassCategoryId] = useState<string>(
+    classroomCategories[0]?.id ?? '',
+  );
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(
+    classroomCategories[0]?.courses[0]?.id ?? '',
+  );
+  const [selectedVodCategoryId, setSelectedVodCategoryId] = useState<string>(vodCategories[0]?.id ?? '');
+
+  const [globalNoticeForm, setGlobalNoticeForm] = useState<GlobalNoticeFormState>({
+    title: '',
+    content: '',
+    thumbnailFile: null,
+    isVisible: true,
+  });
+  const [classroomVideoForm, setClassroomVideoForm] = useState<ClassroomVideoFormState>({
+    title: '',
+    videoUrl: '',
+    description: '',
+    displayOrder: '0',
+  });
+  const [vodVideoForm, setVodVideoForm] = useState<VodVideoFormState>({
+    title: '',
+    description: '',
+    videoUrl: '',
+    thumbnailFile: null,
+    isRecommended: true,
+    displayOrder: '0',
+  });
   const [materialForm, setMaterialForm] = useState<MaterialFormState>({
     title: '',
     description: '',
     file: null,
+    fileType: 'file',
     linkUrl: '',
-    uploadType: 'file',
   });
-  const [draggedVideoId, setDraggedVideoId] = useState<number | null>(null);
+  const [classroomNoticeForm, setClassroomNoticeForm] = useState<ClassroomNoticeFormState>({
+    title: '',
+    content: '',
+    isImportant: false,
+  });
+
+  const [draggedVideoId, setDraggedVideoId] = useState<string | null>(null);
   const [isReorderingVideos, setIsReorderingVideos] = useState(false);
 
-  useEffect(() => {
-    setVideos([]);
-    setNotices([]);
-    setMaterials([]);
+  const courseOptions = useMemo(() => {
+    const category = classroomCategories.find((item) => item.id === selectedClassCategoryId);
+    return category?.courses ?? [];
+  }, [selectedClassCategoryId]);
 
-    // const loadContent = async () => {
-    //   const [videoList, noticeList, materialList] = await Promise.all([
-    //     getVideos(),
-    //     getNotices(),
-    //     getMaterials(),
-    //   ]);
-    //   setVideos(videoList);
-    //   setNotices(sortByCreatedAtDesc(noticeList));
-    //   setMaterials(sortByCreatedAtDesc(materialList));
-    // };
-    // void loadContent();
-  }, []);
-
-  useEffect(() => {
-    if (classes.length === 0) {
-      setSelectedClassId(null);
-      return;
+  const filteredClassroomVideos = useMemo(() => {
+    if (!selectedCourseId) {
+      return [] as ClassroomVideoRecord[];
     }
-
-    if (selectedClassId === null || !classes.some((item) => item.id === selectedClassId)) {
-      setSelectedClassId(classes[0]?.id ?? null);
-    }
-  }, [classes, selectedClassId]);
-
-  const filteredVideos = useMemo(() => {
-    if (selectedClassId == null) {
-      return [] as VideoPayload[];
-    }
-
-    return sortVideosForDisplay(videos.filter((video) => video.classId === selectedClassId));
-  }, [selectedClassId, videos]);
-
-  const filteredNotices = useMemo(() => {
-    if (selectedClassId == null) {
-      return [] as NoticePayload[];
-    }
-
-    return sortByCreatedAtDesc(notices.filter((notice) => notice.classId === selectedClassId));
-  }, [notices, selectedClassId]);
+    return sortVideosForDisplay(classroomVideos.filter((video) => video.courseId === selectedCourseId));
+  }, [classroomVideos, selectedCourseId]);
 
   const filteredMaterials = useMemo(() => {
-    if (selectedClassId == null) {
-      return [] as MaterialPayload[];
+    if (!selectedCourseId) {
+      return [] as ClassroomMaterialRecord[];
     }
+    return materials
+      .filter((material) => material.courseId === selectedCourseId)
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [materials, selectedCourseId]);
 
-    return sortByCreatedAtDesc(materials.filter((material) => material.classId === selectedClassId));
-  }, [materials, selectedClassId]);
-
-  const hasClasses = classes.length > 0;
-
-  const resetVideoForm = () => setVideoForm({ title: '', url: '', description: '' });
-  const resetNoticeForm = () => setNoticeForm({ title: '', content: '' });
-  const resetMaterialForm = () =>
-    setMaterialForm({ title: '', description: '', file: null, linkUrl: '', uploadType: 'file' });
-
-  const handleVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!hasClasses || selectedClassId == null) {
-      return;
+  const filteredClassroomNotices = useMemo(() => {
+    if (!selectedCourseId) {
+      return [] as ClassroomNoticeRecord[];
     }
+    return classroomNotices
+      .filter((notice) => notice.courseId === selectedCourseId)
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [classroomNotices, selectedCourseId]);
 
-    // 콘텐츠 업로드 기능 비활성화
-  };
-
-  const handleNoticeSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!hasClasses || selectedClassId == null) {
-      return;
+  const filteredVodVideos = useMemo(() => {
+    if (!selectedVodCategoryId) {
+      return [] as VodVideoRecord[];
     }
+    return vodVideos
+      .filter((video) => video.categoryId === selectedVodCategoryId)
+      .slice()
+      .sort((a, b) => {
+        if (a.displayOrder !== b.displayOrder) {
+          return a.displayOrder - b.displayOrder;
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [selectedVodCategoryId, vodVideos]);
 
-    // 콘텐츠 업로드 기능 비활성화
-  };
+  const visibleGlobalNotices = useMemo(
+    () =>
+      [...globalNotices]
+        .slice()
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [globalNotices],
+  );
 
-  const handleMaterialSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!hasClasses || selectedClassId == null) {
-      return;
-    }
-
-    // 콘텐츠 업로드 기능 비활성화
-  };
-
-  const handleDeleteVideo = async (id: number) => {
-    void id;
-    // 콘텐츠 삭제 기능 비활성화
-  };
-
-  const handleDeleteNotice = async (id: number) => {
-    void id;
-    // 콘텐츠 삭제 기능 비활성화
-  };
-
-  const handleDeleteMaterial = async (id: number) => {
-    void id;
-    // 콘텐츠 삭제 기능 비활성화
-  };
-
-  const handleVideoDrop = async (targetId: number) => {
-    void targetId;
-    setIsReorderingVideos(false);
-    setDraggedVideoId(null);
-
-    // 영상 순서 저장 기능 비활성화
-  };
-
-  const handleVideoDragStart = (id: number) => () => {
+  const handleVideoDragStart = (id: string) => () => {
     setDraggedVideoId(id);
   };
 
@@ -217,67 +223,147 @@ const ContentManager = () => {
     setDraggedVideoId(null);
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    setMaterialForm((prev) => ({
-      ...prev,
-      file,
-      uploadType: 'file',
-      linkUrl: '',
-    }));
+  const handleVideoDrop = (targetId: string) => {
+    if (!selectedCourseId || !draggedVideoId) {
+      return;
+    }
+
+    setIsReorderingVideos(true);
+    setClassroomVideos((prev) => reorderVideoDisplayOrder(prev, selectedCourseId, draggedVideoId, targetId));
+    setTimeout(() => {
+      setIsReorderingVideos(false);
+    }, 400);
+    setDraggedVideoId(null);
   };
 
-  const handleUploadTypeChange = (type: 'file' | 'link') => {
+  const handleMaterialFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setMaterialForm((prev) => ({ ...prev, file, fileType: 'file' }));
+  };
+
+  const handleMaterialLinkChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setMaterialForm((prev) => ({ ...prev, linkUrl: value, fileType: 'link', file: null }));
+  };
+
+  const handleMaterialUploadTypeChange = (type: 'file' | 'link') => {
     setMaterialForm((prev) => ({
       ...prev,
-      uploadType: type,
+      fileType: type,
       file: type === 'file' ? prev.file : null,
       linkUrl: type === 'link' ? prev.linkUrl : '',
     }));
   };
 
-  const handleLinkChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setMaterialForm((prev) => ({
-      ...prev,
-      linkUrl: value,
-      uploadType: 'link',
-      file: null,
-    }));
+  const handleGlobalNoticeSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    console.info('[ContentManager] 전체 공지 등록은 데모 환경에서 비활성화되어 있습니다.');
+    setGlobalNoticeForm({ title: '', content: '', thumbnailFile: null, isVisible: true });
+  };
+
+  const handleClassroomVideoSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    console.info('[ContentManager] 강의실 영상 등록은 데모 환경에서 비활성화되어 있습니다.');
+    setClassroomVideoForm({ title: '', videoUrl: '', description: '', displayOrder: '0' });
+  };
+
+  const handleVodVideoSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    console.info('[ContentManager] VOD 등록은 데모 환경에서 비활성화되어 있습니다.');
+    setVodVideoForm({
+      title: '',
+      description: '',
+      videoUrl: '',
+      thumbnailFile: null,
+      isRecommended: true,
+      displayOrder: '0',
+    });
+  };
+
+  const handleMaterialSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    console.info('[ContentManager] 자료 업로드는 데모 환경에서 비활성화되어 있습니다.');
+    setMaterialForm({ title: '', description: '', file: null, fileType: 'file', linkUrl: '' });
+  };
+
+  const handleClassroomNoticeSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    console.info('[ContentManager] 강의실 공지 등록은 데모 환경에서 비활성화되어 있습니다.');
+    setClassroomNoticeForm({ title: '', content: '', isImportant: false });
   };
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-md">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <h2 className="text-xl font-bold text-[#404040]">콘텐츠 관리</h2>
-          <div className="flex flex-col gap-2 text-sm text-[#7a6f68] md:flex-row md:items-center md:gap-3">
-            <label className="font-semibold text-[#5c5c5c]" htmlFor="classSelect">
-              수업 선택
-            </label>
-            <select
-              id="classSelect"
-              className="rounded-2xl border border-[#e9dccf] bg-white px-4 py-2 text-sm font-semibold text-[#404040] focus:border-[#ffd331] focus:outline-none"
-              value={selectedClassId ?? ''}
-              onChange={(event) => {
-                const value = event.target.value;
-                setSelectedClassId(value === '' ? null : Number(value));
-              }}
-              disabled={!hasClasses}
-            >
-              {!hasClasses && (
-                <option value="">수업이 없습니다</option>
-              )}
-              {classes.map((classItem) => (
-                <option key={classItem.id} value={classItem.id}>
-                  {classItem.name}
-                </option>
-              ))}
-            </select>
+          <div>
+            <h2 className="text-xl font-bold text-[#404040]">콘텐츠 관리</h2>
+            <p className="text-sm text-[#7a6f68]">
+              콘텐츠 유형에 따라 등록하고 노출 위치를 설정하세요.
+            </p>
           </div>
+          {activeTab === 'classroomVideo' || activeTab === 'material' || activeTab === 'classroomNotice' ? (
+            <div className="flex flex-col gap-2 text-sm text-[#7a6f68] md:flex-row md:items-center md:gap-3">
+              <label className="font-semibold text-[#5c5c5c]" htmlFor="classCategorySelect">
+                강의실 카테고리
+              </label>
+              <select
+                id="classCategorySelect"
+                className="rounded-2xl border border-[#e9dccf] bg-white px-4 py-2 text-sm font-semibold text-[#404040] focus:border-[#ffd331] focus:outline-none"
+                value={selectedClassCategoryId}
+                onChange={(event) => {
+                  const nextCategoryId = event.target.value;
+                  setSelectedClassCategoryId(nextCategoryId);
+                  const category = classroomCategories.find((item) => item.id === nextCategoryId);
+                  const firstCourse = category?.courses[0]?.id ?? '';
+                  setSelectedCourseId(firstCourse);
+                }}
+              >
+                {classroomCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              <label className="font-semibold text-[#5c5c5c]" htmlFor="courseSelect">
+                하위 강좌
+              </label>
+              <select
+                id="courseSelect"
+                className="rounded-2xl border border-[#e9dccf] bg-white px-4 py-2 text-sm font-semibold text-[#404040] focus:border-[#ffd331] focus:outline-none"
+                value={selectedCourseId}
+                onChange={(event) => setSelectedCourseId(event.target.value)}
+              >
+                {courseOptions.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          {activeTab === 'vodVideo' ? (
+            <div className="flex flex-col gap-2 text-sm text-[#7a6f68] md:flex-row md:items-center md:gap-3">
+              <label className="font-semibold text-[#5c5c5c]" htmlFor="vodCategorySelect">
+                VOD 카테고리
+              </label>
+              <select
+                id="vodCategorySelect"
+                className="rounded-2xl border border-[#e9dccf] bg-white px-4 py-2 text-sm font-semibold text-[#404040] focus:border-[#ffd331] focus:outline-none"
+                value={selectedVodCategoryId}
+                onChange={(event) => setSelectedVodCategoryId(event.target.value)}
+              >
+                {vodCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {TAB_ITEMS.map((tab) => (
             <button
               key={tab.key}
@@ -295,57 +381,184 @@ const ContentManager = () => {
         </div>
       </div>
 
-      {activeTab === 'video' && (
+      {activeTab === 'globalNotice' ? (
         <section className="flex flex-col gap-6">
-          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleVideoSubmit}>
-            <h3 className="mb-4 text-lg font-semibold text-[#404040]">영상 등록</h3>
+          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleGlobalNoticeSubmit}>
+            <h3 className="mb-4 text-lg font-semibold text-[#404040]">전체 공지 등록</h3>
             <div className="grid gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="videoTitle">
-                  영상 제목
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="globalNoticeTitle">
+                  제목
                 </label>
                 <input
-                  id="videoTitle"
+                  id="globalNoticeTitle"
+                  type="text"
+                  className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="공지 제목을 입력하세요"
+                  value={globalNoticeForm.title}
+                  onChange={(event) => setGlobalNoticeForm((prev) => ({ ...prev, title: event.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="globalNoticeContent">
+                  내용
+                </label>
+                <textarea
+                  id="globalNoticeContent"
+                  className="min-h-[120px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="공지 내용을 입력하세요"
+                  value={globalNoticeForm.content}
+                  onChange={(event) => setGlobalNoticeForm((prev) => ({ ...prev, content: event.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-[#5c5c5c]">썸네일</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="rounded-2xl border border-dashed border-[#e9dccf] px-4 py-3 text-sm focus:border-[#ffd331] focus:outline-none"
+                  onChange={(event) =>
+                    setGlobalNoticeForm((prev) => ({ ...prev, thumbnailFile: event.target.files?.[0] ?? null }))
+                  }
+                />
+                {globalNoticeForm.thumbnailFile ? (
+                  <p className="text-xs text-[#7a6f68]">선택된 파일: {globalNoticeForm.thumbnailFile.name}</p>
+                ) : null}
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-semibold text-[#5c5c5c]">
+                <input
+                  type="checkbox"
+                  checked={globalNoticeForm.isVisible}
+                  onChange={(event) =>
+                    setGlobalNoticeForm((prev) => ({ ...prev, isVisible: event.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-[#e9dccf] text-[#ffd331] focus:ring-[#ffd331]"
+                />
+                홈/공지 탭에 노출하기
+              </label>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="submit"
+                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
+              >
+                저장
+              </button>
+            </div>
+          </form>
+
+          <div className="rounded-3xl bg-white p-6 shadow-md">
+            <h3 className="mb-4 text-lg font-semibold text-[#404040]">등록된 전체 공지</h3>
+            {visibleGlobalNotices.length === 0 ? (
+              <p className="text-sm text-[#7a6f68]">등록된 공지가 없습니다.</p>
+            ) : (
+              <ul className="space-y-4">
+                {visibleGlobalNotices.map((notice) => (
+                  <li key={notice.id} className="flex flex-col gap-4 rounded-2xl bg-[#f9f5f1] p-4 shadow-sm md:flex-row">
+                    {notice.thumbnailUrl ? (
+                      <div className="h-20 w-full overflow-hidden rounded-xl bg-[#fffaf0] md:h-24 md:w-40">
+                        <img
+                          src={notice.thumbnailUrl}
+                          alt="공지 썸네일"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ) : null}
+                    <div className="flex flex-1 flex-col gap-2">
+                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                        <h4 className="text-sm font-semibold text-[#404040]">{notice.title}</h4>
+                        <span className="text-xs font-semibold text-[#7a6f68]">
+                          {formatDisplayDate(notice.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[#5c5c5c]">{notice.content}</p>
+                      <span className={`text-xs font-semibold ${notice.isVisible ? 'text-green-600' : 'text-[#7a6f68]'}`}>
+                        {notice.isVisible ? '노출 중' : '비노출'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
+                      onClick={() => {
+                        console.info('[ContentManager] 데모 환경에서는 공지를 삭제할 수 없습니다.');
+                      }}
+                      aria-label="공지 삭제"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      ) : null}
+
+      {activeTab === 'classroomVideo' ? (
+        <section className="flex flex-col gap-6">
+          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleClassroomVideoSubmit}>
+            <h3 className="mb-4 text-lg font-semibold text-[#404040]">강의실 영상 등록</h3>
+            <div className="grid gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="classroomVideoTitle">
+                  제목
+                </label>
+                <input
+                  id="classroomVideoTitle"
                   type="text"
                   className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
                   placeholder="예: 1주차 오리엔테이션"
-                  value={videoForm.title}
-                  onChange={(event) => setVideoForm((prev) => ({ ...prev, title: event.target.value }))}
-                  disabled={!hasClasses}
+                  value={classroomVideoForm.title}
+                  onChange={(event) => setClassroomVideoForm((prev) => ({ ...prev, title: event.target.value }))}
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="videoUrl">
-                  링크 또는 임베드 코드
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="classroomVideoUrl">
+                  영상 URL
                 </label>
-                <textarea
-                  id="videoUrl"
-                  className="min-h-[80px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
-                  placeholder="https://vimeo.com/... 혹은 &lt;iframe&gt; 코드"
-                  value={videoForm.url}
-                  onChange={(event) => setVideoForm((prev) => ({ ...prev, url: event.target.value }))}
-                  disabled={!hasClasses}
+                <input
+                  id="classroomVideoUrl"
+                  type="url"
+                  className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="https://player.vimeo.com/..."
+                  value={classroomVideoForm.videoUrl}
+                  onChange={(event) => setClassroomVideoForm((prev) => ({ ...prev, videoUrl: event.target.value }))}
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="videoDescription">
-                  설명 (선택)
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="classroomVideoDescription">
+                  설명
                 </label>
                 <textarea
-                  id="videoDescription"
+                  id="classroomVideoDescription"
                   className="min-h-[80px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
-                  placeholder="영상에 대한 간단한 설명을 남겨주세요."
-                  value={videoForm.description}
-                  onChange={(event) => setVideoForm((prev) => ({ ...prev, description: event.target.value }))}
-                  disabled={!hasClasses}
+                  placeholder="영상 소개를 입력하세요"
+                  value={classroomVideoForm.description}
+                  onChange={(event) =>
+                    setClassroomVideoForm((prev) => ({ ...prev, description: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="classroomVideoOrder">
+                  정렬 순서
+                </label>
+                <input
+                  id="classroomVideoOrder"
+                  type="number"
+                  min={0}
+                  className="w-24 rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  value={classroomVideoForm.displayOrder}
+                  onChange={(event) =>
+                    setClassroomVideoForm((prev) => ({ ...prev, displayOrder: event.target.value }))
+                  }
                 />
               </div>
             </div>
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"
-                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!hasClasses}
+                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
               >
                 저장
               </button>
@@ -354,16 +567,16 @@ const ContentManager = () => {
 
           <div className="rounded-3xl bg-white p-6 shadow-md">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-lg font-semibold text-[#404040]">업로드된 영상</h3>
-              {isReorderingVideos && (
-                <span className="text-xs text-[#7a6f68]">순서를 저장하는 중입니다...</span>
-              )}
+              <h3 className="text-lg font-semibold text-[#404040]">노출 순서</h3>
+              {isReorderingVideos ? (
+                <span className="text-xs text-[#7a6f68]">순서를 조정 중입니다...</span>
+              ) : null}
             </div>
-            {filteredVideos.length === 0 ? (
-              <p className="text-sm text-[#7a6f68]">표시할 콘텐츠가 없습니다.</p>
+            {filteredClassroomVideos.length === 0 ? (
+              <p className="text-sm text-[#7a6f68]">해당 강좌에 등록된 영상이 없습니다.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {filteredVideos.map((video) => (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredClassroomVideos.map((video) => (
                   <article
                     key={video.id}
                     className={`flex flex-col gap-3 rounded-2xl bg-[#f9f5f1] p-4 shadow-sm transition ring-offset-2 ${
@@ -377,49 +590,37 @@ const ContentManager = () => {
                     }}
                     onDrop={(event: DragEvent<HTMLElement>) => {
                       event.preventDefault();
-                      handleVideoDrop(video.id).catch((error) => {
-                        console.error('[ContentManager] 드래그 중 오류가 발생했습니다.', error);
-                      });
+                      handleVideoDrop(video.id);
                     }}
                   >
                     <div className="flex items-center justify-between text-[#7a6f68]">
                       <span className="flex items-center gap-2 text-xs">
                         <GripVertical className="h-4 w-4" aria-hidden="true" />
-                        드래그로 순서 변경
+                        드래그하여 순서 변경
                       </span>
-                      <span className="text-xs font-semibold">
-                        #{typeof video.displayOrder === 'number' ? video.displayOrder + 1 : '-'}
-                      </span>
+                      <span className="text-xs font-semibold">#{video.displayOrder + 1}</span>
                     </div>
                     <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black/5">
-                      {video.url.trim().startsWith('<') ? (
-                        <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: video.url }} />
-                      ) : (
-                        <iframe
-                          title={video.title || '업로드된 영상'}
-                          src={video.url}
-                          className="h-full w-full border-0"
-                          allow="fullscreen"
-                        />
-                      )}
+                      <iframe
+                        title={video.title || '강의실 영상'}
+                        src={video.videoUrl}
+                        className="h-full w-full border-0"
+                        allow="fullscreen"
+                      />
                     </div>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex flex-col gap-1">
-                        <span className="text-sm font-semibold text-[#404040]">{video.title || '영상'}</span>
-                        {video.description && (
+                        <span className="text-sm font-semibold text-[#404040]">{video.title}</span>
+                        {video.description ? (
                           <p className="text-xs text-[#5c5c5c]">{video.description}</p>
-                        )}
-                        <span className="text-xs text-[#7a6f68]">
-                          {new Date(video.createdAt ?? Date.now()).toLocaleDateString()}
-                        </span>
+                        ) : null}
+                        <span className="text-xs text-[#7a6f68]">{formatDisplayDate(video.createdAt)}</span>
                       </div>
                       <button
                         type="button"
                         className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
                         onClick={() => {
-                          handleDeleteVideo(video.id).catch((error) => {
-                            console.error('[ContentManager] 영상 삭제 실패', error);
-                          });
+                          console.info('[ContentManager] 데모 환경에서는 영상을 삭제할 수 없습니다.');
                         }}
                         aria-label="영상 삭제"
                       >
@@ -432,103 +633,158 @@ const ContentManager = () => {
             )}
           </div>
         </section>
-      )}
+      ) : null}
 
-      {activeTab === 'notice' && (
+      {activeTab === 'vodVideo' ? (
         <section className="flex flex-col gap-6">
-          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleNoticeSubmit}>
-            <h3 className="mb-4 text-lg font-semibold text-[#404040]">공지 등록</h3>
+          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleVodVideoSubmit}>
+            <h3 className="mb-4 text-lg font-semibold text-[#404040]">VOD 영상 등록</h3>
             <div className="grid gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="noticeTitle">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="vodTitle">
                   제목
                 </label>
                 <input
-                  id="noticeTitle"
+                  id="vodTitle"
                   type="text"
                   className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
-                  value={noticeForm.title}
-                  onChange={(event) => setNoticeForm((prev) => ({ ...prev, title: event.target.value }))}
-                  disabled={!hasClasses}
+                  placeholder="예: 디자인 템플릿으로 수익 만들기"
+                  value={vodVideoForm.title}
+                  onChange={(event) => setVodVideoForm((prev) => ({ ...prev, title: event.target.value }))}
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="noticeContent">
-                  내용
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="vodDescription">
+                  설명
                 </label>
                 <textarea
-                  id="noticeContent"
-                  className="min-h-[120px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
-                  value={noticeForm.content}
-                  onChange={(event) => setNoticeForm((prev) => ({ ...prev, content: event.target.value }))}
-                  disabled={!hasClasses}
+                  id="vodDescription"
+                  className="min-h-[80px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="영상에 대한 설명을 입력하세요"
+                  value={vodVideoForm.description}
+                  onChange={(event) => setVodVideoForm((prev) => ({ ...prev, description: event.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="vodUrl">
+                  영상 URL
+                </label>
+                <input
+                  id="vodUrl"
+                  type="url"
+                  className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="https://player.vimeo.com/..."
+                  value={vodVideoForm.videoUrl}
+                  onChange={(event) => setVodVideoForm((prev) => ({ ...prev, videoUrl: event.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-[#5c5c5c]">썸네일</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="rounded-2xl border border-dashed border-[#e9dccf] px-4 py-3 text-sm focus:border-[#ffd331] focus:outline-none"
+                  onChange={(event) => setVodVideoForm((prev) => ({ ...prev, thumbnailFile: event.target.files?.[0] ?? null }))}
+                />
+                {vodVideoForm.thumbnailFile ? (
+                  <p className="text-xs text-[#7a6f68]">선택된 파일: {vodVideoForm.thumbnailFile.name}</p>
+                ) : null}
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-semibold text-[#5c5c5c]">
+                <input
+                  type="checkbox"
+                  checked={vodVideoForm.isRecommended}
+                  onChange={(event) =>
+                    setVodVideoForm((prev) => ({ ...prev, isRecommended: event.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-[#e9dccf] text-[#ffd331] focus:ring-[#ffd331]"
+                />
+                추천 콘텐츠로 노출하기
+              </label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="vodOrder">
+                  정렬 순서
+                </label>
+                <input
+                  id="vodOrder"
+                  type="number"
+                  min={0}
+                  className="w-24 rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  value={vodVideoForm.displayOrder}
+                  onChange={(event) => setVodVideoForm((prev) => ({ ...prev, displayOrder: event.target.value }))}
                 />
               </div>
             </div>
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"
-                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!hasClasses}
+                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
               >
-                업로드
+                저장
               </button>
             </div>
           </form>
 
           <div className="rounded-3xl bg-white p-6 shadow-md">
-            <h3 className="mb-4 text-lg font-semibold text-[#404040]">등록된 공지</h3>
-            {filteredNotices.length === 0 ? (
-              <p className="text-sm text-[#7a6f68]">표시할 콘텐츠가 없습니다.</p>
+            <h3 className="mb-4 text-lg font-semibold text-[#404040]">등록된 VOD</h3>
+            {filteredVodVideos.length === 0 ? (
+              <p className="text-sm text-[#7a6f68]">선택한 카테고리에 등록된 VOD 영상이 없습니다.</p>
             ) : (
-              <ul className="space-y-4">
-                {filteredNotices.map((notice) => (
-                  <li key={notice.id} className="rounded-2xl bg-[#f9f5f1] p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h4 className="text-sm font-semibold text-[#404040]">{notice.title}</h4>
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-[#5c5c5c]">{notice.content}</p>
-                        <p className="mt-2 text-xs text-[#7a6f68]">
-                          {new Date(notice.createdAt ?? Date.now()).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => {
-                          handleDeleteNotice(notice.id).catch((error) => {
-                            console.error('[ContentManager] 공지 삭제 실패', error);
-                          });
-                        }}
-                        aria-label="공지 삭제"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      </button>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {filteredVodVideos.map((video) => (
+                  <article key={video.id} className="flex flex-col gap-3 rounded-2xl bg-[#f9f5f1] p-4 shadow-sm">
+                    <div className="aspect-video w-full overflow-hidden rounded-xl bg-[#fffaf0]">
+                      <img src={video.thumbnailUrl} alt="VOD 썸네일" className="h-full w-full object-cover" />
                     </div>
-                  </li>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-semibold text-[#404040]">{video.title}</span>
+                      {video.description ? (
+                        <p className="text-xs text-[#5c5c5c]">{video.description}</p>
+                      ) : null}
+                      <div className="flex items-center justify-between text-xs text-[#7a6f68]">
+                        <span>{formatDisplayDate(video.createdAt)}</span>
+                        <span>#{video.displayOrder + 1}</span>
+                      </div>
+                      {video.isRecommended ? (
+                        <span className="self-start rounded-full bg-[#ffd331] px-3 py-1 text-[10px] font-semibold text-[#404040]">
+                          추천
+                        </span>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
+                      onClick={() => {
+                        console.info('[ContentManager] 데모 환경에서는 VOD를 삭제할 수 없습니다.');
+                      }}
+                      aria-label="VOD 삭제"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </article>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         </section>
-      )}
+      ) : null}
 
-      {activeTab === 'material' && (
+      {activeTab === 'material' ? (
         <section className="flex flex-col gap-6">
           <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleMaterialSubmit}>
             <h3 className="mb-4 text-lg font-semibold text-[#404040]">자료 업로드</h3>
             <div className="grid gap-4">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="materialTitle">
-                  제목
+                  자료 제목
                 </label>
                 <input
                   id="materialTitle"
                   type="text"
                   className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="예: 워크북 템플릿"
                   value={materialForm.title}
                   onChange={(event) => setMaterialForm((prev) => ({ ...prev, title: event.target.value }))}
-                  disabled={!hasClasses}
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -537,60 +793,53 @@ const ContentManager = () => {
                 </label>
                 <textarea
                   id="materialDescription"
-                  className="min-h-[120px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  className="min-h-[80px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="자료 설명을 입력하세요"
                   value={materialForm.description}
                   onChange={(event) => setMaterialForm((prev) => ({ ...prev, description: event.target.value }))}
-                  disabled={!hasClasses}
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <span className="text-sm font-semibold text-[#5c5c5c]">업로드 방식</span>
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
                   <button
                     type="button"
                     className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-colors ${
-                      materialForm.uploadType === 'file'
+                      materialForm.fileType === 'file'
                         ? 'border-[#ffd331] bg-[#ffd331] text-[#404040] shadow-sm'
                         : 'border-[#e9dccf] bg-white text-[#5c5c5c] hover:border-[#ffd331] hover:bg-[#fff6d6]'
                     }`}
-                    onClick={() => handleUploadTypeChange('file')}
-                    disabled={!hasClasses}
+                    onClick={() => handleMaterialUploadTypeChange('file')}
                   >
                     파일 업로드
                   </button>
                   <button
                     type="button"
                     className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-colors ${
-                      materialForm.uploadType === 'link'
+                      materialForm.fileType === 'link'
                         ? 'border-[#ffd331] bg-[#ffd331] text-[#404040] shadow-sm'
                         : 'border-[#e9dccf] bg-white text-[#5c5c5c] hover:border-[#ffd331] hover:bg-[#fff6d6]'
                     }`}
-                    onClick={() => handleUploadTypeChange('link')}
-                    disabled={!hasClasses}
+                    onClick={() => handleMaterialUploadTypeChange('link')}
                   >
                     링크 업로드
                   </button>
                 </div>
-                <p className="text-xs text-[#7a6f68]">
-                  파일을 직접 업로드하거나 외부 링크를 첨부하여 학습 자료를 공유할 수 있습니다.
-                </p>
+                <p className="text-xs text-[#7a6f68]">파일을 직접 첨부하거나 링크 자료를 연결할 수 있습니다.</p>
               </div>
-              {materialForm.uploadType === 'file' ? (
+              {materialForm.fileType === 'file' ? (
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="materialFile">
-                    파일 (PDF, 이미지 등)
+                    파일 첨부
                   </label>
                   <input
                     id="materialFile"
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.gif,.heic,.bmp,.ppt,.pptx,.doc,.docx,.zip"
                     className="rounded-2xl border border-dashed border-[#e9dccf] px-4 py-3 text-sm focus:border-[#ffd331] focus:outline-none"
-                    onChange={handleFileChange}
-                    disabled={!hasClasses}
+                    onChange={handleMaterialFileChange}
                   />
-                  {materialForm.file && (
+                  {materialForm.file ? (
                     <p className="text-xs text-[#7a6f68]">선택된 파일: {materialForm.file.name}</p>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
@@ -600,11 +849,10 @@ const ContentManager = () => {
                   <input
                     id="materialLink"
                     type="url"
-                    placeholder="https://example.com/material"
+                    placeholder="https://example.com/resource"
                     className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
                     value={materialForm.linkUrl}
-                    onChange={handleLinkChange}
-                    disabled={!hasClasses}
+                    onChange={handleMaterialLinkChange}
                   />
                 </div>
               )}
@@ -612,10 +860,9 @@ const ContentManager = () => {
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"
-                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!hasClasses}
+                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
               >
-                업로드
+                저장
               </button>
             </div>
           </form>
@@ -623,41 +870,36 @@ const ContentManager = () => {
           <div className="rounded-3xl bg-white p-6 shadow-md">
             <h3 className="mb-4 text-lg font-semibold text-[#404040]">등록된 자료</h3>
             {filteredMaterials.length === 0 ? (
-              <p className="text-sm text-[#7a6f68]">표시할 콘텐츠가 없습니다.</p>
+              <p className="text-sm text-[#7a6f68]">해당 강좌에 등록된 자료가 없습니다.</p>
             ) : (
               <ul className="space-y-4">
                 {filteredMaterials.map((material) => (
                   <li key={material.id} className="rounded-2xl bg-[#f9f5f1] p-4 shadow-sm">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex-1">
                         <h4 className="text-sm font-semibold text-[#404040]">{material.title}</h4>
-                        {material.description && (
-                          <p className="mt-2 whitespace-pre-wrap text-sm text-[#5c5c5c]">{material.description}</p>
-                        )}
-                        <div className="mt-3 flex flex-col gap-2 text-xs text-[#7a6f68] sm:flex-row sm:items-center sm:gap-4">
-                          <span>
-                            업로드일: {new Date(material.createdAt ?? Date.now()).toLocaleDateString()}
-                          </span>
-                          {material.fileUrl && (
-                            <a
-                              href={material.fileUrl}
-                              download={material.fileName ?? undefined}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-semibold text-[#404040] underline-offset-2 hover:underline"
-                            >
-                              {material.fileName ?? (material.mimeType === 'link' ? '링크 열기' : '파일 열기')}
-                            </a>
-                          )}
-                        </div>
+                        {material.description ? (
+                          <p className="mt-1 text-xs text-[#5c5c5c]">{material.description}</p>
+                        ) : null}
+                        <p className="mt-2 text-xs text-[#7a6f68]">{formatDisplayDate(material.createdAt)}</p>
+                      </div>
+                      <div className="flex flex-col gap-2 text-xs font-semibold text-[#404040]">
+                        <a
+                          href={material.fileUrl}
+                          target={material.fileType === 'link' ? '_blank' : undefined}
+                          rel={material.fileType === 'link' ? 'noopener noreferrer' : undefined}
+                          download={material.fileType === 'file' ? material.fileName : undefined}
+                          className="rounded-full bg-[#ffd331] px-4 py-2 text-center shadow-sm transition-colors hover:bg-[#e6bd2c]"
+                        >
+                          {material.fileType === 'file' ? '파일 다운로드' : '링크 열기'}
+                        </a>
+                        <span className="text-center text-[11px] text-[#7a6f68]">{material.fileName}</span>
                       </div>
                       <button
                         type="button"
                         className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
                         onClick={() => {
-                          handleDeleteMaterial(material.id).catch((error) => {
-                            console.error('[ContentManager] 자료 삭제 실패', error);
-                          });
+                          console.info('[ContentManager] 데모 환경에서는 자료를 삭제할 수 없습니다.');
                         }}
                         aria-label="자료 삭제"
                       >
@@ -670,7 +912,99 @@ const ContentManager = () => {
             )}
           </div>
         </section>
-      )}
+      ) : null}
+
+      {activeTab === 'classroomNotice' ? (
+        <section className="flex flex-col gap-6">
+          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleClassroomNoticeSubmit}>
+            <h3 className="mb-4 text-lg font-semibold text-[#404040]">강의실 공지 등록</h3>
+            <div className="grid gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="classNoticeTitle">
+                  제목
+                </label>
+                <input
+                  id="classNoticeTitle"
+                  type="text"
+                  className="rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="공지 제목을 입력하세요"
+                  value={classroomNoticeForm.title}
+                  onChange={(event) => setClassroomNoticeForm((prev) => ({ ...prev, title: event.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#5c5c5c]" htmlFor="classNoticeContent">
+                  내용
+                </label>
+                <textarea
+                  id="classNoticeContent"
+                  className="min-h-[120px] rounded-2xl border border-[#e9dccf] px-4 py-2 text-sm focus:border-[#ffd331] focus:outline-none"
+                  placeholder="공지 내용을 입력하세요"
+                  value={classroomNoticeForm.content}
+                  onChange={(event) => setClassroomNoticeForm((prev) => ({ ...prev, content: event.target.value }))}
+                />
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-semibold text-[#5c5c5c]">
+                <input
+                  type="checkbox"
+                  checked={classroomNoticeForm.isImportant}
+                  onChange={(event) =>
+                    setClassroomNoticeForm((prev) => ({ ...prev, isImportant: event.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-[#e9dccf] text-[#ffd331] focus:ring-[#ffd331]"
+                />
+                중요 공지로 표시하기
+              </label>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="submit"
+                className="rounded-2xl bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
+              >
+                저장
+              </button>
+            </div>
+          </form>
+
+          <div className="rounded-3xl bg-white p-6 shadow-md">
+            <h3 className="mb-4 text-lg font-semibold text-[#404040]">등록된 강의실 공지</h3>
+            {filteredClassroomNotices.length === 0 ? (
+              <p className="text-sm text-[#7a6f68]">해당 강좌에 등록된 공지가 없습니다.</p>
+            ) : (
+              <ul className="space-y-4">
+                {filteredClassroomNotices.map((notice) => (
+                  <li key={notice.id} className="rounded-2xl bg-[#f9f5f1] p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-semibold text-[#404040]">{notice.title}</h4>
+                          {notice.isImportant ? (
+                            <span className="rounded-full bg-[#ffd331] px-3 py-1 text-[10px] font-semibold text-[#404040]">
+                              중요
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-[#5c5c5c]">{notice.content}</p>
+                        <p className="mt-2 text-xs text-[#7a6f68]">{formatDisplayDate(notice.createdAt)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
+                        onClick={() => {
+                          console.info('[ContentManager] 데모 환경에서는 공지를 삭제할 수 없습니다.');
+                        }}
+                        aria-label="강의실 공지 삭제"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 };
