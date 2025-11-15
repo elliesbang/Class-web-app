@@ -73,12 +73,17 @@ function AdminLoginModal({ isOpen, onClose }) {
       setIsSubmitting(true);
 
       try {
+        const credentials = {
+          email: email.trim(),
+          password,
+        };
+
         const response = await fetch('/api/admin/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify(credentials),
         });
 
         if (!response.ok) {

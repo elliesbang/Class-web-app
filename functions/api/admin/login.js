@@ -4,8 +4,12 @@ export const onRequest = async ({ request, env }) => {
   }
 
   try {
-    const body = await request.json();
-    const { email, password } = body ?? {};
+    const body = await request
+      .json()
+      .catch(() => ({}));
+
+    const email = typeof body?.email === 'string' ? body.email.trim() : '';
+    const password = typeof body?.password === 'string' ? body.password : '';
 
     if (!email || !password) {
       return new Response(JSON.stringify({ success: false, message: 'Invalid credentials' }), {
