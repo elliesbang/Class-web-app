@@ -1,8 +1,9 @@
+import React from 'react';
 import ClassroomTabs from '@/components/classroom/ClassroomTabs';
 
-export default function EggjakPage() {
-  const courseId = "eggjak";
-  const courseDisplayName = "에그작";
+export default function CandymaPage() {
+  const courseId = "candyma";
+  const courseDisplayName = "캔디마";
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5 pb-12">

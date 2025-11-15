@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { hasCourseAccess, subscribeCourseAccessChanges } from '@/lib/course-access';
 import { subscribeAdminAuthChanges } from '@/lib/auth';
 import VideoTab from './VideoTab';
@@ -7,20 +7,20 @@ import UploadTab from './UploadTab';
 import FeedbackTab from './FeedbackTab';
 import NoticeTab from './NoticeTab';
 
-const TAB_CONFIG = [
-  { id: 'video', label: '영상 보기', icon: '🎬', Component: VideoTab },
-  { id: 'materials', label: '자료 보기', icon: '📂', Component: MaterialTab },
-  { id: 'upload', label: '과제 업로드', icon: '📝', Component: UploadTab },
-  { id: 'feedback', label: '피드백 보기', icon: '💬', Component: FeedbackTab },
-  { id: 'notice', label: '공지', icon: '📢', Component: NoticeTab },
+const TAB_CONFIG: any[] = [
+  { id: 'video', label: 'Video', icon: '🎬', Component: VideoTab },
+  { id: 'materials', label: 'Material', icon: '📂', Component: MaterialTab },
+  { id: 'upload', label: 'Upload', icon: '📝', Component: UploadTab },
+  { id: 'feedback', label: 'Feedback', icon: '💬', Component: FeedbackTab },
+  { id: 'notice', label: 'Notice', icon: '📢', Component: NoticeTab },
 ];
 
-function ClassroomTabs({ courseId, courseName, className = '' }) {
+function ClassroomTabs({ courseId, courseName, className = '' }: { [key: string]: any }) {
   const [activeTab, setActiveTab] = useState(TAB_CONFIG[0]?.id ?? 'video');
   const [hasAccess, setHasAccess] = useState(() => hasCourseAccess(courseId));
-  const [contents, setContents] = useState([]);
+  const [contents, setContents] = useState<any[]>([]);
   const [isLoadingContents, setIsLoadingContents] = useState(false);
-  const [contentError, setContentError] = useState(null);
+  const [contentError, setContentError] = useState<any>(null);
 
   useEffect(() => {
     const updateAccess = () => {
@@ -126,7 +126,7 @@ function ClassroomTabs({ courseId, courseName, className = '' }) {
     <div className={containerClassName}>
       <nav className="sticky top-0 z-10 rounded-3xl bg-white/90 p-2 shadow-soft backdrop-blur">
         <ul className="flex flex-wrap gap-2">
-          {TAB_CONFIG.map((tab) => {
+          {TAB_CONFIG.map((tab: any) => {
             const isActive = tab.id === activeTab;
             return (
               <li key={tab.id} className="min-w-[120px] flex-1">

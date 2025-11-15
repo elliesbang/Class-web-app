@@ -154,7 +154,7 @@ const collectFromDirectory = async (baseDir) => {
     const results = [];
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
-      const filePath = path.join(baseDir, entry.name, 'index.jsx');
+      const filePath = path.join(baseDir, entry.name, 'index.tsx');
       try {
         await fs.access(filePath);
       } catch {
@@ -172,7 +172,7 @@ const collectFromDirectory = async (baseDir) => {
 };
 
 const collectCoursesFromInternalPage = async () => {
-  const internalCoursesPath = path.join(webAppRoot, 'src', 'pages', 'InternalCourses.jsx');
+  const internalCoursesPath = path.join(webAppRoot, 'src', 'pages', 'InternalCourses.tsx');
   try {
     const content = await fs.readFile(internalCoursesPath, 'utf8');
     const matches = [
@@ -239,7 +239,7 @@ const generatePage = async (course) => {
   const componentName = toPascalCase(courseId);
   const targetDir = path.join(coursePagesDir, courseId);
   await ensureDirectory(targetDir);
-  const filePath = path.join(targetDir, 'index.jsx');
+  const filePath = path.join(targetDir, 'index.tsx');
   const fileContent = TEMPLATE({ componentName, courseId, courseName });
   await fs.writeFile(filePath, fileContent, 'utf8');
   return { courseId, filePath };

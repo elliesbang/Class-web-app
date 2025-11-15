@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 const tabs = [
   { key: 'video', label: '🎥 영상 보기' },
@@ -11,7 +11,7 @@ const tabs = [
 const tabButtonBase =
   'flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd331]/60';
 
-function ClassDetail({ classItem }) {
+function ClassDetail({ classItem }: { [key: string]: any }) {
   const [activeTab, setActiveTab] = useState('video');
   const safeNotices = useMemo(() => classItem?.notice ?? [], [classItem]);
   const safeResources = useMemo(() => classItem?.resources ?? [], [classItem]);
@@ -52,7 +52,7 @@ function ClassDetail({ classItem }) {
 
     return (
       <div className="space-y-3">
-        {safeNotices.map((notice) => (
+        {safeNotices.map((notice: any) => (
           <article key={notice.title} className="rounded-3xl bg-white px-6 py-5 shadow-soft">
             <h3 className="text-base font-semibold text-ellieGray">{notice.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-ellieGray/70">{notice.content}</p>
@@ -110,7 +110,7 @@ function ClassDetail({ classItem }) {
 
     return (
       <div className="space-y-3">
-        {safeResources.map((resource) => (
+        {safeResources.map((resource: any) => (
           <article key={`${resource.name}-${resource.url}`} className="rounded-3xl bg-white px-6 py-5 shadow-soft">
             <h3 className="text-base font-semibold text-ellieGray">{resource.name}</h3>
             <div className="mt-3">
@@ -152,7 +152,7 @@ function ClassDetail({ classItem }) {
 
     return (
       <div className="space-y-3">
-        {safeFeedback.map((item, index) => (
+        {safeFeedback.map((item: any, index: number) => (
           <article key={`${item.week ?? index}-feedback`} className="rounded-3xl bg-white px-6 py-5 shadow-soft">
             <h3 className="text-base font-semibold text-ellieGray">
               {item.week ? `${item.week}주차 피드백` : '피드백'}
@@ -174,7 +174,7 @@ function ClassDetail({ classItem }) {
       </div>
 
       <nav className="flex gap-2 rounded-3xl bg-white p-2 shadow-soft">
-        {tabs.map((tab) => {
+        {tabs.map((tab: any) => {
           const isActive = tab.key === activeTab;
           return (
             <button

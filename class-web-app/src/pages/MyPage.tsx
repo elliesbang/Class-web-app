@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { hasCourseAccess, subscribeCourseAccessChanges } from '../lib/course-access';
 
-const formatDate = (value) => {
+const formatDate = (value: any) => {
   if (!value) {
     return null;
   }
@@ -23,7 +23,7 @@ const formatDate = (value) => {
   return typeof value === 'string' ? value : String(value);
 };
 
-const formatDateRange = (startDate, endDate) => {
+const formatDateRange = (startDate: any, endDate: any) => {
   const formattedStart = formatDate(startDate);
   const formattedEnd = formatDate(endDate);
 
@@ -42,7 +42,7 @@ const formatDateRange = (startDate, endDate) => {
   return null;
 };
 
-const getClassAccessKey = (classInfo) => {
+const getClassAccessKey = (classInfo: any) => {
   if (classInfo?.code && classInfo.code.trim().length > 0) {
     return classInfo.code;
   }
@@ -55,14 +55,14 @@ const getClassAccessKey = (classInfo) => {
 };
 
 function MyPage() {
-  const [allClasses, setAllClasses] = useState([]);
-  const [visibleClasses, setVisibleClasses] = useState([]);
+  const [allClasses, setAllClasses] = useState<any[]>([]);
+  const [visibleClasses, setVisibleClasses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
 
-  const updateVisibleClasses = useCallback((classes) => {
+  const updateVisibleClasses = useCallback((classes: any[]) => {
     setVisibleClasses(
-      classes.filter((item) => {
+      classes.filter((item: any) => {
         try {
           return hasCourseAccess(getClassAccessKey(item));
         } catch (caught) {
@@ -74,7 +74,7 @@ function MyPage() {
   }, []);
 
   const fetchClasses = useCallback(
-    async (signal) => {
+    async (signal?: any) => {
       if (signal?.aborted) {
         return;
       }
@@ -141,7 +141,7 @@ function MyPage() {
           </p>
         ) : !isLoading && error ? null : (
           <ul className="mt-4 space-y-3 text-sm text-ellieGray/80">
-            {visibleClasses.map((course) => {
+            {visibleClasses.map((course: any) => {
               const periodLabel = formatDateRange(course.startDate, course.endDate);
               const statusLabel = course.isActive === false ? '종료됨' : '진행 중';
 

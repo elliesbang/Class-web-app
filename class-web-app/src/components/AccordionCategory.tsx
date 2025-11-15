@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import CourseCard from './CourseCard.jsx';
+import React, { useState } from 'react';
+import CourseCard from './CourseCard';
 
-function AccordionCategory({ title, courses, accentColor }) {
+function AccordionCategory({ title, courses, accentColor }: { [key: string]: any }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -28,7 +28,7 @@ function AccordionCategory({ title, courses, accentColor }) {
         }`}
       >
         {isOpen &&
-          courses.map((course) => (
+          courses.map((course: any) => (
             <CourseCard key={course.name} course={course} accentColor={accentColor} />
           ))}
       </div>

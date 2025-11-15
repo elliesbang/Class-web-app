@@ -9,7 +9,7 @@
   - `src/`
     - `components/` – 공통 UI 컴포넌트(NavbarTop, AccordionCategory, CourseCard)
     - `pages/` – 홈, 내부 강의실, VOD, 공지, 마이페이지 화면
-    - `App.jsx`, `main.jsx`, `index.css`
+    - `App.tsx`, `main.tsx`, `index.css`
   - `tailwind.config.js`, `postcss.config.js`, `vite.config.js`
   - `package.json`
 - `package.json` (루트) – Cloudflare Pages용 workspace 및 빌드 스크립트 정의

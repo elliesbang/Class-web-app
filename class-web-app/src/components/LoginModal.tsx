@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
@@ -26,12 +26,32 @@ type ActiveForm = "buttons" | "student" | "admin" | "vod";  // ✅ vod 추가
 
 const LoginModal = ({ onClose }: { onClose: () => void }) => {
   const [activeForm, setActiveForm] = useState<ActiveForm>("buttons");
+  const [adminPassword, setAdminPassword] = useState<string>("");
   const navigate = useNavigate();
 
   const closeModal = useCallback(() => {
     onClose();
     setActiveForm("buttons");
+    setAdminPassword("");
   }, [onClose]);
+
+  const handleAdminSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      if (adminPassword.trim() === "admin123") {
+        localStorage.setItem("adminAuth", "true");
+        window.dispatchEvent(new Event("admin-auth-change"));
+        alert("관리자로 로그인되었습니다.");
+        closeModal();
+        navigate("/admin");
+        return;
+      }
+
+      alert("비밀번호가 올바르지 않습니다.");
+    },
+    [adminPassword, closeModal, navigate]
+  );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -72,7 +92,10 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       <button
         type="button"
         className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
-        onClick={() => setActiveForm("admin")}
+        onClick={() => {
+          setAdminPassword("");
+          setActiveForm("admin");
+        }}
       >
         관리자
       </button>
@@ -83,7 +106,10 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     <button
       type="button"
       className="absolute right-0 top-0 text-sm text-gray-500 hover:text-gray-700"
-      onClick={() => setActiveForm("buttons")}
+      onClick={() => {
+        setActiveForm("buttons");
+        setAdminPassword("");
+      }}
     >
       ← 뒤로가기
     </button>
@@ -133,14 +159,19 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       className="relative"
     >
       {renderBackButton()}
-      <div className="mt-6">
+      <form className="mt-6" onSubmit={handleAdminSubmit}>
         <label className="block font-medium mb-1">관리자 비밀번호</label>
-        <input type="password" className="border rounded-md w-full p-2 mb-3" />
+        <input
+          type="password"
+          className="border rounded-md w-full p-2 mb-3"
+          value={adminPassword}
+          onChange={(event) => setAdminPassword(event.target.value)}
+        />
 
-        <button className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full">
+        <button type="submit" className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full">
           로그인
         </button>
-      </div>
+      </form>
     </motion.div>
   );
 

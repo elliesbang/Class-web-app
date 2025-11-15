@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
-const parseJsonResponse = async (response, contextLabel) => {
+const parseJsonResponse = async (response: any, contextLabel: string) => {
   const text = await response.text();
   if (!text) {
     return null;
@@ -20,7 +20,7 @@ const parseJsonResponse = async (response, contextLabel) => {
   }
 };
 
-const normaliseItems = (payload) => {
+const normaliseItems = (payload: any) => {
   if (Array.isArray(payload)) {
     return payload;
   }
@@ -36,7 +36,7 @@ const normaliseItems = (payload) => {
   return [];
 };
 
-const formatDateTime = (value) => {
+const formatDateTime = (value: any) => {
   if (!value) {
     return '';
   }
@@ -59,7 +59,7 @@ const formatDateTime = (value) => {
   }
 };
 
-const getItemKey = (item, index) => {
+const getItemKey = (item: any, index: number) => {
   const candidates = [item?.id, item?.feedbackId, item?.assignmentId, item?.title];
   for (const candidate of candidates) {
     if (candidate) {
@@ -69,10 +69,10 @@ const getItemKey = (item, index) => {
   return `feedback-${index}`;
 };
 
-function FeedbackTab({ courseId, courseName }) {
-  const [feedbackItems, setFeedbackItems] = useState([]);
+function FeedbackTab({ courseId, courseName }: { [key: string]: any }) {
+  const [feedbackItems, setFeedbackItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
 
   useEffect(() => {
     setFeedbackItems([]);
@@ -128,7 +128,7 @@ function FeedbackTab({ courseId, courseName }) {
       {!isLoading && !error ? (
         feedbackItems.length > 0 ? (
           <ul className="space-y-4">
-            {feedbackItems.map((item, index) => {
+            {feedbackItems.map((item: any, index: number) => {
               const key = getItemKey(item, index);
               const description =
                 typeof item?.content === 'string' && item.content.trim().length > 0

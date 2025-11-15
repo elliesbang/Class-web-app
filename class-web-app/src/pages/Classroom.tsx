@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const accordionData = [
@@ -31,13 +31,13 @@ const accordionData = [
 
 function Classroom() {
   const navigate = useNavigate();
-  const [openCategory, setOpenCategory] = useState(null);
+  const [openCategory, setOpenCategory] = useState<any>(null);
 
-  const handleToggle = (category) => {
+  const handleToggle = (category: any) => {
     setOpenCategory((current) => (current === category ? null : category));
   };
 
-  const handleEnterClass = (title) => {
+  const handleEnterClass = (title: any) => {
     if (!title) {
       return;
     }
@@ -56,7 +56,7 @@ function Classroom() {
         </header>
 
         <section className="space-y-4">
-          {accordionData.map((category) => {
+          {accordionData.map((category: any) => {
             const isOpen = openCategory === category.name;
 
             return (
@@ -79,7 +79,7 @@ function Classroom() {
                   }`}
                 >
                   <div className="space-y-3 overflow-hidden">
-                    {category.courses.map((course) => (
+                    {category.courses.map((course: any) => (
                       <div
                         key={course.title}
                         className="rounded-3xl bg-white p-5 shadow-soft transition-transform duration-200 hover:-translate-y-0.5"
