@@ -1,5 +1,3 @@
-import { Client } from '@notionhq/client';
-
 function buildRichText(content) {
   if (!content) return [];
   return [
@@ -10,8 +8,28 @@ function buildRichText(content) {
   ];
 }
 
+async function notionRequest(path, options = {}, env) {
+  const headers = {
+    Authorization: `Bearer ${env.NOTION_TOKEN}`,
+    'Notion-Version': '2022-06-28',
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(`https://api.notion.com/v1/${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Notion API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
+
 export async function onRequestPut(context) {
-  const notion = new Client({ auth: context.env.NOTION_TOKEN });
   const body = await context.request.json();
   const { id, class_id, type, title, description, file_url } = body;
 
@@ -47,12 +65,16 @@ export async function onRequestPut(context) {
   }
 
   try {
-    await notion.pages.update({
-      page_id: id,
-      properties,
-    });
+    await notionRequest(
+      `pages/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ properties }),
+      },
+      context.env
+    );
 
-    const page = await notion.pages.retrieve({ page_id: id });
+    const page = await notionRequest(`pages/${id}`, { method: 'GET' }, context.env);
 
     const data = {
       id: page.id,

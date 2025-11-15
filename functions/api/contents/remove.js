@@ -1,7 +1,25 @@
-import { Client } from '@notionhq/client';
+async function notionRequest(path, options = {}, env) {
+  const headers = {
+    Authorization: `Bearer ${env.NOTION_TOKEN}`,
+    'Notion-Version': '2022-06-28',
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(`https://api.notion.com/v1/${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Notion API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
 
 export async function onRequestDelete(context) {
-  const notion = new Client({ auth: context.env.NOTION_TOKEN });
   const url = new URL(context.request.url);
   const id = url.searchParams.get('id');
 
@@ -12,10 +30,14 @@ export async function onRequestDelete(context) {
   }
 
   try {
-    await notion.pages.update({
-      page_id: id,
-      archived: true,
-    });
+    await notionRequest(
+      `pages/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ archived: true }),
+      },
+      context.env
+    );
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },
