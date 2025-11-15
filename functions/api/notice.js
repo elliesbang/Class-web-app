@@ -1,56 +1,79 @@
-import { initNotion, queryDB, createPage, mapPageProperties } from "./utils/notion";
+import {
+  initNotion,
+  queryDB,
+  createPage,
+  jsonResponse,
+  errorResponse,
+  buildTitle,
+  buildRichText,
+  cleanProperties,
+} from './utils/notion.js';
 
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+const TITLE_KEYS = ['Title', 'title', 'Name', 'name'];
+const CONTENT_KEYS = ['Content', 'content', '본문'];
+const AUTHOR_KEYS = ['Author', 'author', '작성자'];
+
+function findProperty(properties, keys) {
+  for (const key of keys) {
+    if (key in properties) {
+      return properties[key];
+    }
+  }
+
+  return null;
 }
 
-export async function onRequestGet({ env }) {
+export const onRequest = async ({ request, env }) => {
+  if (!env.DB_NOTICE) {
+    return errorResponse(500, '공지사항 데이터베이스가 설정되지 않았습니다.');
+  }
+
   try {
     initNotion(env);
 
-    const response = await queryDB(env.DB_NOTICE);
-    const notices = response.results.map(mapPageProperties);
-
-    return jsonResponse({ success: true, data: { notices } });
-  } catch (error) {
-    console.error("/api/notice GET error", error);
-    return jsonResponse({ success: false, error: error.message || "Internal Server Error" }, 500);
-  }
-}
-
-export async function onRequestPost({ request, env }) {
-  try {
-    const { title, body, date, adminName } = await request.json();
-
-    if (!title || !body || !date || !adminName) {
-      return jsonResponse({ success: false, error: "title, body, date, adminName are required" }, 400);
+    if (request.method === 'GET') {
+      const { results } = await queryDB(env.DB_NOTICE, {}, env);
+      return jsonResponse({
+        success: true,
+        total: results.length,
+        items: results.map((page) => ({
+          id: page.id,
+          title: findProperty(page.properties ?? {}, TITLE_KEYS),
+          content: findProperty(page.properties ?? {}, CONTENT_KEYS),
+          author: findProperty(page.properties ?? {}, AUTHOR_KEYS),
+          createdTime: page.createdTime,
+          lastEditedTime: page.lastEditedTime,
+          properties: page.properties,
+        })),
+      });
     }
 
-    initNotion(env);
+    if (request.method === 'POST') {
+      const body = await request.json();
+      const { role, title, content, author } = body ?? {};
 
-    const created = await createPage(env.DB_NOTICE, {
-      Title: {
-        title: [{ text: { content: title } }],
-      },
-      Body: {
-        rich_text: [{ text: { content: body } }],
-      },
-      Date: {
-        date: { start: date },
-      },
-      Author: {
-        rich_text: [{ text: { content: adminName } }],
-      },
-    });
+      if (role !== 'admin') {
+        return errorResponse(403, '공지 작성 권한이 없습니다.');
+      }
 
-    const notice = mapPageProperties(created);
+      if (!title || !content) {
+        return errorResponse(400, '제목과 내용을 모두 입력해주세요.');
+      }
 
-    return jsonResponse({ success: true, data: { notice } }, 201);
+      const properties = cleanProperties({
+        Title: buildTitle(title),
+        Content: buildRichText(content),
+        Author: author ? buildRichText(author) : undefined,
+        Role: buildRichText(role),
+      });
+
+      const page = await createPage(env.DB_NOTICE, properties, env);
+      return jsonResponse({ success: true, notice: page });
+    }
+
+    return new Response(null, { status: 405 });
   } catch (error) {
-    console.error("/api/notice POST error", error);
-    return jsonResponse({ success: false, error: error.message || "Internal Server Error" }, 500);
+    console.error('[notice] failed', error);
+    return errorResponse(500, '공지사항 처리 중 오류가 발생했습니다.');
   }
-}
+};
