@@ -21,6 +21,10 @@ const routeConfig = {
     { pattern: [], loader: () => import('../api-handlers/students/index.js') },
     { pattern: ['contents'], loader: () => import('../api-handlers/students/contents.js') },
   ],
+  notifications: [
+    { pattern: [], loader: () => import('../api-handlers/notifications/index.js') },
+    { pattern: ['delete'], loader: () => import('../api-handlers/notifications/delete.js') },
+  ],
   courses: [
     { pattern: [], loader: () => import('../api-handlers/courses/index.js') },
   ],
@@ -51,6 +55,9 @@ const routeConfig = {
   ],
   'admin-auth': [
     { pattern: [], loader: () => import('../api-handlers/admin-auth/index.js') },
+  ],
+  'user-preferences': [
+    { pattern: [], loader: () => import('../api-handlers/user-preferences/index.js') },
   ],
 };
 

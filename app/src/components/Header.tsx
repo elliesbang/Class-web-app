@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import NotificationBell from './notifications/NotificationBell';
 
 interface HeaderProps {
   onOpenLoginModal: () => void;
@@ -40,23 +41,26 @@ const Header: React.FC<HeaderProps> = ({ onOpenLoginModal }) => {
           엘리의방 클래스
         </span>
 
-        {isAdminAuthenticated ? (
-          <button
-            type="button"
-            onClick={goToAdminDashboard}
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
-          >
-            관리자 대시보드
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onOpenLoginModal}   // ✅ navigate 제거 → 모달 열기
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
-          >
-            로그인
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          {isAdminAuthenticated ? (
+            <button
+              type="button"
+              onClick={goToAdminDashboard}
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
+            >
+              관리자 대시보드
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenLoginModal}   // ✅ navigate 제거 → 모달 열기
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
+            >
+              로그인
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );
