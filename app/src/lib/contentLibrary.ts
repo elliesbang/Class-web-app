@@ -16,6 +16,7 @@ export type VodCategory = {
 };
 
 export type GlobalNoticeRecord = {
+  notionId: string;
   id: string;
   title: string;
   content: string;
@@ -25,6 +26,7 @@ export type GlobalNoticeRecord = {
 };
 
 export type ClassroomVideoRecord = {
+  notionId: string;
   id: string;
   categoryId: string;
   courseId: string;
@@ -36,6 +38,7 @@ export type ClassroomVideoRecord = {
 };
 
 export type VodVideoRecord = {
+  notionId: string;
   id: string;
   categoryId: string;
   title: string;
@@ -48,6 +51,7 @@ export type VodVideoRecord = {
 };
 
 export type ClassroomMaterialRecord = {
+  notionId: string;
   id: string;
   categoryId: string;
   courseId: string;
@@ -60,6 +64,7 @@ export type ClassroomMaterialRecord = {
 };
 
 export type ClassroomNoticeRecord = {
+  notionId: string;
   id: string;
   categoryId: string;
   courseId: string;
@@ -165,6 +170,7 @@ export const vodCategories: VodCategory[] = [
 
 export const defaultGlobalNotices: GlobalNoticeRecord[] = [
   {
+    notionId: '00000000-0000-0000-0000-000000000101',
     id: 'notice-20251020',
     title: '11월 라이브 클래스 일정 안내',
     content: '11월에는 캔디마 실전반과 미치나 챌린지가 새롭게 열립니다. 상세 일정은 강의실 공지를 확인해 주세요.',
@@ -173,6 +179,7 @@ export const defaultGlobalNotices: GlobalNoticeRecord[] = [
     createdAt: toIsoDate(2),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000102',
     id: 'notice-20251015',
     title: 'VOD 콘텐츠 업데이트',
     content: '출판 라인 VOD에 새로운 템플릿 강좌가 추가되었습니다. 지금 바로 확인해 보세요!',
@@ -181,6 +188,7 @@ export const defaultGlobalNotices: GlobalNoticeRecord[] = [
     createdAt: toIsoDate(7),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000103',
     id: 'notice-20251007',
     title: '추석 연휴 고객센터 휴무 안내',
     content: '9월 14일부터 16일까지 고객센터가 휴무입니다. 강의는 정상 이용 가능합니다.',
@@ -192,6 +200,7 @@ export const defaultGlobalNotices: GlobalNoticeRecord[] = [
 
 export const defaultClassroomVideos: ClassroomVideoRecord[] = [
   {
+    notionId: '00000000-0000-0000-0000-000000000201',
     id: 'video-candyma-1',
     categoryId: 'skill',
     courseId: 'candyma',
@@ -202,6 +211,7 @@ export const defaultClassroomVideos: ClassroomVideoRecord[] = [
     createdAt: toIsoDate(1),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000202',
     id: 'video-candyma-2',
     categoryId: 'skill',
     courseId: 'candyma',
@@ -212,6 +222,7 @@ export const defaultClassroomVideos: ClassroomVideoRecord[] = [
     createdAt: toIsoDate(0),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000203',
     id: 'video-michina-1',
     categoryId: 'ai-creation',
     courseId: 'michina',
@@ -222,6 +233,7 @@ export const defaultClassroomVideos: ClassroomVideoRecord[] = [
     createdAt: toIsoDate(3),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000204',
     id: 'video-nacoljak-1',
     categoryId: 'ai-creation',
     courseId: 'nacoljak',
@@ -235,6 +247,7 @@ export const defaultClassroomVideos: ClassroomVideoRecord[] = [
 
 export const defaultVodVideos: VodVideoRecord[] = [
   {
+    notionId: '00000000-0000-0000-0000-000000000301',
     id: 'vod-featured-1',
     categoryId: 'featured',
     title: '디자인 템플릿으로 수익 만들기',
@@ -246,6 +259,7 @@ export const defaultVodVideos: VodVideoRecord[] = [
     createdAt: toIsoDate(0),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000302',
     id: 'vod-featured-2',
     categoryId: 'featured',
     title: '챌린지 운영 베스트 프랙티스',
@@ -257,6 +271,7 @@ export const defaultVodVideos: VodVideoRecord[] = [
     createdAt: toIsoDate(4),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000303',
     id: 'vod-beginner-1',
     categoryId: 'beginner',
     title: '캔바 기초 다지기',
@@ -268,6 +283,7 @@ export const defaultVodVideos: VodVideoRecord[] = [
     createdAt: toIsoDate(10),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000304',
     id: 'vod-advanced-1',
     categoryId: 'advanced',
     title: 'AI 기반 출판물 제작',
@@ -282,6 +298,7 @@ export const defaultVodVideos: VodVideoRecord[] = [
 
 export const defaultClassroomMaterials: ClassroomMaterialRecord[] = [
   {
+    notionId: '00000000-0000-0000-0000-000000000401',
     id: 'material-candyma-1',
     categoryId: 'skill',
     courseId: 'candyma',
@@ -293,6 +310,7 @@ export const defaultClassroomMaterials: ClassroomMaterialRecord[] = [
     createdAt: toIsoDate(1),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000402',
     id: 'material-candyma-2',
     categoryId: 'skill',
     courseId: 'candyma',
@@ -304,6 +322,7 @@ export const defaultClassroomMaterials: ClassroomMaterialRecord[] = [
     createdAt: toIsoDate(2),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000403',
     id: 'material-michina-1',
     categoryId: 'ai-creation',
     courseId: 'michina',
@@ -318,6 +337,7 @@ export const defaultClassroomMaterials: ClassroomMaterialRecord[] = [
 
 export const defaultClassroomNotices: ClassroomNoticeRecord[] = [
   {
+    notionId: '00000000-0000-0000-0000-000000000501',
     id: 'notice-candyma-1',
     categoryId: 'skill',
     courseId: 'candyma',
@@ -327,6 +347,7 @@ export const defaultClassroomNotices: ClassroomNoticeRecord[] = [
     createdAt: toIsoDate(1),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000502',
     id: 'notice-michina-1',
     categoryId: 'ai-creation',
     courseId: 'michina',
@@ -336,6 +357,7 @@ export const defaultClassroomNotices: ClassroomNoticeRecord[] = [
     createdAt: toIsoDate(2),
   },
   {
+    notionId: '00000000-0000-0000-0000-000000000503',
     id: 'notice-nacoljak-1',
     categoryId: 'ai-creation',
     courseId: 'nacoljak',

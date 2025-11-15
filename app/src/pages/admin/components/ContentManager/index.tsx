@@ -406,9 +406,13 @@ const ContentManager = () => {
     setClassroomNoticeForm({ title: '', content: '', isImportant: false });
   };
 
-  const handleDelete = async (id: string, type: ContentDeleteType) => {
+  const handleDelete = async (notionId: string, type: ContentDeleteType) => {
+    if (!notionId) {
+      alert('삭제에 필요한 Notion 페이지 ID가 없습니다.');
+      return;
+    }
     try {
-      const response = await fetch(`/api/contents?id=${encodeURIComponent(id)}`, {
+      const response = await fetch(`/api/contents?id=${encodeURIComponent(notionId)}`, {
         method: 'DELETE',
       });
 
@@ -422,15 +426,15 @@ const ContentManager = () => {
         alert('삭제되었습니다.');
 
         if (type === 'video') {
-          setClassroomVideos((prev) => prev.filter((item) => item.id !== id));
+          setClassroomVideos((prev) => prev.filter((item) => item.notionId !== notionId));
         } else if (type === 'vod') {
-          setVodVideos((prev) => prev.filter((item) => item.id !== id));
+          setVodVideos((prev) => prev.filter((item) => item.notionId !== notionId));
         } else if (type === 'material') {
-          setMaterials((prev) => prev.filter((item) => item.id !== id));
+          setMaterials((prev) => prev.filter((item) => item.notionId !== notionId));
         } else if (type === 'notice') {
-          setClassroomNotices((prev) => prev.filter((item) => item.id !== id));
+          setClassroomNotices((prev) => prev.filter((item) => item.notionId !== notionId));
         } else if (type === 'global') {
-          setGlobalNotices((prev) => prev.filter((item) => item.id !== id));
+          setGlobalNotices((prev) => prev.filter((item) => item.notionId !== notionId));
         }
       } else {
         alert('삭제 중 오류가 발생했습니다.');
@@ -628,7 +632,7 @@ const ContentManager = () => {
                     <button
                       type="button"
                       className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                      onClick={() => handleDelete(notice.id, 'global')}
+                      onClick={() => handleDelete(notice.notionId, 'global')}
                       aria-label="공지 삭제"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -766,7 +770,7 @@ const ContentManager = () => {
                       <button
                         type="button"
                         className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => handleDelete(video.id, 'video')}
+                        onClick={() => handleDelete(video.notionId, 'video')}
                         aria-label="영상 삭제"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -899,7 +903,7 @@ const ContentManager = () => {
                     <button
                       type="button"
                       className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                      onClick={() => handleDelete(video.id, 'vod')}
+                      onClick={() => handleDelete(video.notionId, 'vod')}
                       aria-label="VOD 삭제"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -1041,7 +1045,7 @@ const ContentManager = () => {
                       <button
                         type="button"
                         className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => handleDelete(material.id, 'material')}
+                        onClick={() => handleDelete(material.notionId, 'material')}
                         aria-label="자료 삭제"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -1131,7 +1135,7 @@ const ContentManager = () => {
                       <button
                         type="button"
                         className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => handleDelete(notice.id, 'notice')}
+                        onClick={() => handleDelete(notice.notionId, 'notice')}
                         aria-label="강의실 공지 삭제"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
