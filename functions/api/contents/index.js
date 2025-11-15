@@ -1,5 +1,3 @@
-import { Client } from '@notionhq/client';
-
 function extractPlainText(items = []) {
   return items.map((item) => item?.plain_text || '').join('');
 }
@@ -44,13 +42,32 @@ function mapPageToContent(page) {
   };
 }
 
+async function notionRequest(path, options = {}, env) {
+  const headers = {
+    Authorization: `Bearer ${env.NOTION_TOKEN}`,
+    'Notion-Version': '2022-06-28',
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(`https://api.notion.com/v1/${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Notion API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
+
 export async function onRequestGet(context) {
-  const notion = new Client({ auth: context.env.NOTION_TOKEN });
   const url = new URL(context.request.url);
   const classId = url.searchParams.get('class_id');
 
   const query = {
-    database_id: context.env.DB_CONTENTS,
     sorts: [
       {
         timestamp: 'created_time',
@@ -69,7 +86,14 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const { results } = await notion.databases.query(query);
+    const { results } = await notionRequest(
+      `databases/${context.env.DB_CONTENTS}/query`,
+      {
+        method: 'POST',
+        body: JSON.stringify(query),
+      },
+      context.env
+    );
     const data = results.map(mapPageToContent);
 
     return new Response(JSON.stringify({ success: true, data }), {
