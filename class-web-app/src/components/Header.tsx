@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import LoginModal from './LoginModal';   // ✅ 모달 직접 import
 import { useNavigate } from 'react-router-dom';
 
-const Header = () => {
+interface HeaderProps {
+  onOpenLoginModal: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onOpenLoginModal }) => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false); // ✅ 모달 상태 추가
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,10 +27,6 @@ const Header = () => {
       window.removeEventListener('admin-auth-change', updateAuthState as EventListener);
     };
   }, []);
-
-  const openLoginModal = () => {
-    setIsLoginModalOpen(true);
-  };
 
   const goToAdminDashboard = () => {
     navigate('/admin');
@@ -53,18 +51,13 @@ const Header = () => {
         ) : (
           <button
             type="button"
-            onClick={openLoginModal}   // ✅ navigate 제거 → 모달 열기
+            onClick={onOpenLoginModal}   // ✅ navigate 제거 → 모달 열기
             className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
           >
             로그인
           </button>
         )}
       </div>
-
-      {/* ✅ 모달 렌더링 */}
-      {isLoginModalOpen && (
-        <LoginModal onClose={() => setIsLoginModalOpen(false)} />
-      )}
     </header>
   );
 };
