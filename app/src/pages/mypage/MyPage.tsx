@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import NotificationSettings from '../../components/notifications/NotificationSettings';
 import { hasCourseAccess, subscribeCourseAccessChanges } from '../../lib/course-access';
 
 const formatDate = (value: any) => {
@@ -168,6 +169,7 @@ function MyPage() {
           프로필, 알림, 결제 수단 등을 손쉽게 관리할 수 있습니다.
         </p>
       </section>
+      <NotificationSettings />
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, GraduationCap, Home, PlayCircle, User } from 'lucide-react';
+import { GraduationCap, Home, Megaphone, PlayCircle, User } from 'lucide-react';
 
 const navItems = [
   { label: '홈', to: '/', Icon: Home },
   { label: '강의실', to: '/internal', Icon: GraduationCap },
   { label: 'VOD', to: '/vod', Icon: PlayCircle },
-  { label: '공지', to: '/notices', Icon: Bell },
+  { label: '공지', to: '/notices', Icon: Megaphone },
   { label: 'My', to: '/mypage', Icon: User },
 ];
 
