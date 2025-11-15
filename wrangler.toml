@@ -1,9 +1,0 @@
-name = "class-web-app"
-compatibility_date = "2024-10-01"
-
-[build]
-command = "npm run build"
-output_directory = "app/dist"      # <-- 여기만 고치면 모든 문제가 해결됨
-
-[functions]
-directory = "functions"

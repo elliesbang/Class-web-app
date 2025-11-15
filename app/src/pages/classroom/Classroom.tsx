@@ -1,14 +1,37 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { classroomCategories } from '../../lib/contentLibrary';
+import ClassroomListItem from '../../components/ClassroomListItem';
+import { classes } from '../../data/classData';
+
+type CategoryId = 'skill' | 'money' | 'ai';
+
+type CategoryConfig = {
+  id: CategoryId;
+  name: string;
+};
+
+const CATEGORY_CONFIGS: CategoryConfig[] = [
+  { id: 'skill', name: '스킬' },
+  { id: 'money', name: '수익화' },
+  { id: 'ai', name: 'AI 창작' },
+];
 
 function Classroom() {
   const navigate = useNavigate();
-  const [openCategory, setOpenCategory] = useState<string | null>(null);
-  const categories = useMemo(() => classroomCategories, []);
+  const [openCategory, setOpenCategory] = useState<CategoryId | null>(null);
 
-  const handleToggle = (categoryId: string) => {
+  const categorizedCategories = useMemo(() => {
+    const filterByCategory = (categoryId: CategoryId) =>
+      classes.filter((course) => course.category === categoryId && course.hidden !== true);
+
+    return CATEGORY_CONFIGS.map((category) => ({
+      ...category,
+      courses: filterByCategory(category.id),
+    }));
+  }, []);
+
+  const handleToggle = (categoryId: CategoryId) => {
     setOpenCategory((current) => (current === categoryId ? null : categoryId));
   };
 
@@ -30,7 +53,7 @@ function Classroom() {
         </header>
 
         <section className="space-y-4">
-          {categories.map((category) => {
+          {categorizedCategories.map((category) => {
             const isOpen = openCategory === category.id;
 
             return (
@@ -54,27 +77,7 @@ function Classroom() {
                 >
                   <div className="space-y-3 overflow-hidden">
                     {category.courses.map((course) => (
-                      <div
-                        key={course.id}
-                        className="rounded-3xl bg-white p-5 shadow-soft transition-transform duration-200 hover:-translate-y-0.5"
-                      >
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <h2 className="text-base font-semibold text-ellieGray">{course.name}</h2>
-                            {course.description ? (
-                              <p className="mt-1 text-sm leading-relaxed text-ellieGray/70">{course.description}</p>
-                            ) : null}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleEnterClass(course.id)}
-                            className="inline-flex w-full justify-center rounded-full px-5 py-2 text-sm font-semibold text-ellieGray shadow-soft transition-transform duration-200 hover:-translate-y-0.5 sm:w-auto"
-                            style={{ backgroundColor: '#ffd331' }}
-                          >
-                            수강하기
-                          </button>
-                        </div>
-                      </div>
+                      <ClassroomListItem key={course.id} course={course} onEnter={handleEnterClass} />
                     ))}
                   </div>
                 </div>
