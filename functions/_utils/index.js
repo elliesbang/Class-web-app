@@ -64,6 +64,13 @@ export const ensureBaseSchema = async (db) => {
       FOREIGN KEY (class_id) REFERENCES classes(id)
     );
 
+    CREATE TABLE IF NOT EXISTS material_pages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      notion_page_id TEXT NOT NULL UNIQUE,
+      course_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS notices (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
