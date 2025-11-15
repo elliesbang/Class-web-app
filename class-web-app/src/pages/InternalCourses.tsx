@@ -1,4 +1,5 @@
-import AccordionCategory from '../components/AccordionCategory.jsx';
+import React from 'react';
+import AccordionCategory from '../components/AccordionCategory';
 
 const categories = [
   {
@@ -49,7 +50,7 @@ function InternalCourses() {
         </p>
       </header>
       <div>
-        {categories.map((category) => (
+        {categories.map((category: any) => (
           <AccordionCategory key={category.title} {...category} />
         ))}
       </div>

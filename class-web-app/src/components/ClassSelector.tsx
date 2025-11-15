@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
-const normaliseCategoryItem = (item) => {
+const normaliseCategoryItem = (item: any) => {
   if (item == null) {
     return null;
   }
@@ -32,7 +32,7 @@ const normaliseCategoryItem = (item) => {
   return null;
 };
 
-const extractArrayPayload = (payload) => {
+const extractArrayPayload = (payload: any) => {
   if (Array.isArray(payload)) {
     return payload;
   }
@@ -54,7 +54,7 @@ const extractArrayPayload = (payload) => {
   return [];
 };
 
-const resolveClassCategoryId = (cls, categoryList) => {
+const resolveClassCategoryId = (cls: any, categoryList: any[]) => {
   if (!cls || typeof cls !== "object") {
     return null;
   }
@@ -88,12 +88,12 @@ const resolveClassCategoryId = (cls, categoryList) => {
 };
 
 export default function ClassSelector() {
-  const [categories, setCategories] = useState([]);
-  const [classes, setClasses] = useState([]);
-  const [filtered, setFiltered] = useState([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [filtered, setFiltered] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [loading, setLoading] = useState({ categories: false, classes: false });
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState<any>({ categories: false, classes: false });
+  const [error, setError] = useState<any>(null);
 
   useEffect(() => {
     setCategories([]);
@@ -146,14 +146,14 @@ export default function ClassSelector() {
       return;
     }
 
-    const filteredData = classes.filter((cls) => {
+    const filteredData = classes.filter((cls: any) => {
       const categoryId = resolveClassCategoryId(cls, categories);
       return categoryId !== null && String(categoryId) === String(selectedCategory);
     });
     setFiltered(filteredData);
   }, [selectedCategory, classes, categories]);
 
-  const handleCategoryChange = (event) => {
+  const handleCategoryChange = (event: any) => {
     setSelectedCategory(event.target.value);
     setError(null);
   };
@@ -180,7 +180,7 @@ export default function ClassSelector() {
           <option value="" disabled>
             {loading.categories ? "카테고리 불러오는 중..." : "카테고리를 선택하세요"}
           </option>
-          {categories.map((category) => (
+          {categories.map((category: any) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>
@@ -201,7 +201,7 @@ export default function ClassSelector() {
 
         {!isLoading && filtered.length > 0 && (
           <ul className="class-selector__list">
-            {filtered.map((cls) => {
+            {filtered.map((cls: any) => {
               const rawTitle =
                 typeof cls.title === "string"
                   ? cls.title

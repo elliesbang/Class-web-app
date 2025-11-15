@@ -1,21 +1,19 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 
-const getVideoLink = (video) => {
-  if (!video || typeof video !== 'object') {
+const parseMaterialLink = (material: any) => {
+  if (!material || typeof material !== 'object') {
     return null;
   }
-
-  const candidates = [video.url, video.videoUrl, video.link, video.linkUrl, video.streamUrl];
+  const candidates = [material.fileUrl, material.file_url, material.url, material.link, material.linkUrl];
   for (const candidate of candidates) {
     if (typeof candidate === 'string' && candidate.trim().length > 0) {
       return candidate;
     }
   }
-
   return null;
 };
 
-const formatDateTime = (value) => {
+const formatDateTime = (value: any) => {
   if (!value) {
     return '';
   }
@@ -29,16 +27,14 @@ const formatDateTime = (value) => {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
     }).format(date);
   } catch (error) {
-    console.error('[VideoTab] Failed to format date', error);
+    console.error('[MaterialTab] Failed to format date', error);
     return '';
   }
 };
 
-const normaliseType = (value) => {
+const normaliseType = (value: any) => {
   if (typeof value === 'string') {
     return value.trim().toLowerCase();
   }
@@ -48,7 +44,7 @@ const normaliseType = (value) => {
   return String(value).trim().toLowerCase();
 };
 
-const normaliseVideos = (items) => {
+const normaliseMaterials = (items: any) => {
   if (!Array.isArray(items)) {
     return [];
   }
@@ -56,18 +52,15 @@ const normaliseVideos = (items) => {
   return items
     .filter((item) => {
       const type = normaliseType(item?.type ?? item?.category ?? item?.contentType);
-      return type === 'video' || type === '영상' || type === 'videos';
+      return type === 'material' || type === '자료' || type === 'file' || type === 'document';
     })
     .map((item, index) => {
-      const id = item?.id ?? item?.content_id ?? item?.contentId ?? `video-${index}`;
+      const id = item?.id ?? item?.content_id ?? item?.contentId ?? `material-${index}`;
       const titleCandidate =
-        item?.title ?? item?.name ?? item?.content_title ?? item?.contentTitle ?? `영상 ${index + 1}`;
+        item?.title ?? item?.name ?? item?.fileName ?? item?.content_title ?? `자료 ${index + 1}`;
       const descriptionCandidate =
         item?.description ?? item?.summary ?? item?.content ?? item?.text ?? '';
-      const urlCandidate =
-        item?.file_url ?? item?.fileUrl ?? item?.url ?? item?.link ?? item?.linkUrl ?? null;
-      const createdAtCandidate =
-        item?.created_at ?? item?.createdAt ?? item?.published_at ?? item?.publishedAt ?? null;
+      const createdAtCandidate = item?.created_at ?? item?.createdAt ?? item?.uploaded_at ?? item?.uploadedAt;
 
       return {
         id,
@@ -78,28 +71,28 @@ const normaliseVideos = (items) => {
             : descriptionCandidate != null
             ? String(descriptionCandidate)
             : '',
-        url: urlCandidate,
-        createdAt: createdAtCandidate,
+        link: parseMaterialLink(item),
+        createdAt: createdAtCandidate ?? null,
       };
     });
 };
 
-function VideoTab({ courseName, contents = [], isLoadingContents = false, contentError = null }) {
-  const videos = useMemo(() => normaliseVideos(contents), [contents]);
+function MaterialTab({ courseName, contents = [], isLoadingContents = false, contentError = null }: { [key: string]: any }) {
+  const materials = useMemo(() => normaliseMaterials(contents), [contents]);
   const isLoading = isLoadingContents;
   const error = contentError;
 
   const headerDescription = useMemo(() => {
     if (!courseName) {
-      return '수업 영상을 확인하고 복습해보세요.';
+      return '강의 자료와 참고 파일을 확인하세요.';
     }
-    return `${courseName} 수업 영상을 확인하고 복습해보세요.`;
+    return `${courseName} 수업에 제공된 자료를 확인하고 다운로드하세요.`;
   }, [courseName]);
 
   return (
     <div className="space-y-4 text-ellieGray">
       <header className="space-y-2">
-        <h2 className="text-lg font-semibold">영상 보기</h2>
+        <h2 className="text-lg font-semibold">자료 보기</h2>
         <p className="text-sm leading-relaxed text-ellieGray/80">{headerDescription}</p>
       </header>
 
@@ -109,40 +102,35 @@ function VideoTab({ courseName, contents = [], isLoadingContents = false, conten
 
       {isLoading ? (
         <p className="rounded-2xl bg-white/70 px-4 py-3 text-center text-sm text-ellieGray/70 shadow-soft">
-          영상 정보를 불러오는 중입니다…
+          자료를 불러오는 중입니다…
         </p>
       ) : null}
 
       {!isLoading && !error ? (
-        videos.length > 0 ? (
+        materials.length > 0 ? (
           <ul className="space-y-4">
-            {videos.map((video, index) => {
-              const link = getVideoLink(video);
-              const description =
-                typeof video?.description === 'string' && video.description.trim().length > 0
-                  ? video.description
-                  : '';
-              const createdAt = formatDateTime(video?.createdAt);
+            {materials.map((material: any, index: number) => {
+              const createdAt = formatDateTime(material?.createdAt);
 
               return (
-                <li key={video?.id ?? `video-${index}`} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
+                <li key={material?.id ?? `material-${index}`} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
                   <h3 className="text-base font-semibold text-ellieGray">
-                    {video?.title ?? `영상 ${index + 1}`}
+                    {material?.title ?? `자료 ${index + 1}`}
                   </h3>
-                  {description ? (
-                    <p className="mt-2 text-sm leading-relaxed text-ellieGray/70">{description}</p>
+                  {material?.description ? (
+                    <p className="mt-2 text-sm leading-relaxed text-ellieGray/70">{material.description}</p>
                   ) : null}
-                  {link ? (
+                  {material?.link ? (
                     <a
-                      href={link}
+                      href={material.link}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-ellieYellow hover:underline"
                     >
-                      영상 열기
+                      자료 열기
                     </a>
                   ) : (
-                    <p className="mt-4 text-sm text-ellieGray/60">영상 링크가 준비되지 않았습니다.</p>
+                    <p className="mt-4 text-sm text-ellieGray/60">연결된 자료가 없습니다.</p>
                   )}
                   {createdAt ? (
                     <p className="mt-3 text-xs text-ellieGray/50">업데이트: {createdAt}</p>
@@ -153,7 +141,7 @@ function VideoTab({ courseName, contents = [], isLoadingContents = false, conten
           </ul>
         ) : (
           <div className="rounded-2xl bg-white/70 px-5 py-6 text-center shadow-soft">
-            <p className="text-sm leading-relaxed text-ellieGray/70">등록된 영상이 없습니다.</p>
+            <p className="text-sm leading-relaxed text-ellieGray/70">아직 등록된 자료가 없습니다.</p>
           </div>
         )
       ) : null}
@@ -161,4 +149,4 @@ function VideoTab({ courseName, contents = [], isLoadingContents = false, conten
   );
 }
 
-export default VideoTab;
+export default MaterialTab;

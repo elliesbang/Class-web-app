@@ -1,3 +1,4 @@
+import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -10,12 +11,12 @@ import AdminAssignmentsManagement from './pages/admin/AdminAssignmentsManagement
 import AdminFeedbackManagement from './pages/admin/AdminFeedbackManagement';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminStatistics from './pages/admin/AdminStatistics';
-import Home from './pages/Home.jsx';
-import Classroom from './pages/Classroom.jsx';
-import Michina from './pages/Michina.jsx';
-import MyPage from './pages/MyPage.jsx';
-import Notices from './pages/Notices.jsx';
-import VOD from './pages/VOD.jsx';
+import Home from './pages/Home';
+import Classroom from './pages/Classroom';
+import Michina from './pages/Michina';
+import MyPage from './pages/MyPage';
+import Notices from './pages/Notices';
+import VOD from './pages/VOD';
 import ClassDetailPage from './pages/class/[id].tsx';
 import AdminLogin from './pages/AdminLogin';
 

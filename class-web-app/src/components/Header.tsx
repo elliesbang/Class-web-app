@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import LoginModal from './LoginModal';   // ✅ 모달 직접 import
 import { useNavigate } from 'react-router-dom';
 
@@ -17,10 +17,12 @@ const Header = () => {
     updateAuthState();
     window.addEventListener('focus', updateAuthState);
     window.addEventListener('storage', updateAuthState);
+    window.addEventListener('admin-auth-change', updateAuthState as EventListener);
 
     return () => {
       window.removeEventListener('focus', updateAuthState);
       window.removeEventListener('storage', updateAuthState);
+      window.removeEventListener('admin-auth-change', updateAuthState as EventListener);
     };
   }, []);
 

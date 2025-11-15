@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
-const parseJsonResponse = async (response, contextLabel) => {
+const parseJsonResponse = async (response: any, contextLabel: string) => {
   const text = await response.text();
   if (!text) {
     return null;
@@ -20,7 +20,7 @@ const parseJsonResponse = async (response, contextLabel) => {
   }
 };
 
-const normaliseItems = (payload) => {
+const normaliseItems = (payload: any) => {
   if (Array.isArray(payload)) {
     return payload;
   }
@@ -36,7 +36,7 @@ const normaliseItems = (payload) => {
   return [];
 };
 
-const getSubmissionLink = (assignment) => {
+const getSubmissionLink = (assignment: any) => {
   if (!assignment || typeof assignment !== 'object') {
     return null;
   }
@@ -49,7 +49,7 @@ const getSubmissionLink = (assignment) => {
   return null;
 };
 
-const formatDateTime = (value) => {
+const formatDateTime = (value: any) => {
   if (!value) {
     return '';
   }
@@ -72,7 +72,7 @@ const formatDateTime = (value) => {
   }
 };
 
-const getItemKey = (item, index) => {
+const getItemKey = (item: any, index: number) => {
   const candidates = [item?.id, item?.assignmentId, item?.slug, item?.title];
   for (const candidate of candidates) {
     if (candidate) {
@@ -82,7 +82,7 @@ const getItemKey = (item, index) => {
   return `assignment-${index}`;
 };
 
-const getAttachments = (assignment) => {
+const getAttachments = (assignment: any) => {
   if (!assignment || typeof assignment !== 'object') {
     return [];
   }
@@ -95,10 +95,10 @@ const getAttachments = (assignment) => {
   return [];
 };
 
-function UploadTab({ courseId, courseName }) {
-  const [assignments, setAssignments] = useState([]);
+function UploadTab({ courseId, courseName }: { [key: string]: any }) {
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
 
   useEffect(() => {
     setAssignments([]);
@@ -154,7 +154,7 @@ function UploadTab({ courseId, courseName }) {
       {!isLoading && !error ? (
         assignments.length > 0 ? (
           <ul className="space-y-4">
-            {assignments.map((assignment, index) => {
+            {assignments.map((assignment: any, index: number) => {
               const key = getItemKey(assignment, index);
               const link = getSubmissionLink(assignment);
               const description =
@@ -187,7 +187,7 @@ function UploadTab({ courseId, courseName }) {
                     <div className="rounded-2xl bg-ivory/80 px-4 py-3">
                       <h4 className="text-xs font-semibold text-ellieGray/80">참고 자료</h4>
                       <ul className="mt-2 space-y-1 text-xs text-ellieGray/70">
-                        {attachments.map((attachment, attachmentIndex) => {
+                        {attachments.map((attachment: any, attachmentIndex: number) => {
                           const attachmentKey = attachment?.id ?? attachment?.url ?? `attachment-${attachmentIndex}`;
                           const attachmentLink =
                             typeof attachment === 'string'

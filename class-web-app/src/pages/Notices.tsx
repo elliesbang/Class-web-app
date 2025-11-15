@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
-
-const formatDisplayDate = (value) => {
+const formatDisplayDate = (value: any) => {
   if (!value) {
     return '';
   }
@@ -23,12 +22,12 @@ const formatDisplayDate = (value) => {
 };
 
 function Notices() {
-  const [notices, setNotices] = useState([]);
+  const [notices, setNotices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
 
   const fetchNotices = useCallback(
-    async (signal) => {
+    async (signal?: any) => {
       if (signal?.aborted) {
         return;
       }
@@ -73,7 +72,7 @@ function Notices() {
             <p className="text-sm text-ellieGray/70">등록된 공지가 없습니다.</p>
           </article>
         ) : (
-          notices.map((notice) => (
+          notices.map((notice: any) => (
             <article key={notice.id} className="rounded-3xl bg-white p-5 shadow-soft">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-lg font-semibold text-ellieGray">{notice.title}</h2>

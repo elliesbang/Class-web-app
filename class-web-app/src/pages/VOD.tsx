@@ -1,3 +1,5 @@
+import React from 'react';
+
 function VOD() {
   return (
     <div className="space-y-5">
@@ -8,7 +10,7 @@ function VOD() {
         </p>
       </header>
       <section className="grid gap-4">
-        {[1, 2, 3].map((item) => (
+        {[1, 2, 3].map((item: number) => (
           <article key={item} className="rounded-3xl bg-white p-5 shadow-soft">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">VOD 강의 {item}</h2>

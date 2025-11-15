@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-export default function CourseForm({ onSaved }) {
-  const [form, setForm] = useState({
+export default function CourseForm({ onSaved }: { [key: string]: any }) {
+  const [form, setForm] = useState<any>({
     name: '',
     code: '',
     category: '',
@@ -16,7 +16,7 @@ export default function CourseForm({ onSaved }) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e) => {
+  const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
       ...prev,
@@ -24,7 +24,7 @@ export default function CourseForm({ onSaved }) {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setIsSubmitting(true);
 

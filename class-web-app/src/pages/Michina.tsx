@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import ClassroomTabs from '@/components/classroom/ClassroomTabs';
 
 function Michina() {
-  const location = useLocation();
+  const location = useLocation() as any;
   const courseId = 'michina';
   const courseName = '미치나';
   const initialOpen = location.state?.autoOpen ?? false;

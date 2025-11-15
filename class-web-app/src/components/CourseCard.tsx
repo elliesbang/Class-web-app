@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isAdminAuthenticated, subscribeAdminAuthChanges } from '../lib/auth';
 import { getVerifiedCode, setVerifiedCode, verifyCourseCode } from '../lib/course-verification';
 
-function CourseCard({ course, accentColor }) {
+function CourseCard({ course, accentColor }: { [key: string]: any }) {
   const { name, link, description, linkState } = course;
   const navigate = useNavigate();
   const [showNotice, setShowNotice] = useState(false);

@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 
-const formatDateTime = (value) => {
+const formatDateTime = (value: any) => {
   if (!value) {
     return '';
   }
@@ -23,7 +23,7 @@ const formatDateTime = (value) => {
   }
 };
 
-const normaliseType = (value) => {
+const normaliseType = (value: any) => {
   if (typeof value === 'string') {
     return value.trim().toLowerCase();
   }
@@ -33,7 +33,7 @@ const normaliseType = (value) => {
   return String(value).trim().toLowerCase();
 };
 
-const normaliseNotices = (items) => {
+const normaliseNotices = (items: any) => {
   if (!Array.isArray(items)) {
     return [];
   }
@@ -70,7 +70,7 @@ const normaliseNotices = (items) => {
     });
 };
 
-function NoticeTab({ courseName, contents = [], isLoadingContents = false, contentError = null }) {
+function NoticeTab({ courseName, contents = [], isLoadingContents = false, contentError = null }: { [key: string]: any }) {
   const notices = useMemo(() => normaliseNotices(contents), [contents]);
   const isLoading = isLoadingContents;
   const error = contentError;
@@ -102,7 +102,7 @@ function NoticeTab({ courseName, contents = [], isLoadingContents = false, conte
       {!isLoading && !error ? (
         notices.length > 0 ? (
           <ul className="space-y-4">
-            {notices.map((notice, index) => {
+            {notices.map((notice: any, index: number) => {
               const createdAt = formatDateTime(notice?.createdAt);
 
               return (
