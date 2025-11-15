@@ -63,6 +63,8 @@ type ClassroomNoticeFormState = {
   isImportant: boolean;
 };
 
+type ContentDeleteType = 'video' | 'vod' | 'material' | 'notice' | 'global';
+
 const formatDisplayDate = (value: string) => {
   try {
     return new Date(value).toLocaleDateString('ko-KR');
@@ -110,11 +112,11 @@ const reorderVideoDisplayOrder = (
 
 const ContentManager = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('globalNotice');
-  const [globalNotices] = useState<GlobalNoticeRecord[]>(defaultGlobalNotices);
+  const [globalNotices, setGlobalNotices] = useState<GlobalNoticeRecord[]>(defaultGlobalNotices);
   const [classroomVideos, setClassroomVideos] = useState<ClassroomVideoRecord[]>(defaultClassroomVideos);
-  const [vodVideos] = useState<VodVideoRecord[]>(defaultVodVideos);
-  const [materials] = useState<ClassroomMaterialRecord[]>(defaultClassroomMaterials);
-  const [classroomNotices] = useState<ClassroomNoticeRecord[]>(defaultClassroomNotices);
+  const [vodVideos, setVodVideos] = useState<VodVideoRecord[]>(defaultVodVideos);
+  const [materials, setMaterials] = useState<ClassroomMaterialRecord[]>(defaultClassroomMaterials);
+  const [classroomNotices, setClassroomNotices] = useState<ClassroomNoticeRecord[]>(defaultClassroomNotices);
 
   const [selectedClassCategoryId, setSelectedClassCategoryId] = useState<string>(
     classroomCategories[0]?.id ?? '',
@@ -255,21 +257,88 @@ const ContentManager = () => {
     }));
   };
 
-  const handleGlobalNoticeSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleGlobalNoticeSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.info('[ContentManager] 전체 공지 등록은 데모 환경에서 비활성화되어 있습니다.');
+    try {
+      const response = await fetch('/api/contents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'globalNotice',
+          payload: {
+            ...globalNoticeForm,
+            thumbnailFile: globalNoticeForm.thumbnailFile?.name ?? null,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit global notice');
+      }
+
+      await response.json().catch(() => null);
+    } catch (error) {
+      console.error('[ContentManager] 전체 공지 등록 실패', error);
+    }
     setGlobalNoticeForm({ title: '', content: '', thumbnailFile: null, isVisible: true });
   };
 
-  const handleClassroomVideoSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleClassroomVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.info('[ContentManager] 강의실 영상 등록은 데모 환경에서 비활성화되어 있습니다.');
+    try {
+      const response = await fetch('/api/contents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'classroomVideo',
+          payload: {
+            ...classroomVideoForm,
+            courseId: selectedCourseId,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit classroom video');
+      }
+
+      await response.json().catch(() => null);
+    } catch (error) {
+      console.error('[ContentManager] 강의실 영상 등록 실패', error);
+    }
     setClassroomVideoForm({ title: '', videoUrl: '', description: '', displayOrder: '0' });
   };
 
-  const handleVodVideoSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleVodVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.info('[ContentManager] VOD 등록은 데모 환경에서 비활성화되어 있습니다.');
+    try {
+      const response = await fetch('/api/contents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'vodVideo',
+          payload: {
+            ...vodVideoForm,
+            thumbnailFile: vodVideoForm.thumbnailFile?.name ?? null,
+            categoryId: selectedVodCategoryId,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit VOD');
+      }
+
+      await response.json().catch(() => null);
+    } catch (error) {
+      console.error('[ContentManager] VOD 등록 실패', error);
+    }
     setVodVideoForm({
       title: '',
       description: '',
@@ -280,16 +349,96 @@ const ContentManager = () => {
     });
   };
 
-  const handleMaterialSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleMaterialSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.info('[ContentManager] 자료 업로드는 데모 환경에서 비활성화되어 있습니다.');
+    try {
+      const response = await fetch('/api/contents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'material',
+          payload: {
+            ...materialForm,
+            file: materialForm.file?.name ?? null,
+            courseId: selectedCourseId,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit material');
+      }
+
+      await response.json().catch(() => null);
+    } catch (error) {
+      console.error('[ContentManager] 자료 업로드 실패', error);
+    }
     setMaterialForm({ title: '', description: '', file: null, fileType: 'file', linkUrl: '' });
   };
 
-  const handleClassroomNoticeSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleClassroomNoticeSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.info('[ContentManager] 강의실 공지 등록은 데모 환경에서 비활성화되어 있습니다.');
+    try {
+      const response = await fetch('/api/contents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'classroomNotice',
+          payload: {
+            ...classroomNoticeForm,
+            courseId: selectedCourseId,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit classroom notice');
+      }
+
+      await response.json().catch(() => null);
+    } catch (error) {
+      console.error('[ContentManager] 강의실 공지 등록 실패', error);
+    }
     setClassroomNoticeForm({ title: '', content: '', isImportant: false });
+  };
+
+  const handleDelete = async (id: string, type: ContentDeleteType) => {
+    try {
+      const response = await fetch(`/api/contents?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete content');
+      }
+
+      const data: { success?: boolean } | null = await response.json().catch(() => null);
+
+      if (data?.success) {
+        alert('삭제되었습니다.');
+
+        if (type === 'video') {
+          setClassroomVideos((prev) => prev.filter((item) => item.id !== id));
+        } else if (type === 'vod') {
+          setVodVideos((prev) => prev.filter((item) => item.id !== id));
+        } else if (type === 'material') {
+          setMaterials((prev) => prev.filter((item) => item.id !== id));
+        } else if (type === 'notice') {
+          setClassroomNotices((prev) => prev.filter((item) => item.id !== id));
+        } else if (type === 'global') {
+          setGlobalNotices((prev) => prev.filter((item) => item.id !== id));
+        }
+      } else {
+        alert('삭제 중 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      console.error('삭제 오류:', error);
+      alert('서버 오류로 삭제에 실패했습니다.');
+    }
   };
 
   return (
@@ -479,9 +628,7 @@ const ContentManager = () => {
                     <button
                       type="button"
                       className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                      onClick={() => {
-                        console.info('[ContentManager] 데모 환경에서는 공지를 삭제할 수 없습니다.');
-                      }}
+                      onClick={() => handleDelete(notice.id, 'global')}
                       aria-label="공지 삭제"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -619,9 +766,7 @@ const ContentManager = () => {
                       <button
                         type="button"
                         className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => {
-                          console.info('[ContentManager] 데모 환경에서는 영상을 삭제할 수 없습니다.');
-                        }}
+                        onClick={() => handleDelete(video.id, 'video')}
                         aria-label="영상 삭제"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -754,9 +899,7 @@ const ContentManager = () => {
                     <button
                       type="button"
                       className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                      onClick={() => {
-                        console.info('[ContentManager] 데모 환경에서는 VOD를 삭제할 수 없습니다.');
-                      }}
+                      onClick={() => handleDelete(video.id, 'vod')}
                       aria-label="VOD 삭제"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -898,9 +1041,7 @@ const ContentManager = () => {
                       <button
                         type="button"
                         className="self-start rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => {
-                          console.info('[ContentManager] 데모 환경에서는 자료를 삭제할 수 없습니다.');
-                        }}
+                        onClick={() => handleDelete(material.id, 'material')}
                         aria-label="자료 삭제"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -990,9 +1131,7 @@ const ContentManager = () => {
                       <button
                         type="button"
                         className="rounded-full bg-[#f5eee9] p-2 text-[#5c5c5c] transition-colors hover:bg-[#ffd331]/80"
-                        onClick={() => {
-                          console.info('[ContentManager] 데모 환경에서는 공지를 삭제할 수 없습니다.');
-                        }}
+                        onClick={() => handleDelete(notice.id, 'notice')}
                         aria-label="강의실 공지 삭제"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
