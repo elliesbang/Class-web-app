@@ -1,4 +1,11 @@
 import { type ApiFetchOptions } from '../utils/apiClient';
+import type {
+  ClassroomMaterialRecord,
+  ClassroomNoticeRecord,
+  ClassroomVideoRecord,
+  GlobalNoticeRecord,
+  VodVideoRecord,
+} from './contentLibrary';
 
 export type AssignmentUploadTimeOption = 'all_day' | 'same_day';
 
@@ -39,36 +46,11 @@ export type ClassMutationResult = {
   classInfo?: ClassInfo | null;
 };
 
-export type VideoPayload = {
-  id: number;
-  title: string;
-  url: string;
-  description?: string | null;
-  classId: number;
-  createdAt: string;
-  displayOrder?: number | null;
-};
-
-export type MaterialPayload = {
-  id: number;
-  title: string;
-  fileUrl: string;
-  description?: string | null;
-  classId: number;
-  createdAt: string;
-  fileName?: string | null;
-  mimeType?: string | null;
-  fileSize?: number | null;
-};
-
-export type NoticePayload = {
-  id: number;
-  title: string;
-  content: string;
-  author?: string | null;
-  classId: number;
-  createdAt: string;
-};
+export type VideoPayload = ClassroomVideoRecord;
+export type MaterialPayload = ClassroomMaterialRecord;
+export type NoticePayload = ClassroomNoticeRecord;
+export type GlobalNoticePayload = GlobalNoticeRecord;
+export type VodContentPayload = VodVideoRecord;
 
 export type FeedbackPayload = {
   id: number;

@@ -1,7 +1,25 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
+import {
+  defaultVodVideos,
+  getVisibleGlobalNotices,
+  vodCategories,
+} from '../lib/contentLibrary';
+
 function Home() {
+  const visibleNotices = useMemo(() => getVisibleGlobalNotices().slice(0, 2), []);
+  const featuredVodVideos = useMemo(
+    () =>
+      defaultVodVideos
+        .filter((video) => video.isRecommended)
+        .slice()
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .slice(0, 3),
+    [],
+  );
+  const featuredCategory = useMemo(() => vodCategories.find((category) => category.id === 'featured'), []);
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl bg-ellieYellow px-6 py-8 text-ellieGray shadow-soft">
@@ -27,17 +45,63 @@ function Home() {
       </section>
 
       <section className="grid gap-4">
-        <article className="rounded-3xl bg-white p-5 shadow-soft">
-          <h2 className="text-lg font-semibold">오늘의 추천</h2>
-          <p className="mt-2 text-sm text-ellieGray/70">
-            엘리의방 클래스에서 인기 있는 강의를 확인해보세요.
-          </p>
+        <article className="space-y-4 rounded-3xl bg-white p-5 shadow-soft">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-ellieGray">
+              {featuredCategory ? `${featuredCategory.name} VOD 추천` : '추천 VOD'}
+            </h2>
+            <Link to="/vod" className="text-xs font-semibold text-ellieGray/70 hover:text-ellieGray">
+              전체 보기
+            </Link>
+          </div>
+          {featuredVodVideos.length === 0 ? (
+            <p className="text-sm text-ellieGray/60">추천 VOD가 준비 중입니다.</p>
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {featuredVodVideos.map((video) => (
+                <li key={video.id} className="flex gap-3 rounded-2xl bg-[#fffaf0] p-3">
+                  <div className="h-20 w-28 overflow-hidden rounded-xl bg-ellieGray/10">
+                    <img src={video.thumbnailUrl} alt="VOD 썸네일" className="h-full w-full object-cover" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-ellieGray">{video.title}</p>
+                    {video.description ? (
+                      <p className="mt-1 line-clamp-2 text-xs text-ellieGray/70">{video.description}</p>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
-        <article className="rounded-3xl bg-white p-5 shadow-soft">
-          <h2 className="text-lg font-semibold">새로운 소식</h2>
-          <p className="mt-2 text-sm text-ellieGray/70">
-            공지사항에서 최신 업데이트와 이벤트 소식을 만나보세요.
-          </p>
+
+        <article className="space-y-4 rounded-3xl bg-white p-5 shadow-soft">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-ellieGray">새로운 소식</h2>
+            <Link to="/notices" className="text-xs font-semibold text-ellieGray/70 hover:text-ellieGray">
+              공지 바로가기
+            </Link>
+          </div>
+          {visibleNotices.length === 0 ? (
+            <p className="text-sm text-ellieGray/60">등록된 전체 공지가 없습니다.</p>
+          ) : (
+            <ul className="space-y-3">
+              {visibleNotices.map((notice) => (
+                <li key={notice.id} className="rounded-2xl bg-[#fffaf0] p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-ellieGray">{notice.title}</p>
+                    <time className="text-xs text-ellieGray/60" dateTime={notice.createdAt}>
+                      {new Date(notice.createdAt).toLocaleDateString('ko-KR', {
+                        month: '2-digit',
+                        day: '2-digit',
+                      })}
+                    </time>
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-xs text-ellieGray/70">{notice.content}</p>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
       </section>
     </div>
