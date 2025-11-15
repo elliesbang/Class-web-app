@@ -1,63 +1,63 @@
 const routeConfig = {
   admin: [
-    { pattern: [], loader: () => import('../api-handlers/admin/dashboard.js') },
-    { pattern: ['dashboard'], loader: () => import('../api-handlers/admin/dashboard.js') },
+    { pattern: [], loader: () => import('./admin/dashboard.js') },
+    { pattern: ['dashboard'], loader: () => import('./admin/dashboard.js') },
   ],
   assignments: [
-    { pattern: [], loader: () => import('../api-handlers/assignments/index.js') },
+    { pattern: [], loader: () => import('./assignments/index.js') },
   ],
   submissions: [
-    { pattern: [], loader: () => import('../api-handlers/submissions/index.js') },
-    { pattern: ['create'], loader: () => import('../api-handlers/submissions/create.js') },
-    { pattern: ['update'], loader: () => import('../api-handlers/submissions/update.js') },
+    { pattern: [], loader: () => import('./submissions/index.js') },
+    { pattern: ['create'], loader: () => import('./submissions/create.js') },
+    { pattern: ['update'], loader: () => import('./submissions/update.js') },
   ],
   feedback: [
-    { pattern: [], loader: () => import('../api-handlers/feedback/index.js') },
+    { pattern: [], loader: () => import('./feedback/index.js') },
   ],
   vod: [
     // Placeholder for future VOD API routes
   ],
   students: [
-    { pattern: [], loader: () => import('../api-handlers/students/index.js') },
-    { pattern: ['contents'], loader: () => import('../api-handlers/students/contents.js') },
+    { pattern: [], loader: () => import('./students/index.js') },
+    { pattern: ['contents'], loader: () => import('./students/contents.js') },
   ],
   notifications: [
-    { pattern: [], loader: () => import('../api-handlers/notifications/index.js') },
-    { pattern: ['delete'], loader: () => import('../api-handlers/notifications/delete.js') },
+    { pattern: [], loader: () => import('./notifications/index.js') },
+    { pattern: ['delete'], loader: () => import('./notifications/delete.js') },
   ],
   courses: [
-    { pattern: [], loader: () => import('../api-handlers/courses/index.js') },
+    { pattern: [], loader: () => import('./courses/index.js') },
   ],
   classes: [
-    { pattern: [], loader: () => import('../api-handlers/classes/index.js') },
-    { pattern: ['create'], loader: () => import('../api-handlers/classes/create.js') },
-    { pattern: ['update'], loader: () => import('../api-handlers/classes/update.js') },
-    { pattern: ['remove'], loader: () => import('../api-handlers/classes/remove.js') },
-    { pattern: [':id'], loader: () => import('../api-handlers/classes/[id].js') },
+    { pattern: [], loader: () => import('./classes/index.js') },
+    { pattern: ['create'], loader: () => import('./classes/create.js') },
+    { pattern: ['update'], loader: () => import('./classes/update.js') },
+    { pattern: ['remove'], loader: () => import('./classes/remove.js') },
+    { pattern: [':id'], loader: () => import('./classes/[id].js') },
   ],
   categories: [
-    { pattern: [], loader: () => import('../api-handlers/categories/index.js') },
-    { pattern: ['add'], loader: () => import('../api-handlers/categories/add.js') },
-    { pattern: ['delete'], loader: () => import('../api-handlers/categories/delete.js') },
-    { pattern: ['update'], loader: () => import('../api-handlers/categories/update.js') },
-    { pattern: ['add-class'], loader: () => import('../api-handlers/categories/add-class.js') },
-    { pattern: ['delete-class'], loader: () => import('../api-handlers/categories/delete-class.js') },
-    { pattern: ['update-class'], loader: () => import('../api-handlers/categories/update-class.js') },
+    { pattern: [], loader: () => import('./categories/index.js') },
+    { pattern: ['add'], loader: () => import('./categories/add.js') },
+    { pattern: ['delete'], loader: () => import('./categories/delete.js') },
+    { pattern: ['update'], loader: () => import('./categories/update.js') },
+    { pattern: ['add-class'], loader: () => import('./categories/add-class.js') },
+    { pattern: ['delete-class'], loader: () => import('./categories/delete-class.js') },
+    { pattern: ['update-class'], loader: () => import('./categories/update-class.js') },
   ],
   contents: [
-    { pattern: [], loader: () => import('../api-handlers/contents/index.js') },
-    { pattern: ['create'], loader: () => import('../api-handlers/contents/create.js') },
-    { pattern: ['update'], loader: () => import('../api-handlers/contents/update.js') },
-    { pattern: ['remove'], loader: () => import('../api-handlers/contents/remove.js') },
+    { pattern: [], loader: () => import('./contents/index.js') },
+    { pattern: ['create'], loader: () => import('./contents/create.js') },
+    { pattern: ['update'], loader: () => import('./contents/update.js') },
+    { pattern: ['remove'], loader: () => import('./contents/remove.js') },
   ],
   index: [
-    { pattern: [], loader: () => import('../api-handlers/index/index.js') },
+    { pattern: [], loader: () => import('./index/index.js') },
   ],
   'admin-auth': [
-    { pattern: [], loader: () => import('../api-handlers/admin-auth/index.js') },
+    { pattern: [], loader: () => import('./admin-auth/index.js') },
   ],
   'user-preferences': [
-    { pattern: [], loader: () => import('../api-handlers/user-preferences/index.js') },
+    { pattern: [], loader: () => import('./user-preferences/index.js') },
   ],
 };
 
