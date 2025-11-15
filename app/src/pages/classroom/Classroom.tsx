@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { classroomCategories } from '../lib/contentLibrary';
+import { classroomCategories } from '../../lib/contentLibrary';
 
 function Classroom() {
   const navigate = useNavigate();

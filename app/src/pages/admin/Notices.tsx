@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { getVisibleGlobalNotices } from '../lib/contentLibrary';
+import { getVisibleGlobalNotices } from '../../lib/contentLibrary';
 
 const formatDisplayDate = (value: any) => {
   if (!value) {

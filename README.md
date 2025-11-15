@@ -4,7 +4,7 @@
 
 ## 프로젝트 구조
 
-- `class-web-app/`
+- `app/`
   - `index.html`, `manifest.webmanifest`
   - `src/`
     - `components/` – 공통 UI 컴포넌트(NavbarTop, AccordionCategory, CourseCard)
@@ -19,6 +19,6 @@
 
 - **Build command**: `npm run build`
 - **Build output directory**: `dist`
-- **Root directory**: `class-web-app`
+- **Root directory**: `app`
 
-Cloudflare Pages는 루트 `package.json`의 workspace 스크립트를 통해 하위 프로젝트에서 `npm run build`를 실행하며, 빌드 결과는 `class-web-app/dist`에 생성됩니다.
+Cloudflare Pages는 루트 `package.json`의 workspace 스크립트를 통해 하위 프로젝트에서 `npm run build`를 실행하며, 빌드 결과는 `app/dist`에 생성됩니다.

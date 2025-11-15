@@ -5,7 +5,7 @@ import {
   defaultVodVideos,
   getVisibleGlobalNotices,
   vodCategories,
-} from '../lib/contentLibrary';
+} from '../../lib/contentLibrary';
 
 function Home() {
   const visibleNotices = useMemo(() => getVisibleGlobalNotices().slice(0, 2), []);

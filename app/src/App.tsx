@@ -11,14 +11,14 @@ import AdminAssignmentsManagement from './pages/admin/AdminAssignmentsManagement
 import AdminFeedbackManagement from './pages/admin/AdminFeedbackManagement';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminStatistics from './pages/admin/AdminStatistics';
-import Home from './pages/Home';
-import Classroom from './pages/Classroom';
-import Michina from './pages/Michina';
-import MyPage from './pages/MyPage';
-import Notices from './pages/Notices';
-import VOD from './pages/VOD';
+import Home from './pages/home/Home';
+import Classroom from './pages/classroom/Classroom';
+import Michina from './pages/classroom/Michina';
+import MyPage from './pages/mypage/MyPage';
+import Notices from './pages/admin/Notices';
+import VOD from './pages/vod/VOD';
 import ClassDetailPage from './pages/class/[id].tsx';
-import AdminLogin from './pages/AdminLogin';
+import AdminLogin from './pages/auth/AdminLogin';
 
 function App() {
   return (
