@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
-  findClassroomCourse,
-  getClassroomMaterialsForCourse,
-  getClassroomNoticesForCourse,
-  getClassroomVideosForCourse,
+  filterMaterialsByCourse,
+  filterNoticesByCourse,
+  filterVideosByCourse,
+  findCourseSummary,
 } from '../../lib/contentLibrary';
+import { useSheetsData } from '../../contexts/SheetsDataContext';
 
 const tabs = [
   { key: 'video', label: '영상' },
@@ -21,18 +22,31 @@ type TabKey = (typeof tabs)[number]['key'];
 function ClassDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { contentCollections, lectureCourses, loading } = useSheetsData();
   const [activeTab, setActiveTab] = useState<TabKey>('video');
 
-  const courseMeta = useMemo(() => (id ? findClassroomCourse(id) : null), [id]);
-  const courseTitle = courseMeta?.course.name ?? '과정 상세 정보';
-  const courseVideos = useMemo(() => (id ? getClassroomVideosForCourse(id) : []), [id]);
-  const courseMaterials = useMemo(() => (id ? getClassroomMaterialsForCourse(id) : []), [id]);
-  const courseNotices = useMemo(() => (id ? getClassroomNoticesForCourse(id) : []), [id]);
+  const courseMeta = useMemo(() => (id ? findCourseSummary(lectureCourses, id) : null), [id, lectureCourses]);
+  const courseTitle = courseMeta?.courseName ?? '과정 상세 정보';
+  const courseVideos = useMemo(
+    () => (id ? filterVideosByCourse(contentCollections.classroomVideos, id) : []),
+    [contentCollections.classroomVideos, id],
+  );
+  const courseMaterials = useMemo(
+    () => (id ? filterMaterialsByCourse(contentCollections.classroomMaterials, id) : []),
+    [contentCollections.classroomMaterials, id],
+  );
+  const courseNotices = useMemo(
+    () => (id ? filterNoticesByCourse(contentCollections.classroomNotices, id) : []),
+    [contentCollections.classroomNotices, id],
+  );
+  const isLoading = loading && !courseMeta;
 
   const renderVideoTab = () => (
     <section className="space-y-4">
       <div className="rounded-3xl bg-white p-6 shadow-soft">
-        {courseVideos.length > 0 ? (
+        {isLoading ? (
+          <p className="text-sm text-ellieGray/70">강의 영상을 불러오는 중입니다...</p>
+        ) : courseVideos.length > 0 ? (
           <div className="space-y-4">
             <div className="aspect-video w-full overflow-hidden rounded-2xl bg-ellieGray/10">
               <iframe
@@ -68,7 +82,9 @@ function ClassDetailPage() {
     <section className="space-y-4">
       <div className="rounded-3xl bg-white p-6 shadow-soft">
         <h3 className="text-base font-semibold text-ellieGray">강의실 공지</h3>
-        {courseNotices.length === 0 ? (
+        {isLoading ? (
+          <p className="mt-3 text-sm text-ellieGray/70">강의실 공지를 불러오는 중입니다...</p>
+        ) : courseNotices.length === 0 ? (
           <p className="mt-3 text-sm text-ellieGray/70">등록된 공지가 없습니다.</p>
         ) : (
           <ul className="mt-4 space-y-3">
@@ -98,7 +114,9 @@ function ClassDetailPage() {
     <section className="space-y-4">
       <div className="rounded-3xl bg-white p-6 shadow-soft">
         <h3 className="text-base font-semibold text-ellieGray">첨부자료</h3>
-        {courseMaterials.length === 0 ? (
+        {isLoading ? (
+          <p className="mt-3 text-sm text-ellieGray/70">첨부자료를 불러오는 중입니다...</p>
+        ) : courseMaterials.length === 0 ? (
           <p className="mt-3 text-sm text-ellieGray/70">등록된 자료가 없습니다.</p>
         ) : (
           <ul className="mt-4 space-y-3 text-sm text-ellieGray/80">
@@ -184,13 +202,13 @@ function ClassDetailPage() {
           ← 목록으로 돌아가기
         </button>
         <h2 className="text-lg font-semibold text-ellieGray">{courseTitle}</h2>
-        {courseMeta?.course.description ? (
-          <p className="mt-2 text-sm text-ellieGray/70">{courseMeta.course.description}</p>
+        {courseMeta?.courseDescription ? (
+          <p className="mt-2 text-sm text-ellieGray/70">{courseMeta.courseDescription}</p>
         ) : null}
-        {courseMeta?.category ? (
-          <p className="mt-1 text-xs text-ellieGray/60">카테고리: {courseMeta.category.name}</p>
+        {courseMeta?.categoryName ? (
+          <p className="mt-1 text-xs text-ellieGray/60">카테고리: {courseMeta.categoryName}</p>
         ) : null}
-        {!courseMeta ? (
+        {!courseMeta && !isLoading ? (
           <p className="mt-3 text-sm text-ellieGray/70">강좌 정보를 찾을 수 없습니다.</p>
         ) : null}
       </div>

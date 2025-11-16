@@ -1,14 +1,28 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
-import { getVodVideosByCategory, vodCategories } from '../../lib/contentLibrary';
+import { useSheetsData } from '../../contexts/SheetsDataContext';
 
 function VOD() {
-  const [activeCategoryId, setActiveCategoryId] = useState<string>(vodCategories[0]?.id ?? '');
+  const { contentCollections, loading } = useSheetsData();
+  const [activeCategoryId, setActiveCategoryId] = useState<string>('');
+
+  useEffect(() => {
+    if (!activeCategoryId && contentCollections.vodCategories[0]) {
+      setActiveCategoryId(contentCollections.vodCategories[0].id);
+    }
+  }, [activeCategoryId, contentCollections.vodCategories]);
+
   const activeCategory = useMemo(
-    () => vodCategories.find((category) => category.id === activeCategoryId),
-    [activeCategoryId],
+    () => contentCollections.vodCategories.find((category) => category.id === activeCategoryId),
+    [activeCategoryId, contentCollections.vodCategories],
   );
-  const videos = useMemo(() => getVodVideosByCategory(activeCategoryId), [activeCategoryId]);
+  const videos = useMemo(
+    () =>
+      contentCollections.vodVideos.filter((video) =>
+        activeCategoryId ? video.categoryId === activeCategoryId : true,
+      ),
+    [activeCategoryId, contentCollections.vodVideos],
+  );
 
   return (
     <div className="space-y-4">
@@ -21,7 +35,7 @@ function VOD() {
 
       <section className="rounded-3xl bg-white p-5 shadow-soft">
         <div className="flex flex-wrap gap-2">
-          {vodCategories.map((category) => {
+          {contentCollections.vodCategories.map((category) => {
             const isActive = category.id === activeCategoryId;
             return (
               <button
@@ -41,7 +55,9 @@ function VOD() {
         </div>
 
         <div className="mt-5 space-y-3 text-sm text-ellieGray/70">
-          {activeCategory ? (
+          {loading ? (
+            <p>VOD 데이터를 불러오는 중입니다...</p>
+          ) : activeCategory ? (
             <p>
               {activeCategory.name} 카테고리의 총 {videos.length}개 콘텐츠를 확인하세요.
             </p>
@@ -52,7 +68,9 @@ function VOD() {
       </section>
 
       <section className="space-y-4">
-        {videos.length === 0 ? (
+        {loading ? (
+          <article className="rounded-3xl bg-white p-5 text-sm text-ellieGray/70 shadow-soft">VOD를 불러오는 중입니다...</article>
+        ) : videos.length === 0 ? (
           <article className="rounded-3xl bg-white p-5 text-sm text-ellieGray/70 shadow-soft">
             선택한 카테고리에 등록된 VOD가 없습니다.
           </article>

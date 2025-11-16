@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import { type AssignmentListItem } from '../../../lib/api';
+import { useSheetsData } from '../../../contexts/SheetsDataContext';
 
 export type AssignmentStatus = '미제출' | '제출됨' | '피드백 완료';
 export type AssignmentFileType = 'image' | 'pdf' | 'link' | 'other';
@@ -96,33 +97,14 @@ const normaliseAssignment = (assignment: AssignmentListItem): Assignment => {
 };
 
 export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
+  const { assignments: sheetAssignments } = useSheetsData();
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>(initialFeedbacks);
 
   useEffect(() => {
-    let ignore = false;
-
-    const fetchAssignments = async () => {
-      if (ignore) return;
-      setAssignments(initialAssignments);
-
-      // try {
-      //   const items = await getAssignments();
-      //   if (ignore) return;
-      //
-      //   const normalised = items.map(normaliseAssignment);
-      //   setAssignments(normalised);
-      // } catch (error) {
-      //   console.error('과제 목록을 불러오지 못했습니다.', error);
-      // }
-    };
-
-    fetchAssignments();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+    const normalised = sheetAssignments.map(normaliseAssignment);
+    setAssignments(normalised);
+  }, [sheetAssignments]);
 
   const addFeedback: AdminDataContextValue['addFeedback'] = useCallback(
     ({ assignmentId, content, author, attachmentUrl, classId = null }) => {

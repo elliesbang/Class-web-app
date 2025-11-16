@@ -1,24 +1,22 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
-import {
-  defaultVodVideos,
-  getVisibleGlobalNotices,
-  vodCategories,
-} from '../../lib/contentLibrary';
+import { useSheetsData } from '../../contexts/SheetsDataContext';
 
 function Home() {
-  const visibleNotices = useMemo(() => getVisibleGlobalNotices().slice(0, 2), []);
-  const featuredVodVideos = useMemo(
-    () =>
-      defaultVodVideos
-        .filter((video) => video.isRecommended)
-        .slice()
-        .sort((a, b) => a.displayOrder - b.displayOrder)
-        .slice(0, 3),
-    [],
+  const { contentCollections, loading } = useSheetsData();
+  const visibleNotices = useMemo(
+    () => contentCollections.globalNotices.filter((notice) => notice.isVisible).slice(0, 2),
+    [contentCollections.globalNotices],
   );
-  const featuredCategory = useMemo(() => vodCategories.find((category) => category.id === 'featured'), []);
+  const featuredVodVideos = useMemo(
+    () => contentCollections.vodVideos.filter((video) => video.isRecommended).slice(0, 3),
+    [contentCollections.vodVideos],
+  );
+  const featuredCategory = useMemo(
+    () => contentCollections.vodCategories.find((category) => category.id === 'featured'),
+    [contentCollections.vodCategories],
+  );
 
   return (
     <div className="space-y-6">
@@ -54,7 +52,9 @@ function Home() {
               전체 보기
             </Link>
           </div>
-          {featuredVodVideos.length === 0 ? (
+          {loading ? (
+            <p className="text-sm text-ellieGray/60">콘텐츠를 불러오는 중입니다...</p>
+          ) : featuredVodVideos.length === 0 ? (
             <p className="text-sm text-ellieGray/60">추천 VOD가 준비 중입니다.</p>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
@@ -82,7 +82,9 @@ function Home() {
               공지 바로가기
             </Link>
           </div>
-          {visibleNotices.length === 0 ? (
+          {loading ? (
+            <p className="text-sm text-ellieGray/60">공지 데이터를 불러오는 중입니다...</p>
+          ) : visibleNotices.length === 0 ? (
             <p className="text-sm text-ellieGray/60">등록된 전체 공지가 없습니다.</p>
           ) : (
             <ul className="space-y-3">

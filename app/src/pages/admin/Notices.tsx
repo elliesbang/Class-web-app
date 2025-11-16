@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { getVisibleGlobalNotices } from '../../lib/contentLibrary';
+import { useSheetsData } from '../../contexts/SheetsDataContext';
 
 const formatDisplayDate = (value: any) => {
   if (!value) {
@@ -24,7 +24,11 @@ const formatDisplayDate = (value: any) => {
 };
 
 function Notices() {
-  const notices = useMemo(() => getVisibleGlobalNotices(), []);
+  const { contentCollections, loading } = useSheetsData();
+  const notices = useMemo(
+    () => contentCollections.globalNotices.filter((notice) => notice.isVisible),
+    [contentCollections.globalNotices],
+  );
 
   return (
     <div className="space-y-4">
@@ -35,7 +39,11 @@ function Notices() {
         </p>
       </header>
       <section className="space-y-4">
-        {notices.length === 0 ? (
+        {loading ? (
+          <article className="rounded-3xl bg-white p-5 shadow-soft">
+            <p className="text-sm text-ellieGray/70">공지 데이터를 불러오는 중입니다...</p>
+          </article>
+        ) : notices.length === 0 ? (
           <article className="rounded-3xl bg-white p-5 shadow-soft">
             <p className="text-sm text-ellieGray/70">등록된 공지가 없습니다.</p>
           </article>

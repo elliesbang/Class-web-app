@@ -66,7 +66,7 @@ export type AssignmentFileType = 'image' | 'pdf' | 'link' | 'other';
 export type AssignmentListItem = {
   id: number;
   title: string;
-  classId: number;
+  classId: number | null;
   className: string | null;
   studentName: string;
   studentEmail: string | null;

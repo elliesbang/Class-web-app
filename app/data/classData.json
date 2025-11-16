@@ -11,7 +11,7 @@
         ],
         "resources": [
           { "name": "1주차 실습 파일", "url": "/files/hangul_week1.pdf", "type": "file" },
-          { "name": "참고 노션 링크", "url": "https://notion.so/example", "type": "link" }
+          { "name": "참고 자료 링크", "url": "https://example.com/reference", "type": "link" }
         ],
         "feedback": [
           { "week": 1, "content": "붓 터치가 자연스러워졌어요!" }

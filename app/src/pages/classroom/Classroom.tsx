@@ -2,34 +2,43 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ClassroomListItem from '../../components/ClassroomListItem';
-import { classes } from '../../data/classData';
-
-type CategoryId = 'skill' | 'money' | 'ai';
-
-type CategoryConfig = {
-  id: CategoryId;
-  name: string;
-};
-
-const CATEGORY_CONFIGS: CategoryConfig[] = [
-  { id: 'skill', name: '스킬' },
-  { id: 'money', name: '수익화' },
-  { id: 'ai', name: 'AI 창작' },
-];
+import { useSheetsData } from '../../contexts/SheetsDataContext';
 
 function Classroom() {
   const navigate = useNavigate();
-  const [openCategory, setOpenCategory] = useState<CategoryId | null>(null);
+  const { lectureCourses, loading } = useSheetsData();
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
 
   const categorizedCategories = useMemo(() => {
-    const filterByCategory = (categoryId: CategoryId) =>
-      classes.filter((course) => course.category === categoryId && course.hidden !== true);
+    const categoryMap = new Map<
+      string,
+      { id: string; name: string; order: number; courses: Array<{ id: string; name: string; description?: string }> }
+    >();
 
-    return CATEGORY_CONFIGS.map((category) => ({
-      ...category,
-      courses: filterByCategory(category.id),
-    }));
-  }, []);
+    lectureCourses.forEach((course) => {
+      if (!categoryMap.has(course.categoryId)) {
+        categoryMap.set(course.categoryId, {
+          id: course.categoryId,
+          name: course.categoryName,
+          order: course.categoryOrder,
+          courses: [],
+        });
+      }
+      const category = categoryMap.get(course.categoryId)!;
+      category.courses.push({
+        id: course.courseId,
+        name: course.courseName,
+        description: course.courseDescription,
+      });
+    });
+
+    return Array.from(categoryMap.values())
+      .map((category) => ({
+        ...category,
+        courses: category.courses.sort((a, b) => a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' })),
+      }))
+      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }));
+  }, [lectureCourses]);
 
   const handleToggle = (categoryId: CategoryId) => {
     setOpenCategory((current) => (current === categoryId ? null : categoryId));
@@ -53,11 +62,16 @@ function Classroom() {
         </header>
 
         <section className="space-y-4">
-          {categorizedCategories.map((category) => {
-            const isOpen = openCategory === category.id;
+          {loading ? (
+            <p className="text-sm text-ellieGray/70">강의실 데이터를 불러오는 중입니다...</p>
+          ) : categorizedCategories.length === 0 ? (
+            <p className="text-sm text-ellieGray/70">표시할 강의실 카테고리가 없습니다.</p>
+          ) : (
+            categorizedCategories.map((category) => {
+              const isOpen = openCategory === category.id;
 
-            return (
-              <article key={category.id} className="rounded-3xl bg-transparent">
+              return (
+                <article key={category.id} className="rounded-3xl bg-transparent">
                 <button
                   type="button"
                   onClick={() => handleToggle(category.id)}
@@ -83,7 +97,8 @@ function Classroom() {
                 </div>
               </article>
             );
-          })}
+            })
+          )}
         </section>
       </div>
     </div>
