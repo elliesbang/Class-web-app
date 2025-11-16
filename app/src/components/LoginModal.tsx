@@ -27,6 +27,7 @@ type ActiveForm = 'buttons' | 'student' | 'admin' | 'vod';
 
 const LoginModal = ({ onClose }: { onClose: () => void }) => {
   const [activeForm, setActiveForm] = useState<ActiveForm>('buttons');
+  const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [studentName, setStudentName] = useState('');
   const [studentEmail, setStudentEmail] = useState('');
@@ -34,11 +35,13 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
   const [vodEmail, setVodEmail] = useState('');
   const [studentSubmitting, setStudentSubmitting] = useState(false);
   const [vodSubmitting, setVodSubmitting] = useState(false);
+  const [adminSubmitting, setAdminSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const closeModal = useCallback(() => {
     onClose();
     setActiveForm('buttons');
+    setAdminEmail('');
     setAdminPassword('');
     setStudentName('');
     setStudentEmail('');
@@ -46,15 +49,44 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     setVodEmail('');
     setStudentSubmitting(false);
     setVodSubmitting(false);
+    setAdminSubmitting(false);
   }, [onClose]);
 
   const handleAdminSubmit = useCallback(
-    (event: React.FormEvent<HTMLFormElement>) => {
+    async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      navigate('/admin-login');
-      closeModal();
+      if (adminSubmitting) {
+        return;
+      }
+
+      try {
+        setAdminSubmitting(true);
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: adminEmail.trim(), password: adminPassword }),
+        });
+
+        if (!response.ok) {
+          throw new Error('LOGIN_FAILED');
+        }
+
+        const data = await response.json();
+        if (!data?.token) {
+          throw new Error('INVALID_RESPONSE');
+        }
+
+        setStoredAuthUser(data);
+        closeModal();
+        navigate('/admin/my');
+      } catch (error) {
+        console.error('[LoginModal] admin login failed', error);
+        alert('관리자 로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.');
+      } finally {
+        setAdminSubmitting(false);
+      }
     },
-    [closeModal, navigate],
+    [adminEmail, adminPassword, adminSubmitting, closeModal, navigate],
   );
 
   const handleRoleLogin = useCallback(
@@ -156,7 +188,9 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
         type="button"
         className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
         onClick={() => {
+          setAdminEmail('');
           setAdminPassword('');
+          setAdminSubmitting(false);
           setActiveForm('admin');
         }}
       >
@@ -171,7 +205,9 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       className="absolute right-0 top-0 text-sm text-gray-500 hover:text-gray-700"
       onClick={() => {
         setActiveForm('buttons');
+        setAdminEmail('');
         setAdminPassword('');
+        setAdminSubmitting(false);
       }}
     >
       ← 뒤로가기
@@ -263,16 +299,30 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     >
       {renderBackButton()}
       <form className="mt-6" onSubmit={handleAdminSubmit}>
-        <label className="block font-medium mb-1">관리자 비밀번호</label>
+        <label className="block font-medium mb-1">이메일</label>
+        <input
+          type="email"
+          className="border rounded-md w-full p-2 mb-3"
+          value={adminEmail}
+          onChange={(event) => setAdminEmail(event.target.value)}
+          required
+        />
+
+        <label className="block font-medium mb-1">비밀번호</label>
         <input
           type="password"
           className="border rounded-md w-full p-2 mb-3"
           value={adminPassword}
           onChange={(event) => setAdminPassword(event.target.value)}
+          required
         />
 
-        <button type="submit" className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full">
-          로그인
+        <button
+          type="submit"
+          className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
+          disabled={adminSubmitting}
+        >
+          {adminSubmitting ? '로그인 중...' : '로그인'}
         </button>
       </form>
     </motion.div>
