@@ -1,4 +1,4 @@
-import { getSheet } from '../utils/googleSheet';
+import { getSheetValues, appendSheetValues } from '../utils/googleSheet.js';
 
 const normaliseString = (value, fallback = '') => {
   if (typeof value === 'string') {
@@ -14,7 +14,7 @@ const normaliseString = (value, fallback = '') => {
 
 export async function onRequest(context) {
   try {
-    const rows = await getSheet('클래스룸 카테고리', context?.env);
+    const rows = await getSheetValues(context?.env, '클래스룸 카테고리');
 
     const grouped = {};
     rows.forEach((row) => {
