@@ -1,4 +1,4 @@
-import { getSheet } from '../utils/googleSheet';
+import { getSheetValues, appendSheetValues } from '../utils/googleSheet.js';
 
 const normaliseString = (value) => {
   if (typeof value === 'string') {
@@ -12,7 +12,7 @@ const normaliseString = (value) => {
 
 export async function onRequest(context) {
   try {
-    const rows = await getSheet('클래스룸 카테고리', context?.env);
+    const rows = await getSheetValues(context?.env, '클래스룸 카테고리');
     const categories = [...new Set(rows.map((row) => normaliseString(row.category || row.Category)).filter(Boolean))];
     return Response.json(categories);
   } catch (error) {

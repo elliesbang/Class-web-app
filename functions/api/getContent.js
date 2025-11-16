@@ -1,8 +1,8 @@
-import { getSheet } from '../utils/googleSheet';
+import { getSheetValues, appendSheetValues } from '../utils/googleSheet.js';
 
 export async function onRequest(context) {
   try {
-    const rows = await getSheet('콘텐츠', context?.env);
+    const rows = await getSheetValues(context?.env, '콘텐츠');
     return Response.json(rows);
   } catch (error) {
     console.error('[getContent] failed to load sheet data', error);
