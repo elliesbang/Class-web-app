@@ -2,15 +2,15 @@ interface Env {
   DB: D1Database;
 }
 
-const jsonResponse = (data: unknown, status = 200): Response =>
+const jsonArray = (data: unknown[], status = 200): Response =>
   new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    headers: { 'Content-Type': 'application/json' },
   });
 
 export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
   if (request.method !== 'GET') {
-    return jsonResponse({ error: 'Method Not Allowed' }, 405);
+    return jsonArray([{ error: 'Method Not Allowed' }], 405);
   }
 
   const url = new URL(request.url);
@@ -22,21 +22,20 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
       statement = env.DB.prepare(
         `SELECT id, classroom_id, type, title, description, content_url, thumbnail_url, order_num, created_at, updated_at
          FROM classroom_content
-         WHERE classroom_id = ?
-         ORDER BY order_num ASC`
+         WHERE classroom_id = ?1 OR classroom_id IS NULL
+         ORDER BY COALESCE(order_num, 0) ASC, created_at DESC`
       ).bind(classroomId);
     } else {
       statement = env.DB.prepare(
         `SELECT id, classroom_id, type, title, description, content_url, thumbnail_url, order_num, created_at, updated_at
          FROM classroom_content
-         WHERE classroom_id IS NULL
-         ORDER BY order_num ASC`
+         ORDER BY COALESCE(order_num, 0) ASC, created_at DESC`
       );
     }
 
     const { results } = await statement.all();
-    return jsonResponse(results ?? []);
+    return jsonArray((results ?? []) as unknown[]);
   } catch (error) {
-    return jsonResponse({ error: 'Failed to fetch content' }, 500);
+    return jsonArray([{ error: 'Failed to fetch content' }], 500);
   }
 };

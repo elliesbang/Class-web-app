@@ -13,12 +13,12 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminStatistics from './pages/admin/AdminStatistics';
 import AdminMyPage from './pages/admin/AdminMyPage.jsx';
 import Home from './pages/home/Home';
-import Classroom from './pages/classroom/Classroom';
+import Classroom from './pages/Classroom';
 import Michina from './pages/classroom/Michina';
 import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/admin/Notices';
 import VOD from './pages/vod/VOD';
-import ClassDetailPage from './pages/class/[id].tsx';
+import ClassroomDetail from './pages/ClassroomDetail.jsx';
 import AdminLogin from './pages/auth/AdminLogin';
 
 function App() {
@@ -35,7 +35,7 @@ function App() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/login" element={<AdminLogin />} />
         <Route path="/internal/michina" element={<Michina />} />
-        <Route path="/class/:id" element={<ClassDetailPage />} />
+        <Route path="/class/:id" element={<ClassroomDetail />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
