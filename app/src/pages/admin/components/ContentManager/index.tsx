@@ -141,14 +141,6 @@ const buildCategoryOptions = (courses: ClassroomCourseSummary[]): CategoryOption
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }));
 };
 
-const getAdminHeaders = () => {
-  if (typeof window === 'undefined') {
-    return {};
-  }
-  const token = localStorage.getItem('accessToken');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
 const ContentManager = () => {
   const { contentCollections, lectureCourses, refresh } = useSheetsData();
   const [activeTab, setActiveTab] = useState<TabKey>('globalNotice');
@@ -304,9 +296,6 @@ const ContentManager = () => {
     try {
       const response = await fetch(`/api/admin/delete-content?id=${encodeURIComponent(contentId)}`, {
         method: 'DELETE',
-        headers: {
-          ...getAdminHeaders(),
-        },
       });
 
       if (!response.ok) {
@@ -358,7 +347,6 @@ const ContentManager = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getAdminHeaders(),
         },
         body: JSON.stringify({
           record: {
@@ -390,7 +378,6 @@ const ContentManager = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getAdminHeaders(),
         },
         body: JSON.stringify({
           record: {
@@ -424,7 +411,6 @@ const ContentManager = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getAdminHeaders(),
         },
         body: JSON.stringify({
           record: {
@@ -468,7 +454,6 @@ const ContentManager = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getAdminHeaders(),
         },
         body: JSON.stringify({
           record: {
@@ -503,7 +488,6 @@ const ContentManager = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getAdminHeaders(),
         },
         body: JSON.stringify({
           record: {

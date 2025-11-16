@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthUser } from '../../hooks/useAuthUser';
+import { clearStoredAuthUser } from '../../lib/authUser';
 
 const ACTIONS = [
   {
@@ -42,33 +44,21 @@ const ACTIONS = [
 
 const AdminMyPage = () => {
   const navigate = useNavigate();
+  const authUser = useAuthUser();
   const [isAuthorised, setIsAuthorised] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
+    if (authUser?.role === 'admin') {
+      setIsAuthorised(true);
+      return;
     }
 
-    const token = localStorage.getItem('accessToken');
-    const role = localStorage.getItem('role');
-
-    if (!token) {
+    if (authUser) {
+      navigate('/my');
+    } else {
       navigate('/login');
-      return undefined;
     }
-
-    if (role !== 'admin') {
-      if (!role) {
-        navigate('/login');
-      } else {
-        navigate('/my');
-      }
-      return undefined;
-    }
-
-    setIsAuthorised(true);
-    return undefined;
-  }, [navigate]);
+  }, [authUser, navigate]);
 
   const actionItems = useMemo(() => ACTIONS, []);
 
@@ -80,10 +70,7 @@ const AdminMyPage = () => {
   );
 
   const handleLogout = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.clear();
-      window.dispatchEvent(new Event('auth-change'));
-    }
+    clearStoredAuthUser();
     navigate('/');
   }, [navigate]);
 

@@ -1,4 +1,4 @@
-import { isAdminAuthenticated } from './auth';
+import { getStoredAuthUser } from './authUser';
 
 export const COURSE_ACCESS_STORAGE_KEY = 'ellieCourseAccess';
 export const COURSE_ACCESS_CHANGE_EVENT = 'ellie-course-access-change';
@@ -96,7 +96,8 @@ export const hasCourseAccess = (courseId: string): boolean => {
     return true;
   }
 
-  if (isAdminAuthenticated()) {
+  const authUser = getStoredAuthUser();
+  if (authUser?.role === 'admin') {
     return true;
   }
 

@@ -1,22 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-
-function getStoredStudent() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    const raw = localStorage.getItem('user');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return parsed;
-    }
-  } catch (error) {
-    console.warn('[StudentMyPage] failed to read user info', error);
-  }
-
-  return null;
-}
+import { useAuthUser } from '../../hooks/useAuthUser';
 
 function fetchJSON(url) {
   return fetch(url).then((response) => {
@@ -28,7 +11,7 @@ function fetchJSON(url) {
 }
 
 export default function StudentMyPage() {
-  const [student] = useState(() => getStoredStudent());
+  const authUser = useAuthUser();
   const [classrooms, setClassrooms] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
@@ -37,9 +20,11 @@ export default function StudentMyPage() {
   const [loading, setLoading] = useState(true);
 
   const studentIdentifier = useMemo(() => {
-    if (!student) return null;
-    return student.email || student.name || student.id || null;
-  }, [student]);
+    if (!authUser || authUser.role !== 'student') {
+      return null;
+    }
+    return authUser.user_id || authUser.email || null;
+  }, [authUser]);
 
   useEffect(() => {
     if (!studentIdentifier) {

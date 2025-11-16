@@ -1,39 +1,42 @@
+import { ApiError, assertMethod, handleApi, jsonResponse } from '../../_utils/api';
+import { assertRole, verifyToken } from '../../_utils/auth';
+
 interface Env {
   DB: D1Database;
+  JWT_SECRET: string;
 }
 
-const jsonArray = (data: unknown[], status = 200): Response =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
+  handleApi(async () => {
+    assertMethod(request, 'GET');
+    const user = await verifyToken(request, env);
+    assertRole(user, ['student', 'admin']);
 
-export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
-  if (request.method !== 'GET') {
-    return jsonArray([{ error: 'Method Not Allowed' }], 405);
-  }
+    const url = new URL(request.url);
+    const classroomId = url.searchParams.get('classroom_id');
+    let studentId = url.searchParams.get('student_id');
 
-  const url = new URL(request.url);
-  const classroomId = url.searchParams.get('classroom_id');
-  const studentId = url.searchParams.get('student_id');
+    if (!classroomId) {
+      throw new ApiError(400, { error: 'classroom_id is required' });
+    }
 
-  if (!classroomId || !studentId) {
-    return jsonArray([{ error: 'classroom_id and student_id are required' }], 400);
-  }
+    if (user.role === 'student') {
+      studentId = user.user_id;
+    }
 
-  try {
+    if (!studentId) {
+      throw new ApiError(400, { error: 'student_id is required' });
+    }
+
     const { results } = await env.DB.prepare(
-      `SELECT f.id, f.assignment_id, f.feedback, f.created_at, a.image_url, a.link_url
+      `SELECT f.id, f.assignment_id, f.feedback, f.created_at, a.image_url, a.link_url, a.student_id
        FROM assignment_feedback f
        INNER JOIN assignments a ON f.assignment_id = a.id
        WHERE a.classroom_id = ?1 AND a.student_id = ?2
-       ORDER BY datetime(f.created_at) DESC`
+       ORDER BY datetime(f.created_at) DESC`,
     )
       .bind(classroomId, studentId)
       .all();
 
-    return jsonArray(results ?? []);
-  } catch (error) {
-    return jsonArray([{ error: 'Failed to fetch feedback' }], 500);
-  }
-};
+    return jsonResponse(results ?? []);
+  });

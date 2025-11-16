@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthUser } from '../hooks/useAuthUser';
 import AdminMyPage from './admin/AdminMyPage.jsx';
 import StudentMyPage from './Student/MyPage.jsx';
 import VodMyPage from './Vod/MyPage.jsx';
@@ -20,50 +21,23 @@ function normaliseRole(role) {
 
 const MyPage = () => {
   const navigate = useNavigate();
+  const authUser = useAuthUser();
   const [state, setState] = useState({ ready: false, role: null });
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
+    if (!authUser) {
+      navigate('/login');
+      return;
     }
 
-    let isMounted = true;
+    const role = normaliseRole(authUser.role);
+    if (!role || !ROLE_COMPONENTS[role]) {
+      navigate('/login');
+      return;
+    }
 
-    const evaluate = () => {
-      const token = localStorage.getItem('accessToken');
-
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const storedRole = normaliseRole(localStorage.getItem('role'));
-
-      if (!storedRole) {
-        navigate('/login');
-        return;
-      }
-
-      if (!ROLE_COMPONENTS[storedRole]) {
-        navigate('/login');
-        return;
-      }
-
-      if (isMounted) {
-        setState({ ready: true, role: storedRole });
-      }
-    };
-
-    evaluate();
-    window.addEventListener('storage', evaluate);
-    window.addEventListener('auth-change', evaluate);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener('storage', evaluate);
-      window.removeEventListener('auth-change', evaluate);
-    };
-  }, [navigate]);
+    setState({ ready: true, role });
+  }, [authUser, navigate]);
 
   const Component = useMemo(() => {
     if (!state.ready || !state.role) {

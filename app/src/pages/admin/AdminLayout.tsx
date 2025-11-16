@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useAuthUser } from '../../hooks/useAuthUser';
+import { clearStoredAuthUser } from '../../lib/authUser';
 import { AdminDataProvider } from './data/AdminDataContext';
 import { AdminClassProvider } from './data/AdminClassContext';
 
@@ -18,63 +20,27 @@ const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const navigate = useNavigate();
+  const authUser = useAuthUser();
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
+    if (authUser?.role === 'admin') {
+      setIsReady(true);
+      return;
     }
 
-    const ensureAuthorised = () => {
-      const token = localStorage.getItem('accessToken');
-      const role = localStorage.getItem('role');
+    setIsReady(false);
 
-      if (!token) {
-        alert('관리자 로그인이 필요합니다.');
-        navigate('/login', { replace: true });
-        return false;
-      }
-
-      if (role !== 'admin') {
-        alert('관리자 권한이 필요합니다.');
-        if (!role) {
-          navigate('/login', { replace: true });
-        } else {
-          navigate('/my', { replace: true });
-        }
-        return false;
-      }
-
-      return true;
-    };
-
-    const authorised = ensureAuthorised();
-    if (!authorised) {
-      return undefined;
+    if (authUser) {
+      alert('관리자 권한이 필요합니다.');
+      navigate('/my', { replace: true });
+    } else {
+      alert('관리자 로그인이 필요합니다.');
+      navigate('/login', { replace: true });
     }
-
-    setIsReady(true);
-
-    const handleAuthChange = () => {
-      if (!ensureAuthorised()) {
-        setIsReady(false);
-      }
-    };
-
-    window.addEventListener('auth-change', handleAuthChange);
-    window.addEventListener('storage', handleAuthChange);
-
-    return () => {
-      window.removeEventListener('auth-change', handleAuthChange);
-      window.removeEventListener('storage', handleAuthChange);
-    };
-  }, [navigate]);
+  }, [authUser, navigate]);
 
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('role');
-      window.dispatchEvent(new Event('auth-change'));
-    }
+    clearStoredAuthUser();
     navigate('/', { replace: true });
   };
 

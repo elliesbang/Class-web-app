@@ -1,38 +1,41 @@
+import { ApiError, assertMethod, handleApi, jsonResponse } from '../../_utils/api';
+import { assertRole, verifyToken } from '../../_utils/auth';
+
 interface Env {
   DB: D1Database;
+  JWT_SECRET: string;
 }
 
-const jsonArray = (data: unknown[], status = 200): Response =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
+  handleApi(async () => {
+    assertMethod(request, 'GET');
+    const user = await verifyToken(request, env);
+    assertRole(user, ['student', 'admin']);
 
-export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
-  if (request.method !== 'GET') {
-    return jsonArray([{ error: 'Method Not Allowed' }], 405);
-  }
+    const url = new URL(request.url);
+    const classroomId = url.searchParams.get('classroom_id');
+    let studentId = url.searchParams.get('student_id');
 
-  const url = new URL(request.url);
-  const classroomId = url.searchParams.get('classroom_id');
-  const studentId = url.searchParams.get('student_id');
+    if (!classroomId) {
+      throw new ApiError(400, { error: 'classroom_id is required' });
+    }
 
-  if (!classroomId || !studentId) {
-    return jsonArray([{ error: 'classroom_id and student_id are required' }], 400);
-  }
+    if (user.role === 'student') {
+      studentId = user.user_id;
+    }
 
-  try {
-    const { results } = await env.DB.prepare(
-      `SELECT id, classroom_id, student_id, image_url, link_url, created_at
+    const conditions = ['classroom_id = ?1'];
+    const bindings: unknown[] = [classroomId];
+    if (studentId) {
+      conditions.push('student_id = ?2');
+      bindings.push(studentId);
+    }
+
+    const query = `SELECT id, classroom_id, student_id, image_url, link_url, created_at
        FROM assignments
-       WHERE classroom_id = ?1 AND student_id = ?2
-       ORDER BY datetime(created_at) DESC`
-    )
-      .bind(classroomId, studentId)
-      .all();
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY datetime(created_at) DESC`;
 
-    return jsonArray(results ?? []);
-  } catch (error) {
-    return jsonArray([{ error: 'Failed to fetch assignments' }], 500);
-  }
-};
+    const { results } = await env.DB.prepare(query).bind(...bindings).all();
+    return jsonResponse(results ?? []);
+  });
