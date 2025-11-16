@@ -17,8 +17,13 @@ const stringOrNull = (value: unknown): string | null => {
   return String(value ?? '').trim() || null;
 };
 
+/**
+ * 안전한 name 추출 함수 (D1의 숫자 컬럼/undefined key까지 대응)
+ */
 const extractName = (record: Record<string, unknown>, fallback?: string | null): string => {
   const preferredKeys = ['name', 'full_name', 'display_name', 'student_name'];
+
+  // 1차: 대표 키 검사
   for (const key of preferredKeys) {
     if (record[key]) {
       const value = stringOrNull(record[key]);
@@ -26,12 +31,16 @@ const extractName = (record: Record<string, unknown>, fallback?: string | null):
     }
   }
 
+  // 2차: 모든 key 탐색 (안전 검사 포함)
   for (const [key, value] of Object.entries(record)) {
-  if (typeof key === 'string' && key.toLowerCase().includes('name')) {
-    const normalised = stringOrNull(value);
-    if (normalised) return normalised;
+    if (typeof key === 'string') {
+      const lower = key.toLowerCase();
+      if (typeof lower === 'string' && lower.includes('name')) {
+        const normalised = stringOrNull(value);
+        if (normalised) return normalised;
+      }
+    }
   }
-}
 
   return fallback ?? '';
 };
@@ -97,6 +106,7 @@ export const handleLoginRequest = async (
     throw new ApiError(400, { error: 'Email is required' });
   }
 
+  // --- DB 조회 ---
   const statement = env.DB.prepare(
     `SELECT * FROM ${table} WHERE email = ?1 LIMIT 1`
   ).bind(email);
@@ -135,10 +145,13 @@ export const handleLoginRequest = async (
 
   if (!userId) throw new ApiError(500, { error: '계정 ID가 없습니다.' });
 
+  // --- 관리자일 때 name 안전 처리 ---
+  const safeName = isAdmin ? '' : extractName(record, name);
+
   const authUser: AuthUser = {
     user_id: userId,
     role,
-    name: extractName(record, name),
+    name: safeName,
     email: extractEmail(record, email),
   };
 
