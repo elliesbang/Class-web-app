@@ -1,4 +1,4 @@
-import { getSheet } from '@/utils/googleSheet';
+import { getSheet } from '../utils/googleSheet';
 
 const normaliseString = (value) => {
   if (typeof value === 'string') {
