@@ -9,6 +9,11 @@ interface Env {
 export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
   handleApi(async () => {
     assertMethod(request, 'GET');
+
+    // 🔥 로그인 안 된 상태에서 호출되면 조용히 빈 리스트 반환
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) return jsonResponse([]);
+
     const user = await verifyToken(request, env);
     assertRole(user, ['student', 'admin']);
 
@@ -26,15 +31,18 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
 
     const conditions = ['classroom_id = ?1'];
     const bindings: unknown[] = [classroomId];
+
     if (studentId) {
       conditions.push('student_id = ?2');
       bindings.push(studentId);
     }
 
-    const query = `SELECT id, classroom_id, student_id, image_url, link_url, created_at
-       FROM assignments
-       WHERE ${conditions.join(' AND ')}
-       ORDER BY datetime(created_at) DESC`;
+    const query = `
+      SELECT id, classroom_id, student_id, image_url, link_url, created_at
+      FROM assignments
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY datetime(created_at) DESC
+    `;
 
     const { results } = await env.DB.prepare(query).bind(...bindings).all();
     return jsonResponse(results ?? []);
