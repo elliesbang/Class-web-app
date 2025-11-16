@@ -18,7 +18,8 @@ const stringOrNull = (value: unknown): string | null => {
 };
 
 /**
- * 안전한 name 추출 함수 (D1의 숫자 컬럼/undefined key까지 대응)
+ * 안전한 이름 추출
+ * 숫자 key / null key / undefined key 모두 방어
  */
 const extractName = (record: Record<string, unknown>, fallback?: string | null): string => {
   const preferredKeys = ['name', 'full_name', 'display_name', 'student_name'];
@@ -116,6 +117,7 @@ export const handleLoginRequest = async (
 
   if (!record) throw new ApiError(401, { error: 'Invalid credentials' });
 
+  // --- 비밀번호 추출 ---
   const storedHash = extractPasswordHash(record);
 
   // --- 관리자 로그인(email + password) ---
@@ -125,7 +127,7 @@ export const handleLoginRequest = async (
     }
   }
 
-  // --- 학생/VOD 로그인(name + email) ---
+  // --- 수강생/VOD 로그인(name + email) ---
   if (!isAdmin) {
     if (!name) {
       throw new ApiError(400, { error: '이름을 입력하세요.' });
@@ -145,7 +147,7 @@ export const handleLoginRequest = async (
 
   if (!userId) throw new ApiError(500, { error: '계정 ID가 없습니다.' });
 
-  // --- 관리자일 때 name 안전 처리 ---
+  // ⭐ 관리자일 때 extractName 절대 호출하지 않음
   const safeName = isAdmin ? '' : extractName(record, name);
 
   const authUser: AuthUser = {
@@ -156,6 +158,7 @@ export const handleLoginRequest = async (
   };
 
   const token = await generateAuthToken(authUser, env.JWT_SECRET);
+
   return jsonResponse({ ...authUser, token });
 };
 
