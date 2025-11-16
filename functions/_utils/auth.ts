@@ -1,4 +1,3 @@
-// rebuild fix 3
 import { sign, verify } from 'hono/jwt';
 import { ApiError } from './api';
 
@@ -22,19 +21,18 @@ interface TokenPayload {
   email?: string;
   name?: string;
   exp?: number;
+  iat?: number;
 }
 
 const TOKEN_TTL_SECONDS = 60 * 60 * 24; // 24h
 
-// ------------------------
-// JWT 생성
-// ------------------------
 export const generateAuthToken = async (user: AuthUser, secret: string): Promise<string> => {
   const now = Math.floor(Date.now() / 1000);
 
   return sign(
     {
       sub: user.user_id,
+      user_id: user.user_id,
       role: user.role,
       email: user.email,
       name: user.name,
@@ -45,9 +43,6 @@ export const generateAuthToken = async (user: AuthUser, secret: string): Promise
   );
 };
 
-// ------------------------
-// JWT 검증
-// ------------------------
 export const verifyToken = async (request: Request, env: JwtEnv): Promise<AuthUser> => {
   const header = request.headers.get('Authorization');
 
@@ -74,51 +69,40 @@ export const verifyToken = async (request: Request, env: JwtEnv): Promise<AuthUs
     throw new ApiError(401, { error: 'Token expired' });
   }
 
-  const role = (payload.role ?? '').toString() as UserRole;
-  const userId = payload.sub ?? payload.user_id;
+  const userId = (payload.sub ?? payload.user_id ?? '').toString().trim();
+  const role = (payload.role ?? '').toString().trim() as UserRole;
+  const email = (payload.email ?? '').toString().trim();
+  const name = (payload.name ?? '').toString().trim();
 
-  if (!role || !userId) {
+  if (!userId || !role || !email || !name) {
+    throw new ApiError(401, { error: 'Invalid token payload' });
+  }
+
+  if (!['admin', 'student', 'vod'].includes(role)) {
     throw new ApiError(401, { error: 'Invalid token payload' });
   }
 
   return {
-    user_id: String(userId),
+    user_id: userId,
     role,
-    email: (payload.email ?? '').toString(),
-    name: (payload.name ?? '').toString(),
+    email,
+    name,
   };
 };
 
-// ------------------------
-// 역할(권한) 검사 — includes 오류 방지 버전
-// ------------------------
 export const assertRole = (user: AuthUser, allowed: UserRole | UserRole[]) => {
-  // allowed가 undefined/null인 경우 안전 처리
-  if (!allowed) {
+  const roles = Array.isArray(allowed) ? allowed : [allowed];
+
+  if (!roles.length) {
     throw new ApiError(500, { error: 'Invalid role configuration' });
   }
 
-  // 배열 형태로 강제 변환 + null 제거
-  const roles: UserRole[] = Array.isArray(allowed)
-    ? (allowed.filter(Boolean) as UserRole[])
-    : [allowed];
-
-  if (!roles || roles.length === 0) {
-    throw new ApiError(500, { error: 'Invalid role configuration' });
-  }
-
-  // includes 자체는 roles가 빈 배열이어도 안전하지만
-  // roles가 undefined일 경우 대비했기 때문에 여기서는 절대 오류 안 남.
   if (!roles.includes(user.role)) {
     throw new ApiError(403, { error: 'Forbidden' });
   }
 };
 
-// ------------------------
-// 소유권 검사
-// ------------------------
 export const ensureOwnership = (user: AuthUser, ownerId: string) => {
-  // 관리자면 무조건 허용
   if (user.role === 'admin') return;
 
   if (user.user_id !== ownerId) {
