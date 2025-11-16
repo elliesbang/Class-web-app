@@ -2,6 +2,8 @@
   "imports": {
     "@hono/d1": "./node_modules/@hono/d1/index.js",
     "hono": "./node_modules/hono/dist/index.js",
-    "zod": "./node_modules/zod/index.mjs"
+    "zod": "./node_modules/zod/index.mjs",
+    "googleapis": "./functions/vendor/googleapis.js",
+    "@/utils/googleSheet": "./functions/utils/googleSheet.js"
   }
 }

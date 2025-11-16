@@ -19,6 +19,35 @@ function readVodHistory() {
   }
 }
 
+const resolveCategoryName = (item) => {
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+  return (
+    item.category ||
+    item.categoryName ||
+    item['카테고리'] ||
+    item['category(카테고리)'] ||
+    ''
+  )
+    .toString()
+    .trim();
+};
+
+const resolveTitle = (item) => {
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+  return (
+    item.title ||
+    item['title(강좌명)'] ||
+    item.name ||
+    ''
+  )
+    .toString()
+    .trim();
+};
+
 export default function VodMyPage() {
   const [vods, setVods] = useState([]);
   const [category, setCategory] = useState('');
@@ -28,15 +57,11 @@ export default function VodMyPage() {
   const [history, setHistory] = useState(() => readVodHistory());
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
     setError(null);
 
-    const params = new URLSearchParams();
-    if (category) params.set('category', category);
-    if (search) params.set('q', search);
-    const query = params.toString();
-
-    fetch(`/api/vod${query ? `?${query}` : ''}`)
+    fetch('/api/getVOD')
       .then((response) => {
         if (!response.ok) {
           throw new Error('VOD 목록을 불러오지 못했습니다.');
@@ -44,16 +69,24 @@ export default function VodMyPage() {
         return response.json();
       })
       .then((json) => {
-        setVods(json?.items ?? []);
+        if (!isMounted) return;
+        const list = Array.isArray(json) ? json : Array.isArray(json?.items) ? json.items : [];
+        setVods(list);
       })
       .catch((caught) => {
+        if (!isMounted) return;
         console.error('[VodMyPage] failed to load vod list', caught);
         setError(caught);
       })
       .finally(() => {
+        if (!isMounted) return;
         setLoading(false);
       });
-  }, [category, search]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     setHistory(readVodHistory());
@@ -62,12 +95,32 @@ export default function VodMyPage() {
   const categories = useMemo(() => {
     const set = new Set();
     vods.forEach((item) => {
-      if (item.category) {
-        set.add(item.category);
+      const name = resolveCategoryName(item);
+      if (name) {
+        set.add(name);
       }
     });
     return Array.from(set);
   }, [vods]);
+
+  const filteredVods = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    return vods.filter((item) => {
+      const categoryName = resolveCategoryName(item);
+      const matchesCategory = category ? categoryName === category : true;
+      if (!matchesCategory) {
+        return false;
+      }
+      if (!keyword) {
+        return true;
+      }
+      const title = resolveTitle(item).toLowerCase();
+      const description = (item?.description || '')
+        .toString()
+        .toLowerCase();
+      return title.includes(keyword) || description.includes(keyword);
+    });
+  }, [vods, category, search]);
 
   const recentVods = useMemo(() => {
     if (!history || history.length === 0) {
@@ -150,14 +203,14 @@ export default function VodMyPage() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {loading ? (
               <p className="text-sm text-ellieGray/60">데이터를 불러오는 중입니다...</p>
-            ) : vods.length === 0 ? (
+            ) : filteredVods.length === 0 ? (
               <p className="text-sm text-ellieGray/60">해당 조건에 맞는 강의가 없습니다.</p>
             ) : (
-              vods.map((vod) => (
+              filteredVods.map((vod) => (
                 <div key={vod.id} className="flex flex-col justify-between rounded-2xl border border-ellieGray/10 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-ellieGray">{vod.title || 'VOD 강의'}</p>
-                    <p className="mt-1 text-xs text-ellieGray/60">카테고리: {vod.category || '미분류'}</p>
+                    <p className="text-sm font-semibold text-ellieGray">{resolveTitle(vod) || 'VOD 강의'}</p>
+                    <p className="mt-1 text-xs text-ellieGray/60">카테고리: {resolveCategoryName(vod) || '미분류'}</p>
                     {vod.description ? (
                       <p className="mt-2 text-xs text-ellieGray/60">{vod.description}</p>
                     ) : null}
@@ -189,8 +242,8 @@ export default function VodMyPage() {
             ) : (
               recentVods.map((item, index) => (
                 <div key={`${item.id || index}`} className="rounded-2xl border border-ellieGray/10 p-4">
-                  <p className="text-sm font-semibold text-ellieGray">{item.title || 'VOD 강의'}</p>
-                  <p className="mt-1 text-xs text-ellieGray/60">카테고리: {item.category || '미분류'}</p>
+                  <p className="text-sm font-semibold text-ellieGray">{resolveTitle(item) || 'VOD 강의'}</p>
+                  <p className="mt-1 text-xs text-ellieGray/60">카테고리: {resolveCategoryName(item) || '미분류'}</p>
                 </div>
               ))
             )}
