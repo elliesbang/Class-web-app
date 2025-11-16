@@ -27,11 +27,11 @@ const extractName = (record: Record<string, unknown>, fallback?: string | null):
   }
 
   for (const [key, value] of Object.entries(record)) {
-    if (key.toLowerCase().includes('name')) {
-      const normalised = stringOrNull(value);
-      if (normalised) return normalised;
-    }
+  if (typeof key === 'string' && key.toLowerCase().includes('name')) {
+    const normalised = stringOrNull(value);
+    if (normalised) return normalised;
   }
+}
 
   return fallback ?? '';
 };
