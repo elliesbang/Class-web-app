@@ -19,8 +19,11 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
        FROM class_category
        ORDER BY order_num ASC`
     );
+
     const { results } = await statement.all();
-    return jsonResponse({ items: results ?? [] });
+
+    // 🔥 핵심: items가 아니라 배열 그대로 반환해야 함
+    return jsonResponse(results ?? []);
   } catch (error) {
     return jsonResponse({ error: 'Failed to fetch categories' }, 500);
   }
