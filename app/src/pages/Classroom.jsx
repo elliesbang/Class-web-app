@@ -10,7 +10,7 @@ const CLASSROOM_CATEGORIES = [
     accent: 'bg-[#e4f1ff]',
     description: '핵심 디자인과 실무 스킬을 다집니다.',
     classrooms: [
-      { id: 'candyma', name: '캔디마', description: 'AI 캔바 마스터 클래스' },
+      { id: 'candyma', name: '캔디마', description: '캔바 기초' },
       { id: 'earlchal', name: '이얼챌', description: '중국어 캘리 챌린지' },
       { id: 'candyup', name: '캔디업', description: '디자인 수익화 업그레이드' },
       { id: 'jungcalup', name: '중캘업', description: '중국어 캘리그라피 업' },
@@ -32,11 +32,11 @@ const CLASSROOM_CATEGORIES = [
     accent: 'bg-[#fff5d7]',
     description: 'AI 도구로 창작하는 모든 노하우',
     classrooms: [
-      { id: 'eggjak', name: '에그작', description: 'AI 이모티콘 제작' },
-      { id: 'eggjakchal', name: '에그작챌', description: '30일 챌린지' },
-      { id: 'nacoljak', name: '나컬작', description: '나만의 컬러 일러스트' },
-      { id: 'nacoljakchal', name: '나컬작챌', description: '챌린지 과정' },
-      { id: 'michina', name: '미치나', description: '미드저니 × 캔바' },
+      { id: 'eggjak', name: '에그작', description: 'AI 그림책 출판 수업' },
+      { id: 'eggjakchal', name: '에그작챌', description: '에그작 수강생만 참여하는 챌린지' },
+      { id: 'nacoljak', name: '나컬작', description: 'AI 컬러링북 출판 수업' },
+      { id: 'nacoljakchal', name: '나컬작챌', description: '나컬작 수강생만 참여하는 챌린지' },
+      { id: 'michina', name: '미치나', description: 'AI로 스톡사이트 요소 올리는 챌린지' },
     ],
   },
 ];
