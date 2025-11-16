@@ -66,7 +66,7 @@ export const ensureBaseSchema = async (db) => {
 
     CREATE TABLE IF NOT EXISTS material_pages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      notion_page_id TEXT NOT NULL UNIQUE,
+      external_page_id TEXT NOT NULL UNIQUE,
       course_id TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );

@@ -30,9 +30,10 @@ export const onRequest = async ({ request, env }) => {
       });
     }
 
+    const accessToken = env.ADMIN_TOKEN || crypto.randomUUID();
     const payload = {
       success: true,
-      accessToken: crypto.randomUUID(),
+      accessToken,
       role: 'admin',
     };
 

@@ -1,22 +1,6 @@
-export type ClassroomCourse = {
-  id: string;
-  name: string;
-  description?: string;
-};
-
-export type ClassroomCategory = {
-  id: string;
-  name: string;
-  courses: ClassroomCourse[];
-};
-
-export type VodCategory = {
-  id: string;
-  name: string;
-};
+export type SheetContentEntry = Record<string, string | number | boolean | null>;
 
 export type GlobalNoticeRecord = {
-  notionId: string;
   id: string;
   title: string;
   content: string;
@@ -26,10 +10,9 @@ export type GlobalNoticeRecord = {
 };
 
 export type ClassroomVideoRecord = {
-  notionId: string;
   id: string;
-  categoryId: string;
   courseId: string;
+  categoryId: string;
   title: string;
   videoUrl: string;
   description?: string | null;
@@ -38,209 +21,272 @@ export type ClassroomVideoRecord = {
 };
 
 export type VodVideoRecord = {
-  notionId: string;
   id: string;
   categoryId: string;
   title: string;
   description?: string | null;
   videoUrl: string;
-  thumbnailUrl: string;
+  thumbnailUrl?: string | null;
   isRecommended: boolean;
   displayOrder: number;
   createdAt: string;
 };
 
 export type ClassroomMaterialRecord = {
-  notionId: string;
   id: string;
-  categoryId: string;
   courseId: string;
+  categoryId: string;
   title: string;
   description?: string | null;
   fileUrl: string;
-  fileName: string;
+  fileName?: string | null;
   fileType: 'file' | 'link';
   createdAt: string;
 };
 
 export type ClassroomNoticeRecord = {
-  notionId: string;
   id: string;
-  categoryId: string;
   courseId: string;
+  categoryId: string;
   title: string;
   content: string;
   isImportant: boolean;
   createdAt: string;
 };
 
-export const classroomCategories: ClassroomCategory[] = [
-  {
-    id: 'skill',
-    name: '스킬',
-    courses: [
-      {
-        id: 'candyma',
-        name: '캔디마',
-        description: '캔바로 만드는 디지털 마케팅 실습 과정입니다.',
-      },
-      {
-        id: 'candup',
-        name: '캔디업',
-        description: '캔바 활용 고급 편집과 브랜딩 강의입니다.',
-      },
-      {
-        id: 'zhcal-up',
-        name: '중캘업',
-        description: '중국어 캘리그라피 작품 제작 심화 과정입니다.',
-      },
-    ],
-  },
-  {
-    id: 'commerce',
-    name: '수익화',
-    courses: [
-      {
-        id: 'cangoods',
-        name: '캔굿즈',
-        description: '캔바 디자인을 상품화하는 실전 수업입니다.',
-      },
-      {
-        id: 'calgoods',
-        name: '캘굿즈',
-        description: '캘리그라피 굿즈 제작을 위한 실습 강의입니다.',
-      },
-    ],
-  },
-  {
-    id: 'ai-creation',
-    name: 'AI 창작',
-    courses: [
-      {
-        id: 'eggjak',
-        name: '에그작',
-        description: 'AI 기반 출판물을 제작하는 프로젝트 과정입니다.',
-      },
-      {
-        id: 'eggjakchal',
-        name: '에그작챌',
-        description: '에그작 참여자를 위한 챌린지형 강의입니다.',
-      },
-      {
-        id: 'nacoljak',
-        name: '나컬작',
-        description: '나만의 컬러링북을 기획하고 제작하는 과정입니다.',
-      },
-      {
-        id: 'nacoljakchal',
-        name: '나컬작챌',
-        description: '나컬작 참가자를 위한 실전 챌린지 과정입니다.',
-      },
-      {
-        id: 'michina',
-        name: '미치나',
-        description: 'AI+캔바 기반 창작 챌린지를 운영하는 실전 과정입니다.',
-      },
-      {
-        id: 'mitemna',
-        name: '미템나',
-        description: '미리캔버스 템플릿 제작 노하우를 배우는 강의입니다.',
-      },
-      {
-        id: 'earlchal',
-        name: '이얼챌',
-        description: '중국어 캘리그라피 기초를 다지는 챌린지 과정입니다.',
-      },
-    ],
-  },
-];
-
-export const vodCategories: VodCategory[] = [
-  { id: 'featured', name: '추천' },
-  { id: 'beginner', name: '입문' },
-  { id: 'advanced', name: '심화' },
-];
-
-export const defaultGlobalNotices: GlobalNoticeRecord[] = [];
-
-export const defaultClassroomVideos: ClassroomVideoRecord[] = [];
-
-export const defaultVodVideos: VodVideoRecord[] = [];
-
-export const defaultClassroomMaterials: ClassroomMaterialRecord[] = [];
-
-export const defaultClassroomNotices: ClassroomNoticeRecord[] = [];
-
-export const contentDestinations = {
-  globalNotices: [
-    { route: '/', section: 'home.news' },
-    { route: '/notices', section: 'notices.list' },
-  ],
-  classroomVideos: [
-    { route: '/class/:courseId', section: 'classroom.videoTab' },
-  ],
-  vodVideos: [
-    { route: '/', section: 'home.vodFeatured' },
-    { route: '/vod', section: 'vod.list' },
-  ],
-  classroomMaterials: [
-    { route: '/class/:courseId', section: 'classroom.materialTab' },
-  ],
-  classroomNotices: [
-    { route: '/class/:courseId', section: 'classroom.noticeTab' },
-  ],
-} as const;
-
-export const findClassroomCategory = (categoryId: string) =>
-  classroomCategories.find((category) => category.id === categoryId) ?? null;
-
-export const findClassroomCourse = (courseId: string) => {
-  for (const category of classroomCategories) {
-    const course = category.courses.find((item) => item.id === courseId);
-    if (course) {
-      return { category, course } as { category: ClassroomCategory; course: ClassroomCourse };
-    }
-  }
-
-  return null;
+export type VodCategory = {
+  id: string;
+  name: string;
+  order: number;
 };
 
-export const getClassroomVideosForCourse = (courseId: string) =>
-  defaultClassroomVideos
-    .filter((video) => video.courseId === courseId)
-    .slice()
-    .sort((a, b) => {
-      if (a.displayOrder !== b.displayOrder) {
-        return a.displayOrder - b.displayOrder;
+export type ContentCollections = {
+  globalNotices: GlobalNoticeRecord[];
+  classroomVideos: ClassroomVideoRecord[];
+  vodVideos: VodVideoRecord[];
+  classroomMaterials: ClassroomMaterialRecord[];
+  classroomNotices: ClassroomNoticeRecord[];
+  vodCategories: VodCategory[];
+};
+
+export type LectureItem = {
+  id: string;
+  courseId: string;
+  categoryId: string;
+  title: string;
+  description?: string;
+  videoUrl?: string;
+  resourceUrl?: string;
+  order: number;
+  raw?: Record<string, string>;
+};
+
+export type LectureSubCategory = {
+  courseId: string;
+  courseName: string;
+  courseDescription?: string;
+  subCategoryOrder: number;
+  lectures: LectureItem[];
+};
+
+export type LectureCategory = {
+  categoryId: string;
+  categoryName: string;
+  categoryOrder: number;
+  subCategories: LectureSubCategory[];
+};
+
+export type ClassroomCourseSummary = {
+  categoryId: string;
+  categoryName: string;
+  categoryOrder: number;
+  courseId: string;
+  courseName: string;
+  courseDescription?: string;
+  subCategoryOrder: number;
+};
+
+const generateId = () =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `content-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const normaliseString = (value: unknown, fallback = '') => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+  }
+  if (value == null) {
+    return fallback;
+  }
+  const stringValue = String(value).trim();
+  return stringValue.length > 0 ? stringValue : fallback;
+};
+
+const parseBoolean = (value: unknown, fallback = false) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  if (typeof value === 'string') {
+    const normalised = value.trim().toLowerCase();
+    if (['true', 'yes', 'y', '1', '노출', '공개'].includes(normalised)) {
+      return true;
+    }
+    if (['false', 'no', 'n', '0', '비공개'].includes(normalised)) {
+      return false;
+    }
+  }
+  return fallback;
+};
+
+const parseNumber = (value: unknown, fallback = 0) => {
+  const num = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+export const buildContentCollections = (entries: SheetContentEntry[] = []): ContentCollections => {
+  const globalNotices: GlobalNoticeRecord[] = [];
+  const classroomVideos: ClassroomVideoRecord[] = [];
+  const classroomMaterials: ClassroomMaterialRecord[] = [];
+  const classroomNotices: ClassroomNoticeRecord[] = [];
+  const vodVideos: VodVideoRecord[] = [];
+  const vodCategoryMap = new Map<string, VodCategory>();
+
+  entries.forEach((entry) => {
+    const type = normaliseString(entry.type).toLowerCase();
+    const baseId = normaliseString(entry.id) || generateId();
+    const categoryId = normaliseString(entry.categoryId || entry.category || 'general');
+    const courseId = normaliseString(entry.courseId || entry.course || entry.subCategory || 'course');
+    const createdAt = normaliseString(entry.createdAt || entry.updatedAt || new Date().toISOString());
+
+    if (['global_notice', 'global', 'notice'].includes(type)) {
+      globalNotices.push({
+        id: baseId,
+        title: normaliseString(entry.title || '공지'),
+        content: normaliseString(entry.content || ''),
+        thumbnailUrl: normaliseString(entry.thumbnailUrl || entry.thumbnail || '') || null,
+        isVisible: parseBoolean(entry.isVisible ?? true, true),
+        createdAt,
+      });
+      return;
+    }
+
+    if (['classroom_video', 'video', 'lecture_video'].includes(type)) {
+      classroomVideos.push({
+        id: baseId,
+        courseId,
+        categoryId,
+        title: normaliseString(entry.title || '강의 영상'),
+        videoUrl: normaliseString(entry.videoUrl || entry.url || ''),
+        description: normaliseString(entry.description || ''),
+        displayOrder: parseNumber(entry.displayOrder || entry.order, 0),
+        createdAt,
+      });
+      return;
+    }
+
+    if (['vod', 'vod_video'].includes(type)) {
+      const vodCategoryId = normaliseString(entry.vodCategoryId || entry.categoryId || entry.category || 'default');
+      const vodCategoryName = normaliseString(entry.vodCategoryName || entry.categoryName || entry.category || 'VOD');
+      const vodCategoryOrder = parseNumber(entry.categoryOrder || entry.vodCategoryOrder, 0);
+      vodVideos.push({
+        id: baseId,
+        categoryId: vodCategoryId,
+        title: normaliseString(entry.title || 'VOD'),
+        description: normaliseString(entry.description || ''),
+        videoUrl: normaliseString(entry.videoUrl || entry.url || ''),
+        thumbnailUrl: normaliseString(entry.thumbnailUrl || entry.thumbnail || '') || null,
+        isRecommended: parseBoolean(entry.isRecommended ?? entry.recommended ?? false, false),
+        displayOrder: parseNumber(entry.displayOrder || entry.order, 0),
+        createdAt,
+      });
+      if (!vodCategoryMap.has(vodCategoryId)) {
+        vodCategoryMap.set(vodCategoryId, {
+          id: vodCategoryId,
+          name: vodCategoryName,
+          order: vodCategoryOrder,
+        });
       }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+      return;
+    }
 
-export const getClassroomMaterialsForCourse = (courseId: string) =>
-  defaultClassroomMaterials
-    .filter((material) => material.courseId === courseId)
-    .slice()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (['material', 'classroom_material'].includes(type)) {
+      const fileTypeValue = normaliseString(entry.fileType || 'file').toLowerCase();
+      const fileType: 'file' | 'link' = fileTypeValue === 'link' ? 'link' : 'file';
+      classroomMaterials.push({
+        id: baseId,
+        courseId,
+        categoryId,
+        title: normaliseString(entry.title || '자료'),
+        description: normaliseString(entry.description || ''),
+        fileUrl: normaliseString(entry.fileUrl || entry.url || entry.link || ''),
+        fileName: normaliseString(entry.fileName || ''),
+        fileType,
+        createdAt,
+      });
+      return;
+    }
 
-export const getClassroomNoticesForCourse = (courseId: string) =>
-  defaultClassroomNotices
-    .filter((notice) => notice.courseId === courseId)
-    .slice()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (['classroom_notice', 'class_notice'].includes(type)) {
+      classroomNotices.push({
+        id: baseId,
+        courseId,
+        categoryId,
+        title: normaliseString(entry.title || '공지'),
+        content: normaliseString(entry.content || ''),
+        isImportant: parseBoolean(entry.isImportant ?? entry.important ?? false, false),
+        createdAt,
+      });
+    }
+  });
 
-export const getVodVideosByCategory = (categoryId: string) =>
-  defaultVodVideos
-    .filter((video) => video.categoryId === categoryId)
-    .slice()
-    .sort((a, b) => {
-      if (a.displayOrder !== b.displayOrder) {
-        return a.displayOrder - b.displayOrder;
-      }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  const vodCategories = Array.from(vodCategoryMap.values()).sort(
+    (a, b) => a.order - b.order || a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }),
+  );
 
-export const getVisibleGlobalNotices = () =>
-  defaultGlobalNotices
-    .filter((notice) => notice.isVisible)
-    .slice()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sortByDateDesc = (list: { createdAt: string }[]) =>
+    list
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return {
+    globalNotices: sortByDateDesc(globalNotices),
+    classroomVideos: classroomVideos
+      .slice()
+      .sort((a, b) => a.displayOrder - b.displayOrder || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    vodVideos: vodVideos
+      .slice()
+      .sort((a, b) => a.displayOrder - b.displayOrder || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    classroomMaterials: sortByDateDesc(classroomMaterials),
+    classroomNotices: sortByDateDesc(classroomNotices),
+    vodCategories,
+  };
+};
+
+export const flattenLectureCourses = (categories: LectureCategory[]): ClassroomCourseSummary[] =>
+  categories.flatMap((category) =>
+    category.subCategories.map((subCategory) => ({
+      categoryId: category.categoryId,
+      categoryName: category.categoryName,
+      categoryOrder: category.categoryOrder,
+      courseId: subCategory.courseId,
+      courseName: subCategory.courseName,
+      courseDescription: subCategory.courseDescription,
+      subCategoryOrder: subCategory.subCategoryOrder,
+    })),
+  );
+
+export const findCourseSummary = (courses: ClassroomCourseSummary[], courseId: string) =>
+  courses.find((course) => course.courseId === courseId) ?? null;
+
+export const filterVideosByCourse = (videos: ClassroomVideoRecord[], courseId: string) =>
+  videos.filter((video) => video.courseId === courseId);
+
+export const filterMaterialsByCourse = (materials: ClassroomMaterialRecord[], courseId: string) =>
+  materials.filter((material) => material.courseId === courseId);
+
+export const filterNoticesByCourse = (notices: ClassroomNoticeRecord[], courseId: string) =>
+  notices.filter((notice) => notice.courseId === courseId);

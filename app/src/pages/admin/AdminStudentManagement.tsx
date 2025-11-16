@@ -3,10 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import StudentTable from '../../components/admin/StudentTable';
 import {
   getStudents,
-  getVODStudents,
+  getVodStudents,
   type StudentAccountRow,
   type VodAccountRow,
-} from '../../../../functions/api/notion/getStudents';
+} from '../../lib/studentAccounts';
 
 type AccountType = 'student' | 'vod';
 
@@ -69,7 +69,7 @@ const AdminStudentManagement = () => {
     const loadVodStudents = async () => {
       setVodLoading(true);
       try {
-        const result = await getVODStudents({ signal: abortController.signal });
+        const result = await getVodStudents({ signal: abortController.signal });
         if (!abortController.signal.aborted) {
           setVodStudents(result);
         }

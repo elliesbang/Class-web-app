@@ -1,20 +1,15 @@
-import { ChangeEvent, DragEvent, FormEvent, useMemo, useState } from 'react';
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { GripVertical, Trash2 } from 'lucide-react';
 
 import {
-  classroomCategories,
-  defaultClassroomMaterials,
-  defaultClassroomNotices,
-  defaultClassroomVideos,
-  defaultGlobalNotices,
-  defaultVodVideos,
-  vodCategories,
   type ClassroomMaterialRecord,
   type ClassroomNoticeRecord,
   type ClassroomVideoRecord,
   type GlobalNoticeRecord,
   type VodVideoRecord,
+  type ClassroomCourseSummary,
 } from '../../../../lib/contentLibrary';
+import { useSheetsData } from '../../../../contexts/SheetsDataContext';
 
 const TAB_ITEMS = [
   { key: 'globalNotice' as const, label: '전체 공지' },
@@ -110,21 +105,82 @@ const reorderVideoDisplayOrder = (
   });
 };
 
-const ContentManager = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('globalNotice');
-  const [globalNotices, setGlobalNotices] = useState<GlobalNoticeRecord[]>(defaultGlobalNotices);
-  const [classroomVideos, setClassroomVideos] = useState<ClassroomVideoRecord[]>(defaultClassroomVideos);
-  const [vodVideos, setVodVideos] = useState<VodVideoRecord[]>(defaultVodVideos);
-  const [materials, setMaterials] = useState<ClassroomMaterialRecord[]>(defaultClassroomMaterials);
-  const [classroomNotices, setClassroomNotices] = useState<ClassroomNoticeRecord[]>(defaultClassroomNotices);
+type CategoryOption = {
+  id: string;
+  name: string;
+  order: number;
+  courses: Array<{ id: string; name: string; description?: string }>;
+};
 
-  const [selectedClassCategoryId, setSelectedClassCategoryId] = useState<string>(
-    classroomCategories[0]?.id ?? '',
-  );
-  const [selectedCourseId, setSelectedCourseId] = useState<string>(
-    classroomCategories[0]?.courses[0]?.id ?? '',
-  );
-  const [selectedVodCategoryId, setSelectedVodCategoryId] = useState<string>(vodCategories[0]?.id ?? '');
+const buildCategoryOptions = (courses: ClassroomCourseSummary[]): CategoryOption[] => {
+  const categoryMap = new Map<string, CategoryOption>();
+  courses.forEach((course) => {
+    if (!categoryMap.has(course.categoryId)) {
+      categoryMap.set(course.categoryId, {
+        id: course.categoryId,
+        name: course.categoryName,
+        order: course.categoryOrder,
+        courses: [],
+      });
+    }
+    const category = categoryMap.get(course.categoryId)!;
+    if (!category.courses.some((item) => item.id === course.courseId)) {
+      category.courses.push({
+        id: course.courseId,
+        name: course.courseName,
+        description: course.courseDescription,
+      });
+    }
+  });
+
+  return Array.from(categoryMap.values())
+    .map((category) => ({
+      ...category,
+      courses: category.courses.sort((a, b) => a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' })),
+    }))
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }));
+};
+
+const getAdminHeaders = () => {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+  const token = localStorage.getItem('accessToken');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+const ContentManager = () => {
+  const { contentCollections, lectureCourses, refresh } = useSheetsData();
+  const [activeTab, setActiveTab] = useState<TabKey>('globalNotice');
+  const [globalNotices, setGlobalNotices] = useState<GlobalNoticeRecord[]>(contentCollections.globalNotices);
+  const [classroomVideos, setClassroomVideos] = useState<ClassroomVideoRecord[]>(contentCollections.classroomVideos);
+  const [vodVideos, setVodVideos] = useState<VodVideoRecord[]>(contentCollections.vodVideos);
+  const [materials, setMaterials] = useState<ClassroomMaterialRecord[]>(contentCollections.classroomMaterials);
+  const [classroomNotices, setClassroomNotices] = useState<ClassroomNoticeRecord[]>(contentCollections.classroomNotices);
+
+  useEffect(() => {
+    setGlobalNotices(contentCollections.globalNotices);
+  }, [contentCollections.globalNotices]);
+
+  useEffect(() => {
+    setClassroomVideos(contentCollections.classroomVideos);
+  }, [contentCollections.classroomVideos]);
+
+  useEffect(() => {
+    setVodVideos(contentCollections.vodVideos);
+  }, [contentCollections.vodVideos]);
+
+  useEffect(() => {
+    setMaterials(contentCollections.classroomMaterials);
+  }, [contentCollections.classroomMaterials]);
+
+  useEffect(() => {
+    setClassroomNotices(contentCollections.classroomNotices);
+  }, [contentCollections.classroomNotices]);
+
+  const [selectedClassCategoryId, setSelectedClassCategoryId] = useState<string>('');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [selectedVodCategoryId, setSelectedVodCategoryId] = useState<string>('');
 
   const [globalNoticeForm, setGlobalNoticeForm] = useState<GlobalNoticeFormState>({
     title: '',
@@ -162,10 +218,32 @@ const ContentManager = () => {
   const [draggedVideoId, setDraggedVideoId] = useState<string | null>(null);
   const [isReorderingVideos, setIsReorderingVideos] = useState(false);
 
+  const categoryOptions = useMemo(() => buildCategoryOptions(lectureCourses), [lectureCourses]);
+
+  useEffect(() => {
+    if (!selectedClassCategoryId && categoryOptions[0]) {
+      setSelectedClassCategoryId(categoryOptions[0].id);
+      setSelectedCourseId(categoryOptions[0].courses[0]?.id ?? '');
+    }
+  }, [categoryOptions, selectedClassCategoryId]);
+
+  useEffect(() => {
+    const category = categoryOptions.find((item) => item.id === selectedClassCategoryId);
+    if (category && category.courses.length > 0 && !category.courses.some((course) => course.id === selectedCourseId)) {
+      setSelectedCourseId(category.courses[0].id);
+    }
+  }, [categoryOptions, selectedClassCategoryId, selectedCourseId]);
+
+  useEffect(() => {
+    if (!selectedVodCategoryId && contentCollections.vodCategories[0]) {
+      setSelectedVodCategoryId(contentCollections.vodCategories[0].id);
+    }
+  }, [contentCollections.vodCategories, selectedVodCategoryId]);
+
   const courseOptions = useMemo(() => {
-    const category = classroomCategories.find((item) => item.id === selectedClassCategoryId);
+    const category = categoryOptions.find((item) => item.id === selectedClassCategoryId);
     return category?.courses ?? [];
-  }, [selectedClassCategoryId]);
+  }, [categoryOptions, selectedClassCategoryId]);
 
   const filteredClassroomVideos = useMemo(() => {
     if (!selectedCourseId) {
@@ -217,51 +295,37 @@ const ContentManager = () => {
     [globalNotices],
   );
 
-  // 🔥 삭제 기능 수정 — 엔드포인트 완전 분리
-  const handleDelete = async (notionId: string, type: ContentDeleteType) => {
-    if (!notionId) {
-      alert('삭제에 필요한 Notion 페이지 ID가 없습니다.');
+  const handleDelete = async (contentId: string, type: ContentDeleteType) => {
+    if (!contentId) {
+      alert('삭제에 필요한 콘텐츠 ID가 없습니다.');
       return;
     }
 
-    const endpointMap: Record<ContentDeleteType, string> = {
-      global: '/api/notice',
-      video: '/api/class-video',
-      vod: '/api/vod-video',
-      material: '/api/material',
-      notice: '/api/class-notice',
-    };
-
-    const endpoint = endpointMap[type];
-
     try {
-      const response = await fetch(`${endpoint}?id=${encodeURIComponent(notionId)}`, {
+      const response = await fetch(`/api/admin/delete-content?id=${encodeURIComponent(contentId)}`, {
         method: 'DELETE',
+        headers: {
+          ...getAdminHeaders(),
+        },
       });
 
       if (!response.ok) {
         throw new Error('Failed to delete content');
       }
 
-      const data = await response.json().catch(() => null);
-
-      if (data?.success) {
-        alert('삭제되었습니다.');
-
-        if (type === 'video') {
-          setClassroomVideos((prev) => prev.filter((item) => item.notionId !== notionId));
-        } else if (type === 'vod') {
-          setVodVideos((prev) => prev.filter((item) => item.notionId !== notionId));
-        } else if (type === 'material') {
-          setMaterials((prev) => prev.filter((item) => item.notionId !== notionId));
-        } else if (type === 'notice') {
-          setClassroomNotices((prev) => prev.filter((item) => item.notionId !== notionId));
-        } else if (type === 'global') {
-          setGlobalNotices((prev) => prev.filter((item) => item.notionId !== notionId));
-        }
-      } else {
-        alert('삭제 실패');
+      if (type === 'video') {
+        setClassroomVideos((prev) => prev.filter((item) => item.id !== contentId));
+      } else if (type === 'vod') {
+        setVodVideos((prev) => prev.filter((item) => item.id !== contentId));
+      } else if (type === 'material') {
+        setMaterials((prev) => prev.filter((item) => item.id !== contentId));
+      } else if (type === 'notice') {
+        setClassroomNotices((prev) => prev.filter((item) => item.id !== contentId));
+      } else if (type === 'global') {
+        setGlobalNotices((prev) => prev.filter((item) => item.id !== contentId));
       }
+
+      await refresh();
     } catch (error) {
       console.error('삭제 오류:', error);
       alert('서버 오류로 삭제에 실패했습니다.');
@@ -290,16 +354,19 @@ const ContentManager = () => {
   const handleGlobalNoticeSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/notice', {
+      const response = await fetch('/api/admin/create-content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminHeaders(),
         },
         body: JSON.stringify({
-          type: 'globalNotice',
-          payload: {
-            ...globalNoticeForm,
-            thumbnailFile: globalNoticeForm.thumbnailFile?.name ?? null,
+          record: {
+            type: 'global_notice',
+            title: globalNoticeForm.title,
+            content: globalNoticeForm.content,
+            thumbnailUrl: globalNoticeForm.thumbnailFile?.name ?? '',
+            isVisible: globalNoticeForm.isVisible,
           },
         }),
       });
@@ -309,6 +376,7 @@ const ContentManager = () => {
       }
 
       await response.json().catch(() => null);
+      await refresh();
     } catch (error) {
       console.error('[ContentManager] 전체 공지 등록 실패', error);
     }
@@ -318,16 +386,21 @@ const ContentManager = () => {
   const handleClassroomVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/class-video', {
+      const response = await fetch('/api/admin/create-content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminHeaders(),
         },
         body: JSON.stringify({
-          type: 'classroomVideo',
-          payload: {
-            ...classroomVideoForm,
+          record: {
+            type: 'classroom_video',
+            title: classroomVideoForm.title,
+            videoUrl: classroomVideoForm.videoUrl,
+            description: classroomVideoForm.description,
+            displayOrder: classroomVideoForm.displayOrder,
             courseId: selectedCourseId,
+            categoryId: selectedClassCategoryId,
           },
         }),
       });
@@ -337,6 +410,7 @@ const ContentManager = () => {
       }
 
       await response.json().catch(() => null);
+      await refresh();
     } catch (error) {
       console.error('[ContentManager] 강의실 영상 등록 실패', error);
     }
@@ -346,17 +420,24 @@ const ContentManager = () => {
   const handleVodVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/vod-video', {
+      const response = await fetch('/api/admin/create-content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminHeaders(),
         },
         body: JSON.stringify({
-          type: 'vodVideo',
-          payload: {
-            ...vodVideoForm,
-            thumbnailFile: vodVideoForm.thumbnailFile?.name ?? null,
-            categoryId: selectedVodCategoryId,
+          record: {
+            type: 'vod',
+            title: vodVideoForm.title,
+            description: vodVideoForm.description,
+            videoUrl: vodVideoForm.videoUrl,
+            thumbnailUrl: vodVideoForm.thumbnailFile?.name ?? '',
+            displayOrder: vodVideoForm.displayOrder,
+            isRecommended: vodVideoForm.isRecommended,
+            vodCategoryId: selectedVodCategoryId,
+            vodCategoryName:
+              contentCollections.vodCategories.find((item) => item.id === selectedVodCategoryId)?.name ?? '',
           },
         }),
       });
@@ -366,6 +447,7 @@ const ContentManager = () => {
       }
 
       await response.json().catch(() => null);
+      await refresh();
     } catch (error) {
       console.error('[ContentManager] VOD 등록 실패', error);
     }
@@ -382,17 +464,22 @@ const ContentManager = () => {
   const handleMaterialSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/material', {
+      const response = await fetch('/api/admin/create-content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminHeaders(),
         },
         body: JSON.stringify({
-          type: 'material',
-          payload: {
-            ...materialForm,
-            file: materialForm.file?.name ?? null,
+          record: {
+            type: 'material',
+            title: materialForm.title,
+            description: materialForm.description,
+            fileType: materialForm.fileType,
+            fileUrl: materialForm.fileType === 'link' ? materialForm.linkUrl : materialForm.file?.name ?? '',
+            fileName: materialForm.file?.name ?? '',
             courseId: selectedCourseId,
+            categoryId: selectedClassCategoryId,
           },
         }),
       });
@@ -402,6 +489,7 @@ const ContentManager = () => {
       }
 
       await response.json().catch(() => null);
+      await refresh();
     } catch (error) {
       console.error('[ContentManager] 자료 업로드 실패', error);
     }
@@ -411,16 +499,20 @@ const ContentManager = () => {
   const handleClassroomNoticeSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/class-notice', {
+      const response = await fetch('/api/admin/create-content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminHeaders(),
         },
         body: JSON.stringify({
-          type: 'classroomNotice',
-          payload: {
-            ...classroomNoticeForm,
+          record: {
+            type: 'classroom_notice',
+            title: classroomNoticeForm.title,
+            content: classroomNoticeForm.content,
+            isImportant: classroomNoticeForm.isImportant,
             courseId: selectedCourseId,
+            categoryId: selectedClassCategoryId,
           },
         }),
       });
@@ -430,6 +522,7 @@ const ContentManager = () => {
       }
 
       await response.json().catch(() => null);
+      await refresh();
     } catch (error) {
       console.error('[ContentManager] 강의실 공지 등록 실패', error);
     }
@@ -457,11 +550,11 @@ const ContentManager = () => {
                 onChange={(event) => {
                   const id = event.target.value;
                   setSelectedClassCategoryId(id);
-                  const category = classroomCategories.find((item) => item.id === id);
+                  const category = categoryOptions.find((item) => item.id === id);
                   setSelectedCourseId(category?.courses[0]?.id ?? '');
                 }}
               >
-                {classroomCategories.map((c) => (
+                {categoryOptions.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -491,7 +584,7 @@ const ContentManager = () => {
                 value={selectedVodCategoryId}
                 onChange={(event) => setSelectedVodCategoryId(event.target.value)}
               >
-                {vodCategories.map((c) => (
+                {contentCollections.vodCategories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -605,7 +698,7 @@ const ContentManager = () => {
                     </div>
                     <button
                       className="rounded-full p-2 bg-[#f5eee9]"
-                      onClick={() => handleDelete(n.notionId, 'global')}
+                      onClick={() => handleDelete(n.id, 'global')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -709,7 +802,7 @@ const ContentManager = () => {
                       </div>
                       <button
                         className="rounded-full p-2 bg-[#f5eee9]"
-                        onClick={() => handleDelete(v.notionId, 'video')}
+                        onClick={() => handleDelete(v.id, 'video')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -815,7 +908,7 @@ const ContentManager = () => {
                       </div>
                       <button
                         className="rounded-full p-2 bg-[#f5eee9]"
-                        onClick={() => handleDelete(v.notionId, 'vod')}
+                        onClick={() => handleDelete(v.id, 'vod')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -895,7 +988,7 @@ const ContentManager = () => {
 
                       <button
                         className="rounded-full p-2 bg-[#f5eee9]"
-                        onClick={() => handleDelete(m.notionId, 'material')}
+                        onClick={() => handleDelete(m.id, 'material')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -986,7 +1079,7 @@ const ContentManager = () => {
 
                     <button
                       className="rounded-full bg-[#f5eee9] p-2"
-                      onClick={() => handleDelete(n.notionId, 'notice')}
+                      onClick={() => handleDelete(n.id, 'notice')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
