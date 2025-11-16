@@ -9,6 +9,11 @@ interface Env {
 export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
   handleApi(async () => {
     assertMethod(request, 'GET');
+    // 🔥 Authorization 체크 추가
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      return jsonResponse([]);
+    }
     const user = await verifyToken(request, env);
     assertRole(user, ['student', 'admin']);
 
