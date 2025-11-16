@@ -1,4 +1,4 @@
-import { getSheet } from '@/utils/googleSheet';
+import { getSheet } from '../utils/googleSheet';
 
 export async function onRequest(context) {
   try {
