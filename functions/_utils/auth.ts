@@ -1,3 +1,4 @@
+// rebuild fix 3
 import { sign, verify } from 'hono/jwt';
 import { ApiError } from './api';
 
