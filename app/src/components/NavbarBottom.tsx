@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GraduationCap, Home, Megaphone, PlayCircle, User } from 'lucide-react';
+import { useAuthUser } from '../hooks/useAuthUser';
 
 const baseItems = [
   { label: '홈', to: '/', Icon: Home },
@@ -12,42 +13,18 @@ const baseItems = [
 const baseButtonClasses =
   'flex flex-col items-center justify-center gap-1 rounded-2xl bg-white py-3 text-xs font-medium shadow-md transition-colors duration-200 focus:outline-none';
 
-const getIsLoggedIn = () => {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  return Boolean(localStorage.getItem('accessToken'));
-};
-
 const NavbarBottom = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => getIsLoggedIn());
-
-  useEffect(() => {
-    const handleAuthUpdate = () => {
-      setIsLoggedIn(getIsLoggedIn());
-    };
-
-    handleAuthUpdate();
-
-    window.addEventListener('storage', handleAuthUpdate);
-    window.addEventListener('auth-change', handleAuthUpdate);
-
-    return () => {
-      window.removeEventListener('storage', handleAuthUpdate);
-      window.removeEventListener('auth-change', handleAuthUpdate);
-    };
-  }, []);
+  const authUser = useAuthUser();
 
   const navItems = useMemo(() => {
-    if (!isLoggedIn) {
+    if (!authUser) {
       return baseItems;
     }
 
     return [...baseItems, { label: 'My', to: '/my', Icon: User }];
-  }, [isLoggedIn]);
+  }, [authUser]);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 bg-[#fefaf4] px-5 pb-6 pt-3 shadow-[0_-6px_20px_rgba(0,0,0,0.05)]">

@@ -1,33 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import NotificationBell from './notifications/NotificationBell';
+import { useAuthUser } from '../hooks/useAuthUser';
 
 interface HeaderProps {
   onOpenLoginModal: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onOpenLoginModal }) => {
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const authUser = useAuthUser();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const updateAuthState = () => {
-      setIsAdminAuthenticated(localStorage.getItem('adminAuth') === 'true');
-    };
-
-    updateAuthState();
-    window.addEventListener('focus', updateAuthState);
-    window.addEventListener('storage', updateAuthState);
-    window.addEventListener('admin-auth-change', updateAuthState as EventListener);
-
-    return () => {
-      window.removeEventListener('focus', updateAuthState);
-      window.removeEventListener('storage', updateAuthState);
-      window.removeEventListener('admin-auth-change', updateAuthState as EventListener);
-    };
-  }, []);
 
   const goToAdminDashboard = () => {
     navigate('/admin');
@@ -43,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenLoginModal }) => {
 
         <div className="flex items-center gap-3">
           <NotificationBell />
-          {isAdminAuthenticated ? (
+          {authUser?.role === 'admin' ? (
             <button
               type="button"
               onClick={goToAdminDashboard}
@@ -54,7 +36,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenLoginModal }) => {
           ) : (
             <button
               type="button"
-              onClick={onOpenLoginModal}   // ✅ navigate 제거 → 모달 열기
+              onClick={onOpenLoginModal}
               className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
             >
               로그인

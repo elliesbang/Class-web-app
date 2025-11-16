@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isAdminAuthenticated, subscribeAdminAuthChanges } from '../lib/auth';
+import { useAuthUser } from '../hooks/useAuthUser';
 import { getVerifiedCode, setVerifiedCode, verifyCourseCode } from '../lib/course-verification';
 
 function CourseCard({ course, accentColor }: { [key: string]: any }) {
@@ -11,7 +11,8 @@ function CourseCard({ course, accentColor }: { [key: string]: any }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputCode, setInputCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isAdmin, setIsAdmin] = useState(() => isAdminAuthenticated());
+  const authUser = useAuthUser();
+  const isAdmin = authUser?.role === 'admin';
 
   const courseId = useMemo(() => {
     if (course.courseId) {
@@ -34,13 +35,6 @@ function CourseCard({ course, accentColor }: { [key: string]: any }) {
     const timer = window.setTimeout(() => setShowNotice(false), 2400);
     return () => window.clearTimeout(timer);
   }, [showNotice]);
-
-  useEffect(() => {
-    const unsubscribe = subscribeAdminAuthChanges(setIsAdmin);
-    return () => {
-      unsubscribe();
-    };
-  }, []);
 
   const handleUnavailableClick = () => {
     setShowNotice(true);

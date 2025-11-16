@@ -7,4 +7,4 @@ interface Env {
 }
 
 export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
-  handleApi(async () => handleLoginRequest(request, env, 'admin'));
+  handleApi(async () => handleLoginRequest(request, env, 'vod'));

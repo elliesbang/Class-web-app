@@ -1,23 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthUser } from '../../hooks/useAuthUser';
 import AdminLoginModal from '../../components/modals/AdminLoginModal.jsx';
 
 const AdminLogin = () => {
   const [isModalOpen, setIsModalOpen] = useState(true);
   const navigate = useNavigate();
+  const authUser = useAuthUser();
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const token = localStorage.getItem('accessToken');
-    const role = localStorage.getItem('role');
-
-    if (token && role === 'admin') {
+    if (authUser?.role === 'admin') {
       navigate('/admin/my', { replace: true });
     }
-  }, [navigate]);
+  }, [authUser, navigate]);
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center bg-[#fefaf4] px-4 py-16">

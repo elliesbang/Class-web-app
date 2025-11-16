@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuthUser } from '../hooks/useAuthUser';
 import NoticeTab from '../components/tabs/NoticeTab';
 import VideoTab from '../components/tabs/VideoTab';
 import MaterialTab from '../components/tabs/MaterialTab';
@@ -57,6 +58,7 @@ const createDataBuckets = () => ({
 function ClassroomDetail() {
   const { id: classroomId = '' } = useParams();
   const navigate = useNavigate();
+  const authUser = useAuthUser();
   const [activeTab, setActiveTab] = useState('notice');
   const [contents, setContents] = useState(createDataBuckets());
   const [assignments, setAssignments] = useState([]);
@@ -68,8 +70,13 @@ function ClassroomDetail() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (authUser?.role === 'student') {
+      setStudentId(authUser.user_id);
+      setStudentIdDraft(authUser.user_id);
+      return;
+    }
     setStudentIdDraft(getStoredStudentId());
-  }, []);
+  }, [authUser]);
 
   useEffect(() => {
     setStudentIdDraft(studentId);
@@ -214,7 +221,6 @@ function ClassroomDetail() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           classroom_id: classroomId,
-          student_id: studentId,
           link_url: linkUrl || null,
           image_url: imageUrl || null,
         }),

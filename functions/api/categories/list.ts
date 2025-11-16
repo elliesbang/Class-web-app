@@ -1,30 +1,23 @@
+import { handleApi, assertMethod, jsonResponse } from '../../_utils/api';
+import { assertRole, verifyToken } from '../../_utils/auth';
+
 interface Env {
   DB: D1Database;
+  JWT_SECRET: string;
 }
 
-const jsonResponse = (data: unknown, status = 200): Response =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
-  });
+export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
+  handleApi(async () => {
+    assertMethod(request, 'GET');
+    const user = await verifyToken(request, env);
+    assertRole(user, 'admin');
 
-export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
-  if (request.method !== 'GET') {
-    return jsonResponse({ error: 'Method Not Allowed' }, 405);
-  }
-
-  try {
     const statement = env.DB.prepare(
       `SELECT id, name, order_num, created_at, updated_at
        FROM class_category
-       ORDER BY order_num ASC`
+       ORDER BY order_num ASC`,
     );
 
     const { results } = await statement.all();
-
-    // 🔥 핵심: items가 아니라 배열 그대로 반환해야 함
     return jsonResponse(results ?? []);
-  } catch (error) {
-    return jsonResponse({ error: 'Failed to fetch categories' }, 500);
-  }
-};
+  });

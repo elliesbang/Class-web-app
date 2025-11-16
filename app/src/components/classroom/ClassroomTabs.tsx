@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { hasCourseAccess, subscribeCourseAccessChanges } from '@/lib/course-access';
-import { subscribeAdminAuthChanges } from '@/lib/auth';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import VideoTab from './VideoTab';
 import MaterialTab from './MaterialTab';
 import UploadTab from './UploadTab';
@@ -17,26 +17,25 @@ const TAB_CONFIG: any[] = [
 
 function ClassroomTabs({ courseId, courseName, className = '' }: { [key: string]: any }) {
   const [activeTab, setActiveTab] = useState(TAB_CONFIG[0]?.id ?? 'video');
-  const [hasAccess, setHasAccess] = useState(() => hasCourseAccess(courseId));
+  const authUser = useAuthUser();
+  const [hasAccess, setHasAccess] = useState(() => hasCourseAccess(courseId) || authUser?.role === 'admin');
   const [contents, setContents] = useState<any[]>([]);
   const [isLoadingContents, setIsLoadingContents] = useState(false);
   const [contentError, setContentError] = useState<any>(null);
 
   useEffect(() => {
     const updateAccess = () => {
-      setHasAccess(hasCourseAccess(courseId));
+      setHasAccess(hasCourseAccess(courseId) || authUser?.role === 'admin');
     };
 
     updateAccess();
 
     const unsubscribeAccess = subscribeCourseAccessChanges(updateAccess);
-    const unsubscribeAdmin = subscribeAdminAuthChanges(() => updateAccess());
 
     return () => {
       unsubscribeAccess();
-      unsubscribeAdmin();
     };
-  }, [courseId]);
+  }, [authUser?.role, courseId]);
 
   useEffect(() => {
     setContents([]);

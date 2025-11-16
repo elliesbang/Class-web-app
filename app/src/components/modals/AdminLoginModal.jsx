@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { setStoredAuthUser } from '../../lib/authUser';
 
 const MODAL_ROOT_ID = 'modal-root';
 
@@ -91,17 +92,11 @@ function AdminLoginModal({ isOpen, onClose }) {
         }
 
         const data = await response.json();
-        const token = data?.accessToken;
-
-        if (!token) {
+        if (!data?.token) {
           throw new Error('INVALID_RESPONSE');
         }
 
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', token);
-          localStorage.setItem('role', data?.role ?? 'admin');
-          window.dispatchEvent(new Event('auth-change'));
-        }
+        setStoredAuthUser(data);
 
         handleClose();
         navigate('/admin/my');
