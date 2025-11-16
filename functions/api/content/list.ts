@@ -35,7 +35,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
     }
 
     const { results } = await statement.all();
-    return jsonResponse({ items: results ?? [] });
+    return jsonResponse(results ?? []);
   } catch (error) {
     return jsonResponse({ error: 'Failed to fetch content' }, 500);
   }
