@@ -108,13 +108,19 @@ type ApiResponse<T> = {
 };
 
 export async function fetchCategories(options: ApiFetchOptions = {}): Promise<unknown[]> {
-  void options;
+  const { signal } = options;
+  const response = await fetch('/api/getCategories', { signal });
+  if (!response.ok) {
+    throw new Error('카테고리를 불러오지 못했습니다.');
+  }
+  const payload = await response.json();
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown[] }).data)) {
+    return (payload as { data?: unknown[] }).data ?? [];
+  }
   return [];
-
-  // try {
-  //   const payload = await apiFetch('/api/categories', options);
-  //   ...
-  // }
 }
 
 const parseDateValue = (value: unknown): string | null => {

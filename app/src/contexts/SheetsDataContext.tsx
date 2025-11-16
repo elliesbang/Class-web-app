@@ -49,6 +49,90 @@ const parseAssignmentFileType = (value: unknown): AssignmentFileType => {
   return 'other';
 };
 
+const slugifyKey = (value: string, fallback: string) => {
+  const base = normaliseString(value, fallback);
+  if (!base) {
+    return fallback;
+  }
+  const slug = base
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || fallback;
+};
+
+const mapLectureItems = (categoryId: string, courseId: string, lectures: unknown): LectureCategory['subCategories'][number]['lectures'] => {
+  if (!Array.isArray(lectures)) {
+    return [];
+  }
+
+  return lectures.map((lecture, index) => {
+    const record = (typeof lecture === 'object' && lecture !== null
+      ? (lecture as Record<string, unknown>)
+      : {}) as Record<string, unknown>;
+    const titleSource =
+      (record['title(강좌명)'] as string | undefined) ??
+      (record.title as string | undefined) ??
+      (record.name as string | undefined) ??
+      lecture;
+
+    return {
+      id: `${courseId}-lecture-${index + 1}`,
+      courseId,
+      categoryId,
+      title: normaliseString(titleSource || `강의 ${index + 1}`, `강의 ${index + 1}`),
+      description: normaliseString((record.description as string | undefined) ?? '', ''),
+      videoUrl: normaliseString((record.videoUrl as string | undefined) ?? (record.url as string | undefined) ?? ''),
+      resourceUrl: normaliseString(
+        (record.resourceUrl as string | undefined) ?? (record.attachment as string | undefined) ?? '',
+      ),
+      order: index,
+      raw: record,
+    };
+  });
+};
+
+const mapClassroomPayload = (payload: unknown): LectureCategory[] => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return [];
+  }
+
+  const grouped = payload as Record<string, unknown>;
+  const categories: LectureCategory[] = [];
+
+  Object.entries(grouped).forEach(([categoryName, subCategories], categoryIndex) => {
+    const normalisedCategoryName = normaliseString(categoryName, `카테고리 ${categoryIndex + 1}`);
+    const categoryId = slugifyKey(normalisedCategoryName || `category-${categoryIndex + 1}`, `category-${categoryIndex + 1}`);
+    const subCategoryEntries =
+      subCategories && typeof subCategories === 'object' && !Array.isArray(subCategories)
+        ? (subCategories as Record<string, unknown>)
+        : {};
+
+    const mappedSubCategories: LectureCategory['subCategories'] = Object.entries(subCategoryEntries).map(
+      ([subCategoryName, lectures], subIndex) => {
+        const courseName = normaliseString(subCategoryName, `코스 ${subIndex + 1}`);
+        const courseId = slugifyKey(`${categoryId}-${courseName || `course-${subIndex + 1}`}`, `${categoryId}-course-${subIndex + 1}`);
+        return {
+          courseId,
+          courseName: courseName || `코스 ${subIndex + 1}`,
+          courseDescription: '',
+          subCategoryOrder: subIndex,
+          lectures: mapLectureItems(categoryId, courseId, lectures),
+        };
+      },
+    );
+
+    categories.push({
+      categoryId,
+      categoryName: normalisedCategoryName || `카테고리 ${categoryIndex + 1}`,
+      categoryOrder: categoryIndex,
+      subCategories: mappedSubCategories,
+    });
+  });
+
+  return categories;
+};
+
 const mapAssignments = (rows: SheetContentEntry[]): AssignmentListItem[] =>
   rows.map((row, index) => {
     const fallbackCreatedAt = new Date().toISOString();
@@ -115,9 +199,9 @@ export const SheetsDataProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
       const [contentResponse, lectureResponse, assignmentResponse] = await Promise.all([
-        fetch('/api/content'),
-        fetch('/api/lectures'),
-        fetch('/api/assignments'),
+        fetch('/api/getContent'),
+        fetch('/api/getClassroom'),
+        fetch('/api/getAssignments'),
       ]);
 
       if (!contentResponse.ok || !lectureResponse.ok || !assignmentResponse.ok) {
@@ -131,7 +215,7 @@ export const SheetsDataProvider = ({ children }: { children: ReactNode }) => {
       ]);
 
       setContentEntries(extractDataArray(contentPayload));
-      setLectures(extractDataArray(lecturePayload) as LectureCategory[]);
+      setLectures(Array.isArray(lecturePayload) ? (lecturePayload as LectureCategory[]) : mapClassroomPayload(lecturePayload));
       setAssignments(mapAssignments(extractDataArray(assignmentPayload)));
     } catch (fetchError) {
       console.error('[SheetsDataProvider] failed to fetch data', fetchError);

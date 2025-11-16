@@ -139,35 +139,42 @@ const AdminClassManagement = () => {
         return;
       }
 
-      setIsCategoryLoading(false);
+      setIsCategoryLoading(true);
       setCategoryOptions([]);
       setCategoryError(null);
 
-      // try {
-      //   const payload = await fetchCategories({ signal: controller.signal });
-      //   if (!isMounted) {
-      //     return;
-      //   }
-      //   const names = toUniqueCategoryNames(payload);
-      //   setCategoryOptions(names);
-      //   setCategoryError(names.length === 0 ? '카테고리 불러오기 실패' : null);
-      // } catch (caught) {
-      //   if (!isMounted) {
-      //     return;
-      //   }
-      //   const errorLike = caught as { name?: string } | null;
-      //   if (errorLike?.name === 'AbortError') {
-      //     return;
-      //   }
-      //   console.error('[admin-class] failed to load categories', caught);
-      //   setCategoryOptions([]);
-      //   setCategoryError('카테고리 불러오기 실패');
-      // } finally {
-      //   if (!isMounted) {
-      //     return;
-      //   }
-      //   setIsCategoryLoading(false);
-      // }
+      try {
+        const response = await fetch('/api/getCategories', { signal: controller.signal });
+        if (!isMounted) {
+          return;
+        }
+        if (!response.ok) {
+          throw new Error('카테고리를 불러오지 못했습니다.');
+        }
+        const payload = await response.json();
+        if (!isMounted) {
+          return;
+        }
+        const names = toUniqueCategoryNames(Array.isArray(payload) ? payload : []);
+        setCategoryOptions(names);
+        setCategoryError(names.length === 0 ? '카테고리 불러오기 실패' : null);
+      } catch (caught) {
+        if (!isMounted) {
+          return;
+        }
+        const errorLike = caught as { name?: string } | null;
+        if (errorLike?.name === 'AbortError') {
+          return;
+        }
+        console.error('[admin-class] failed to load categories', caught);
+        setCategoryOptions([]);
+        setCategoryError('카테고리 불러오기 실패');
+      } finally {
+        if (!isMounted) {
+          return;
+        }
+        setIsCategoryLoading(false);
+      }
     };
 
     void loadCategories();
