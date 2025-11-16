@@ -89,12 +89,11 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
   const handleStudentSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (studentSubmitting) {
-        return;
-      }
+      if (studentSubmitting) return;
+
       setStudentSubmitting(true);
       await handleRoleLogin(
-        '/api/student/login',
+        '/api/login/student', // 🔥 수정됨
         { name: studentName.trim(), email: studentEmail.trim() },
         'student',
       );
@@ -106,11 +105,14 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
   const handleVodSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (vodSubmitting) {
-        return;
-      }
+      if (vodSubmitting) return;
+
       setVodSubmitting(true);
-      await handleRoleLogin('/api/vod/login', { name: vodName.trim(), email: vodEmail.trim() }, 'vod');
+      await handleRoleLogin(
+        '/api/login/vod', // 🔥 수정됨
+        { name: vodName.trim(), email: vodEmail.trim() },
+        'vod',
+      );
       setVodSubmitting(false);
     },
     [handleRoleLogin, vodEmail, vodName, vodSubmitting],
@@ -257,8 +259,12 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
   );
 
   const renderAdminForm = () => (
-    <motion.div key="admin-form"
-      variants={panelVariants} initial="hidden" animate="visible" exit="exit"
+    <motion.div
+      key="admin-form"
+      variants={panelVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
       className="relative"
     >
       {renderBackButton()}
@@ -279,22 +285,29 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
   );
 
   return (
-    <motion.div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    <motion.div
+      className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       onClick={closeModal}
     >
-      <motion.div className="bg-white rounded-2xl shadow-xl p-6 w-[400px]"
-        variants={modalVariants} initial="hidden" animate="visible" exit="exit"
+      <motion.div
+        className="bg-white rounded-2xl shadow-xl p-6 w-[400px]"
+        variants={modalVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-semibold">로그인</h2>
 
         <div className="mt-4 min-h-[220px]">
           <AnimatePresence mode="wait">
-            {activeForm === "buttons" && renderButtons()}
-            {activeForm === "student" && renderStudentForm()}
-            {activeForm === "vod" && renderVodForm()}
-            {activeForm === "admin" && renderAdminForm()}
+            {activeForm === 'buttons' && renderButtons()}
+            {activeForm === 'student' && renderStudentForm()}
+            {activeForm === 'vod' && renderVodForm()}
+            {activeForm === 'admin' && renderAdminForm()}
           </AnimatePresence>
         </div>
       </motion.div>
