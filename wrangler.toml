@@ -1,6 +1,8 @@
 name = "class-elliesbang"
 compatibility_date = "2025-11-16"
 
+pages_build_output_dir = "app/dist"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "elliesbang-class"
