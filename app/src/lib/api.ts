@@ -108,24 +108,31 @@ type ApiResponse<T> = {
   assignment?: AssignmentListItem;
 };
 
-export async function fetchCategories(options: ApiFetchOptions = {}): Promise<unknown[]> {
+type CategoryRecord = { id: string | number; name: string; code: string };
+
+export async function fetchCategories(options: ApiFetchOptions = {}): Promise<CategoryRecord[]> {
   const { signal } = options;
   const token = getStoredAuthUser()?.token ?? '';
-  const response = await fetch('/api/class_category/list', {
+  const response = await fetch('/api/categories', {
     signal,
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
     throw new Error('카테고리를 불러오지 못했습니다.');
   }
+
   const payload = await response.json();
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-  if (payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown[] }).data)) {
-    return (payload as { data?: unknown[] }).data ?? [];
-  }
-  return [];
+  const results =
+    payload && typeof payload === 'object' && Array.isArray((payload as { results?: unknown[] }).results)
+      ? (payload as { results?: unknown[] }).results
+      : [];
+
+  return results
+    .map((item) => item as Partial<CategoryRecord>)
+    .filter((item): item is CategoryRecord =>
+      item != null && 'id' in item && 'name' in item && 'code' in item
+    )
+    .map((item) => ({ id: item.id, name: item.name, code: item.code }));
 }
 
 const parseDateValue = (value: unknown): string | null => {

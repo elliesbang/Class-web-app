@@ -1,5 +1,5 @@
-import { handleApi, assertMethod, jsonResponse } from '../../_utils/api';
-import { assertRole, verifyToken } from '../../_utils/auth';
+import { handleApi, assertMethod, jsonResponse } from '../_utils/api';
+import { assertRole, verifyToken } from '../_utils/auth';
 
 interface Env {
   DB: D1Database;
@@ -10,7 +10,6 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
   handleApi(async () => {
     assertMethod(request, 'GET');
 
-    // 🔒 Authorization 체크
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) {
       return jsonResponse({ error: 'Unauthorized' }, 401);
