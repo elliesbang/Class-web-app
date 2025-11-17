@@ -114,21 +114,25 @@ type CategoryOption = {
 
 const buildCategoryOptions = (courses: ClassroomCourseSummary[]): CategoryOption[] => {
   const categoryMap = new Map<string, CategoryOption>();
+
   courses.forEach((course) => {
+    // 카테고리 누락 방지: course 정보 없어도 카테고리는 무조건 생성
     if (!categoryMap.has(course.categoryId)) {
       categoryMap.set(course.categoryId, {
         id: course.categoryId,
         name: course.categoryName,
-        order: course.categoryOrder,
+        order: course.categoryOrder ?? 999, 
         courses: [],
       });
     }
-    const category = categoryMap.get(course.categoryId)!;
-    if (!category.courses.some((item) => item.id === course.courseId)) {
+
+    // 하위 강좌가 있을 때만 추가 (없어도 카테고리는 유지됨)
+    if (course.courseId) {
+      const category = categoryMap.get(course.categoryId)!;
       category.courses.push({
         id: course.courseId,
-        name: course.courseName,
-        description: course.courseDescription,
+        name: course.courseName ?? '',
+        description: course.courseDescription ?? '',
       });
     }
   });
@@ -136,10 +140,17 @@ const buildCategoryOptions = (courses: ClassroomCourseSummary[]): CategoryOption
   return Array.from(categoryMap.values())
     .map((category) => ({
       ...category,
-      courses: category.courses.sort((a, b) => a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' })),
+      courses: category.courses.sort((a, b) =>
+        a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' })
+      ),
     }))
-    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }));
+    .sort(
+      (a, b) =>
+        (a.order ?? 999) - (b.order ?? 999) ||
+        a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' })
+    );
 };
+
 
 const ContentManager = () => {
   const { contentCollections, lectureCourses, refresh } = useSheetsData();
