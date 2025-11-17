@@ -198,25 +198,101 @@ export const SheetsDataProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     setError(null);
     try {
-      const [contentResponse, lectureResponse, assignmentResponse] = await Promise.all([
-        fetch('/api/getContent'),
-        fetch('/api/getClassroom'),
-        fetch('/api/getAssignments'),
+      const [contentResponse, lectureResponse] = await Promise.all([
+        fetch('/api/content/list'),
+        fetch('/api/classroom/list'),
       ]);
 
-      if (!contentResponse.ok || !lectureResponse.ok || !assignmentResponse.ok) {
+      if (!contentResponse.ok || !lectureResponse.ok) {
         throw new Error('시트 데이터를 불러오지 못했습니다.');
       }
 
-      const [contentPayload, lecturePayload, assignmentPayload] = await Promise.all([
+      const [contentPayload, lecturePayload] = await Promise.all([
         contentResponse.json(),
         lectureResponse.json(),
-        assignmentResponse.json(),
       ]);
 
-      setContentEntries(extractDataArray(contentPayload));
-      setLectures(Array.isArray(lecturePayload) ? (lecturePayload as LectureCategory[]) : mapClassroomPayload(lecturePayload));
-      setAssignments(mapAssignments(extractDataArray(assignmentPayload)));
+      const mapContentRecords = (payload: unknown): SheetContentEntry[] => {
+        const records = extractDataArray(payload).length > 0
+          ? extractDataArray(payload)
+          : Array.isArray((payload as { results?: unknown[] })?.results)
+            ? ((payload as { results: SheetContentEntry[] }).results ?? [])
+            : Array.isArray(payload)
+              ? (payload as SheetContentEntry[])
+              : [];
+
+        return records.map((entry) => {
+          const record = entry as Record<string, unknown>;
+          const orderNum = record.order_num ?? record.orderNum ?? 0;
+          const createdAt = (record.created_at ?? record.createdAt ?? new Date().toISOString()) as string;
+          const classroomId = record.classroom_id ?? record.classroomId ?? record.courseId ?? '';
+          const vodCategoryId = record.vod_category_id ?? record.vodCategoryId ?? record.categoryId ?? null;
+
+          return {
+            ...record,
+            id: (record.id as string | number | undefined) ?? `content-${Date.now()}`,
+            type: record.type ?? record.content_type ?? '',
+            title: record.title ?? record.name ?? '',
+            content: record.description ?? record.content ?? '',
+            description: record.description ?? '',
+            videoUrl: record.content_url ?? record.videoUrl ?? record.url ?? '',
+            url: record.content_url ?? record.videoUrl ?? record.url ?? '',
+            thumbnailUrl: record.thumbnail_url ?? record.thumbnailUrl ?? '',
+            categoryId: vodCategoryId ?? classroomId ?? '',
+            courseId: classroomId ?? '',
+            displayOrder: typeof orderNum === 'number' ? orderNum : Number(orderNum) || 0,
+            order: typeof orderNum === 'number' ? orderNum : Number(orderNum) || 0,
+            vodCategoryId: vodCategoryId ?? undefined,
+            createdAt,
+          } as SheetContentEntry;
+        });
+      };
+
+      const mapClassroomRecordsToLectures = (payload: unknown): LectureCategory[] => {
+        const records = Array.isArray((payload as { results?: unknown[] })?.results)
+          ? ((payload as { results: Record<string, unknown>[] }).results ?? [])
+          : Array.isArray(payload)
+            ? (payload as Record<string, unknown>[])
+            : [];
+
+        const categoryMap = new Map<string, LectureCategory>();
+
+        records.forEach((record, index) => {
+          const categoryId = normaliseString(record.category_id ?? record.categoryId ?? 'default', 'default');
+          const categoryName = normaliseString(
+            record.category_name ?? record.categoryName ?? '일반 카테고리',
+            '일반 카테고리',
+          );
+          const categoryOrder = typeof record.order_num === 'number' ? record.order_num : index;
+
+          if (!categoryMap.has(categoryId)) {
+            categoryMap.set(categoryId, {
+              categoryId,
+              categoryName,
+              categoryOrder,
+              subCategories: [],
+            });
+          }
+
+          const courseId = normaliseString(record.id ?? `course-${index + 1}`, `course-${index + 1}`);
+          const courseName = normaliseString(record.name ?? record.title ?? `코스 ${index + 1}`, `코스 ${index + 1}`);
+
+          const targetCategory = categoryMap.get(categoryId)!;
+          targetCategory.subCategories.push({
+            courseId,
+            courseName,
+            courseDescription: normaliseString(record.description ?? ''),
+            subCategoryOrder: targetCategory.subCategories.length,
+            lectures: [],
+          });
+        });
+
+        return Array.from(categoryMap.values());
+      };
+
+      setContentEntries(mapContentRecords(contentPayload));
+      setLectures(mapClassroomRecordsToLectures(lecturePayload));
+      setAssignments([]);
     } catch (fetchError) {
       console.error('[SheetsDataProvider] failed to fetch data', fetchError);
       setError('데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');

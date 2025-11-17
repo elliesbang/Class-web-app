@@ -9,6 +9,7 @@ import {
   type VodVideoRecord,
   type ClassroomCourseSummary,
 } from '../../../../lib/contentLibrary';
+import { getStoredAuthUser } from '../../../../lib/authUser';
 import { useSheetsData } from '../../../../contexts/SheetsDataContext';
 
 const TAB_ITEMS = [
@@ -225,6 +226,15 @@ const ContentManager = () => {
   const [draggedVideoId, setDraggedVideoId] = useState<string | null>(null);
   const [isReorderingVideos, setIsReorderingVideos] = useState(false);
 
+  const buildAuthHeaders = () => {
+    const token = getStoredAuthUser()?.token;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
   const categoryOptions = useMemo(() => buildCategoryOptions(lectureCourses), [lectureCourses]);
 
   useEffect(() => {
@@ -328,8 +338,9 @@ const ContentManager = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/delete-content?id=${encodeURIComponent(contentId)}`, {
-        method: 'DELETE',
+      const response = await fetch(`/api/content/delete?id=${encodeURIComponent(contentId)}`, {
+        method: 'POST',
+        headers: buildAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -377,19 +388,16 @@ const ContentManager = () => {
   const handleGlobalNoticeSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/admin/create-content', {
+      const response = await fetch('/api/content/add', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: buildAuthHeaders(),
         body: JSON.stringify({
-          record: {
-            type: 'global_notice',
-            title: globalNoticeForm.title,
-            content: globalNoticeForm.content,
-            thumbnailUrl: globalNoticeForm.thumbnailFile?.name ?? '',
-            isVisible: globalNoticeForm.isVisible,
-          },
+          type: 'global_notice',
+          title: globalNoticeForm.title,
+          description: globalNoticeForm.content,
+          thumbnail_url: globalNoticeForm.thumbnailFile?.name ?? '',
+          content_url: '',
+          order_num: 0,
         }),
       });
 
@@ -408,21 +416,16 @@ const ContentManager = () => {
   const handleClassroomVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/admin/create-content', {
+      const response = await fetch('/api/content/add', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: buildAuthHeaders(),
         body: JSON.stringify({
-          record: {
-            type: 'classroom_video',
-            title: classroomVideoForm.title,
-            videoUrl: classroomVideoForm.videoUrl,
-            description: classroomVideoForm.description,
-            displayOrder: classroomVideoForm.displayOrder,
-            courseId: selectedCourseId,
-            categoryId: selectedClassCategoryId,
-          },
+          type: 'classroom_video',
+          title: classroomVideoForm.title,
+          description: classroomVideoForm.description,
+          content_url: classroomVideoForm.videoUrl,
+          classroom_id: selectedCourseId,
+          order_num: Number(classroomVideoForm.displayOrder) || 0,
         }),
       });
 
@@ -441,22 +444,17 @@ const ContentManager = () => {
   const handleVodVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/admin/create-content', {
+      const response = await fetch('/api/content/add', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: buildAuthHeaders(),
         body: JSON.stringify({
-          record: {
-            type: 'vod',
-            title: vodVideoForm.title,
-            description: vodVideoForm.description,
-            videoUrl: vodVideoForm.videoUrl,
-            thumbnailUrl: vodVideoForm.thumbnailFile?.name ?? '',
-            displayOrder: vodVideoForm.displayOrder,
-            isRecommended: vodVideoForm.isRecommended,
-            vod_category_id: selectedVodCategoryId ?? null,
-          },
+          type: 'vod',
+          title: vodVideoForm.title,
+          description: vodVideoForm.description,
+          content_url: vodVideoForm.videoUrl,
+          thumbnail_url: vodVideoForm.thumbnailFile?.name ?? '',
+          order_num: Number(vodVideoForm.displayOrder) || 0,
+          vod_category_id: selectedVodCategoryId ?? null,
         }),
       });
 
@@ -482,22 +480,16 @@ const ContentManager = () => {
   const handleMaterialSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/admin/create-content', {
+      const response = await fetch('/api/content/add', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: buildAuthHeaders(),
         body: JSON.stringify({
-          record: {
-            type: 'material',
-            title: materialForm.title,
-            description: materialForm.description,
-            fileType: materialForm.fileType,
-            fileUrl: materialForm.fileType === 'link' ? materialForm.linkUrl : materialForm.file?.name ?? '',
-            fileName: materialForm.file?.name ?? '',
-            courseId: selectedCourseId,
-            categoryId: selectedClassCategoryId,
-          },
+          type: 'material',
+          title: materialForm.title,
+          description: materialForm.description,
+          content_url: materialForm.fileType === 'link' ? materialForm.linkUrl : materialForm.file?.name ?? '',
+          classroom_id: selectedCourseId,
+          order_num: 0,
         }),
       });
 
@@ -516,20 +508,15 @@ const ContentManager = () => {
   const handleClassroomNoticeSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/admin/create-content', {
+      const response = await fetch('/api/content/add', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: buildAuthHeaders(),
         body: JSON.stringify({
-          record: {
-            type: 'classroom_notice',
-            title: classroomNoticeForm.title,
-            content: classroomNoticeForm.content,
-            isImportant: classroomNoticeForm.isImportant,
-            courseId: selectedCourseId,
-            categoryId: selectedClassCategoryId,
-          },
+          type: 'classroom_notice',
+          title: classroomNoticeForm.title,
+          description: classroomNoticeForm.content,
+          classroom_id: selectedCourseId,
+          order_num: classroomNoticeForm.isImportant ? -1 : 0,
         }),
       });
 

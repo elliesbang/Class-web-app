@@ -1,5 +1,4 @@
 import { handleApi, assertMethod, jsonResponse } from '../../_utils/api';
-import { verifyToken } from '../../_utils/auth';
 
 interface Env {
   DB: D1Database;
@@ -9,12 +8,6 @@ interface Env {
 export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
   handleApi(async () => {
     assertMethod(request, 'GET');
-    // 🔥 Authorization 체크 추가
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
-      return jsonResponse([]);
-    }
-    await verifyToken(request, env);
 
     const url = new URL(request.url);
     const classroomId = url.searchParams.get('classroom_id');
@@ -22,14 +15,14 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
     let statement;
     if (classroomId) {
       statement = env.DB.prepare(
-        `SELECT id, classroom_id, type, title, description, content_url, thumbnail_url, order_num, created_at, updated_at
+        `SELECT id, classroom_id, type, title, description, content_url, thumbnail_url, vod_category_id, order_num, created_at, updated_at
          FROM classroom_content
          WHERE classroom_id = ?1 OR classroom_id IS NULL
          ORDER BY COALESCE(order_num, 0) ASC, created_at DESC`,
       ).bind(classroomId);
     } else {
       statement = env.DB.prepare(
-        `SELECT id, classroom_id, type, title, description, content_url, thumbnail_url, order_num, created_at, updated_at
+        `SELECT id, classroom_id, type, title, description, content_url, thumbnail_url, vod_category_id, order_num, created_at, updated_at
          FROM classroom_content
          ORDER BY COALESCE(order_num, 0) ASC, created_at DESC`,
       );
