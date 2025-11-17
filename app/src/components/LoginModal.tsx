@@ -80,7 +80,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       try {
         setAdminSubmitting(true);
 
-        const response = await fetch('/api/auth/admin', {
+         const response = await fetch('/api/login/admin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -152,7 +152,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       setStudentSubmitting(true);
       try {
         await handleRoleLogin(
-          '/api/auth/student',
+          '/api/login/student',
           { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
           'student'
         );
@@ -187,7 +187,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       setVodSubmitting(true);
       try {
         await handleRoleLogin(
-          '/api/auth/vod',
+          '/api/login/vod',
           { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
           'vod'
         );
