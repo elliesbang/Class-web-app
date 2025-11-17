@@ -108,12 +108,12 @@ type ApiResponse<T> = {
   assignment?: AssignmentListItem;
 };
 
-type CategoryRecord = { id: string | number; name: string; code: string };
+type CategoryRecord = { id: number; name: string; parent_id: number | null };
 
 export async function fetchCategories(options: ApiFetchOptions = {}): Promise<CategoryRecord[]> {
   const { signal } = options;
   const token = getStoredAuthUser()?.token ?? '';
-  const response = await fetch('/api/categories', {
+  const response = await fetch('/api/class-category', {
     signal,
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -122,17 +122,19 @@ export async function fetchCategories(options: ApiFetchOptions = {}): Promise<Ca
   }
 
   const payload = await response.json();
-  const results =
-    payload && typeof payload === 'object' && Array.isArray((payload as { results?: unknown[] }).results)
-      ? (payload as { results?: unknown[] }).results
-      : [];
+  const raw = Array.isArray(payload) ? payload : [];
 
-  return results
+  return raw
     .map((item) => item as Partial<CategoryRecord>)
-    .filter((item): item is CategoryRecord =>
-      item != null && 'id' in item && 'name' in item && 'code' in item
+    .filter(
+      (item): item is CategoryRecord =>
+        item != null && typeof item.id !== 'undefined' && typeof item.name === 'string',
     )
-    .map((item) => ({ id: item.id, name: item.name, code: item.code }));
+    .map((item) => ({
+      id: Number(item.id),
+      name: String(item.name),
+      parent_id: item.parent_id == null ? null : Number(item.parent_id),
+    }));
 }
 
 const parseDateValue = (value: unknown): string | null => {
