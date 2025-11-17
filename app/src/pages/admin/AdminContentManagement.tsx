@@ -1,7 +1,7 @@
-import ContentManager from './components/ContentManager';
+import ContentListPage from './content/ContentListPage';
 
 const AdminContentManagement = () => {
-  return <ContentManager />;
+  return <ContentListPage />;
 };
 
 export default AdminContentManagement;
