@@ -146,7 +146,7 @@ const AdminClassManagement = () => {
 
         try {
           const token = getStoredAuthUser()?.token ?? '';
-          const response = await fetch('/api/class_category/list', {
+          const response = await fetch('/api/admin/class_category/list', {
             signal: controller.signal,
             headers: { Authorization: `Bearer ${token}` },
           });
