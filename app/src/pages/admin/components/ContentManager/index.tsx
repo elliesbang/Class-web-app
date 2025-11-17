@@ -543,53 +543,48 @@ const ContentManager = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* 상단 탭 UI — 그대로 유지 */}
-      <div className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-md">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-[#404040]">콘텐츠 관리</h2>
-          </div>
+    <div className="flex flex-col gap-6 rounded-3xl bg-white p-6 shadow-md">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-[#404040]">콘텐츠 관리</h2>
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          {TAB_ITEMS.map((tab) => (
-            <button
-              key={tab.key}
-              className={`rounded-2xl px-4 py-2 text-sm font-semibold ${
-                activeTab === tab.key
-                  ? 'bg-[#ffd331] text-[#404040]'
-                  : 'bg-[#f5eee9] text-[#7a6f68] hover:bg-[#ffd331]/80 hover:text-[#404040]'
-              }`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {!CATEGORY_HIDDEN_TABS.includes(activeTab) && (
-          <CategorySelector
-            categories={categoryOptions}
-            selected={selectedClassCategoryId}
-            onChange={handleCategoryChange}
-          />
-        )}
-
-        {SHOW_VOD_CATEGORY ? (
-          <VodCategorySelector
-            categories={vodCategories}
-            selected={selectedVodCategoryId}
-            onChange={handleVodCategoryChange}
-          />
-        ) : null}
       </div>
 
-      {/* 이하: 등록 폼 + 리스트 렌더링 (원본 그대로이며 삭제 API만 바꿔둔 상태) */}
+      <div className="flex flex-wrap gap-2">
+        {TAB_ITEMS.map((tab) => (
+          <button
+            key={tab.key}
+            className={`rounded-2xl px-4 py-2 text-sm font-semibold ${
+              activeTab === tab.key
+                ? 'bg-[#ffd331] text-[#404040]'
+                : 'bg-[#f5eee9] text-[#7a6f68] hover:bg-[#ffd331]/80 hover:text-[#404040]'
+            }`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {!CATEGORY_HIDDEN_TABS.includes(activeTab) && (
+        <CategorySelector
+          categories={categoryOptions}
+          selected={selectedClassCategoryId}
+          onChange={handleCategoryChange}
+        />
+      )}
+
+      {SHOW_VOD_CATEGORY ? (
+        <VodCategorySelector
+          categories={vodCategories}
+          selected={selectedVodCategoryId}
+          onChange={handleVodCategoryChange}
+        />
+      ) : null}
 
       {activeTab === 'globalNotice' ? (
         <section className="flex flex-col gap-6">
-          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleGlobalNoticeSubmit}>
+          <form className="rounded-2xl bg-[#f9f5f1] p-6" onSubmit={handleGlobalNoticeSubmit}>
             <h3 className="mb-4 text-lg font-semibold text-[#404040]">전체 공지 등록</h3>
             <div className="grid gap-4">
               <div className="flex flex-col gap-2">
@@ -656,7 +651,7 @@ const ContentManager = () => {
             </div>
           </form>
 
-          <div className="rounded-3xl bg-white p-6 shadow-md">
+          <div className="rounded-2xl bg-[#f9f5f1] p-6">
             <h3 className="mb-4 text-lg font-semibold text-[#404040]">등록된 전체 공지</h3>
 
             {visibleGlobalNotices.length === 0 ? (
@@ -687,7 +682,7 @@ const ContentManager = () => {
       {/* 강의실 영상 */}
       {activeTab === 'classroomVideo' ? (
         <section className="flex flex-col gap-6">
-          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleClassroomVideoSubmit}>
+          <form className="rounded-2xl bg-[#f9f5f1] p-6" onSubmit={handleClassroomVideoSubmit}>
             <h3 className="mb-4 text-lg font-semibold">강의실 영상 등록</h3>
 
             <div className="grid gap-4">
@@ -757,7 +752,7 @@ const ContentManager = () => {
             </div>
           </form>
 
-          <div className="rounded-3xl bg-white p-6 shadow-md">
+          <div className="rounded-2xl bg-[#f9f5f1] p-6">
             <h3 className="mb-4 text-lg font-semibold">등록된 강의실 영상</h3>
 
             {filteredClassroomVideos.length === 0 ? (
@@ -792,7 +787,7 @@ const ContentManager = () => {
       {/* VOD */}
       {activeTab === 'vodVideo' ? (
         <section className="flex flex-col gap-6">
-          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleVodVideoSubmit}>
+          <form className="rounded-2xl bg-[#f9f5f1] p-6" onSubmit={handleVodVideoSubmit}>
             <h3 className="mb-4 text-lg font-semibold">VOD 등록</h3>
 
             <div className="grid gap-4">
@@ -860,7 +855,7 @@ const ContentManager = () => {
             </div>
           </form>
 
-          <div className="rounded-3xl bg-white p-6 shadow-md">
+          <div className="rounded-2xl bg-[#f9f5f1] p-6">
             <h3 className="mb-4 text-lg font-semibold">등록된 VOD</h3>
 
             {filteredVodVideos.length === 0 ? (
@@ -898,7 +893,7 @@ const ContentManager = () => {
       {/* 자료 */}
       {activeTab === 'material' ? (
         <section className="flex flex-col gap-6">
-          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleMaterialSubmit}>
+          <form className="rounded-2xl bg-[#f9f5f1] p-6" onSubmit={handleMaterialSubmit}>
             <h3 className="mb-4 text-lg font-semibold">자료 업로드</h3>
 
             <div className="grid gap-4">
@@ -945,7 +940,7 @@ const ContentManager = () => {
             </div>
           </form>
 
-          <div className="rounded-3xl bg-white p-6 shadow-md">
+          <div className="rounded-2xl bg-[#f9f5f1] p-6">
             <h3 className="mb-4 text-lg font-semibold">등록된 자료</h3>
 
             {filteredMaterials.length === 0 ? (
@@ -988,7 +983,7 @@ const ContentManager = () => {
       {/* 강의실 공지 */}
       {activeTab === 'classroomNotice' ? (
         <section className="flex flex-col gap-6">
-          <form className="rounded-3xl bg-white p-6 shadow-md" onSubmit={handleClassroomNoticeSubmit}>
+          <form className="rounded-2xl bg-[#f9f5f1] p-6" onSubmit={handleClassroomNoticeSubmit}>
             <h3 className="mb-4 text-lg font-semibold">강의실 공지 등록</h3>
             <div className="grid gap-4">
               <label className="text-sm font-semibold">제목</label>
@@ -1036,7 +1031,7 @@ const ContentManager = () => {
             </div>
           </form>
 
-          <div className="rounded-3xl bg-white p-6 shadow-md">
+          <div className="rounded-2xl bg-[#f9f5f1] p-6">
             <h3 className="mb-4 text-lg font-semibold">등록된 강의실 공지</h3>
 
             {filteredClassroomNotices.length === 0 ? (
