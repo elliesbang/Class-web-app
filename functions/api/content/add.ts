@@ -14,6 +14,7 @@ interface Payload {
   content_url?: string | null;
   thumbnail_url?: string | null;
   order_num?: number | null;
+  vod_category_id?: number | null;
 }
 
 export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
@@ -33,11 +34,18 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
     }
 
     const id = crypto.randomUUID();
+    const vodCategoryId =
+      body.type === 'vod'
+        ? typeof body.vod_category_id === 'number'
+          ? body.vod_category_id
+          : Number(body.vod_category_id ?? '')
+        : null;
+    const vodCategoryValue = Number.isFinite(vodCategoryId) ? vodCategoryId : null;
 
     await env.DB.prepare(
       `INSERT INTO classroom_content
-      (id, classroom_id, type, title, description, content_url, thumbnail_url, order_num, created_at, updated_at)
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), datetime('now'))`,
+      (id, classroom_id, type, title, description, content_url, thumbnail_url, vod_category_id, order_num, created_at, updated_at)
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, datetime('now'), datetime('now'))`,
     )
       .bind(
         id,
@@ -47,6 +55,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
         body.description ?? null,
         body.content_url ?? null,
         body.thumbnail_url ?? null,
+        body.type === 'vod' ? vodCategoryValue : null,
         body.order_num ?? null,
       )
       .run();

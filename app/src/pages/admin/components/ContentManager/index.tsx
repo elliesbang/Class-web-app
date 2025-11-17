@@ -44,6 +44,8 @@ type VodVideoFormState = {
   displayOrder: string;
 };
 
+type VodCategory = { id: number; name: string; order_num: number };
+
 type MaterialFormState = {
   title: string;
   description: string;
@@ -161,6 +163,7 @@ const ContentManager = () => {
   const [vodVideos, setVodVideos] = useState<VodVideoRecord[]>(contentCollections.vodVideos);
   const [materials, setMaterials] = useState<ClassroomMaterialRecord[]>(contentCollections.classroomMaterials);
   const [classroomNotices, setClassroomNotices] = useState<ClassroomNoticeRecord[]>(contentCollections.classroomNotices);
+  const [vodCategories, setVodCategories] = useState<VodCategory[]>([]);
 
   useEffect(() => {
     setGlobalNotices(contentCollections.globalNotices);
@@ -184,7 +187,7 @@ const ContentManager = () => {
 
   const [selectedClassCategoryId, setSelectedClassCategoryId] = useState<string>('');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [selectedVodCategoryId, setSelectedVodCategoryId] = useState<string>('');
+  const [selectedVodCategoryId, setSelectedVodCategoryId] = useState<number | null>(null);
 
   const [globalNoticeForm, setGlobalNoticeForm] = useState<GlobalNoticeFormState>({
     title: '',
@@ -239,10 +242,28 @@ const ContentManager = () => {
   }, [categoryOptions, selectedClassCategoryId, selectedCourseId]);
 
   useEffect(() => {
-    if (!selectedVodCategoryId && contentCollections.vodCategories[0]) {
-      setSelectedVodCategoryId(contentCollections.vodCategories[0].id);
+    if (activeTab !== 'vodVideo') {
+      return;
     }
-  }, [contentCollections.vodCategories, selectedVodCategoryId]);
+
+    const fetchVodCategories = async () => {
+      try {
+        const response = await fetch('/api/vod-category');
+        if (!response.ok) {
+          throw new Error('Failed to fetch VOD categories');
+        }
+        const data = (await response.json()) as VodCategory[];
+        setVodCategories(data);
+        if (data.length > 0 && selectedVodCategoryId == null) {
+          setSelectedVodCategoryId(data[0].id);
+        }
+      } catch (error) {
+        console.error('[ContentManager] VOD 카테고리 불러오기 실패', error);
+      }
+    };
+
+    void fetchVodCategories();
+  }, [activeTab, selectedVodCategoryId]);
 
   const courseOptions = useMemo(() => {
     const category = categoryOptions.find((item) => item.id === selectedClassCategoryId);
@@ -280,8 +301,9 @@ const ContentManager = () => {
     if (!selectedVodCategoryId) {
       return [] as VodVideoRecord[];
     }
+    const selectedId = String(selectedVodCategoryId);
     return vodVideos
-      .filter((video) => video.categoryId === selectedVodCategoryId)
+      .filter((video) => String(video.categoryId) === selectedId)
       .slice()
       .sort((a, b) => {
         if (a.displayOrder !== b.displayOrder) {
@@ -433,9 +455,7 @@ const ContentManager = () => {
             thumbnailUrl: vodVideoForm.thumbnailFile?.name ?? '',
             displayOrder: vodVideoForm.displayOrder,
             isRecommended: vodVideoForm.isRecommended,
-            vodCategoryId: selectedVodCategoryId,
-            vodCategoryName:
-              contentCollections.vodCategories.find((item) => item.id === selectedVodCategoryId)?.name ?? '',
+            vod_category_id: selectedVodCategoryId ?? null,
           },
         }),
       });
@@ -539,10 +559,15 @@ const ContentManager = () => {
               <label className="font-semibold text-[#5c5c5c]">VOD 카테고리</label>
               <select
                 className="rounded-2xl border border-[#e9dccf] px-4 py-2"
-                value={selectedVodCategoryId}
-                onChange={(event) => setSelectedVodCategoryId(event.target.value)}
+                value={selectedVodCategoryId ?? ''}
+                onChange={(event) =>
+                  setSelectedVodCategoryId(
+                    event.target.value === '' ? null : Number(event.target.value),
+                  )
+                }
               >
-                {contentCollections.vodCategories.map((c) => (
+                <option value="">카테고리를 선택하세요</option>
+                {vodCategories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>

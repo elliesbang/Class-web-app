@@ -1,28 +1,93 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { useSheetsData } from '../../contexts/SheetsDataContext';
+type VodCategory = { id: number; name: string; order_num: number };
+type VodContent = {
+  id: string;
+  title: string;
+  description?: string | null;
+  videoUrl: string;
+  thumbnailUrl?: string | null;
+  createdAt?: string | null;
+};
 
 function VOD() {
-  const { contentCollections, loading } = useSheetsData();
-  const [activeCategoryId, setActiveCategoryId] = useState<string>('');
+  const [categories, setCategories] = useState<VodCategory[]>([]);
+  const [vodContents, setVodContents] = useState<VodContent[]>([]);
+  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingContents, setLoadingContents] = useState(false);
 
   useEffect(() => {
-    if (!activeCategoryId && contentCollections.vodCategories[0]) {
-      setActiveCategoryId(contentCollections.vodCategories[0].id);
+    const loadCategories = async () => {
+      setLoadingCategories(true);
+      try {
+        const response = await fetch('/api/vod-category');
+        if (!response.ok) {
+          throw new Error('Failed to fetch VOD categories');
+        }
+        const data = (await response.json()) as VodCategory[];
+        setCategories(data);
+        if (data.length > 0) {
+          setActiveCategoryId((prev) => (prev == null ? data[0].id : prev));
+        }
+      } catch (error) {
+        console.error('[VOD] VOD categories fetch failed', error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    void loadCategories();
+  }, []);
+
+  useEffect(() => {
+    if (activeCategoryId == null) {
+      setVodContents([]);
+      return;
     }
-  }, [activeCategoryId, contentCollections.vodCategories]);
+
+    const loadVodContents = async () => {
+      setLoadingContents(true);
+      try {
+        const response = await fetch(`/api/vod?vod_category_id=${activeCategoryId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch VOD contents');
+        }
+        const data = (await response.json()) as Array<{
+          id: string | number;
+          title: string;
+          description?: string | null;
+          content_url?: string | null;
+          thumbnail_url?: string | null;
+          created_at?: string | null;
+        }>;
+
+        setVodContents(
+          data.map((item) => ({
+            id: String(item.id),
+            title: item.title,
+            description: item.description ?? '',
+            videoUrl: item.content_url ?? '',
+            thumbnailUrl: item.thumbnail_url ?? '',
+            createdAt: item.created_at ?? null,
+          })),
+        );
+      } catch (error) {
+        console.error('[VOD] VOD contents fetch failed', error);
+        setVodContents([]);
+      } finally {
+        setLoadingContents(false);
+      }
+    };
+
+    void loadVodContents();
+  }, [activeCategoryId]);
 
   const activeCategory = useMemo(
-    () => contentCollections.vodCategories.find((category) => category.id === activeCategoryId),
-    [activeCategoryId, contentCollections.vodCategories],
+    () => categories.find((category) => category.id === activeCategoryId),
+    [activeCategoryId, categories],
   );
-  const videos = useMemo(
-    () =>
-      contentCollections.vodVideos.filter((video) =>
-        activeCategoryId ? video.categoryId === activeCategoryId : true,
-      ),
-    [activeCategoryId, contentCollections.vodVideos],
-  );
+  const videos = useMemo(() => vodContents, [vodContents]);
 
   return (
     <div className="space-y-4">
@@ -35,7 +100,7 @@ function VOD() {
 
       <section className="rounded-3xl bg-white p-5 shadow-soft">
         <div className="flex flex-wrap gap-2">
-          {contentCollections.vodCategories.map((category) => {
+          {categories.map((category) => {
             const isActive = category.id === activeCategoryId;
             return (
               <button
@@ -55,7 +120,7 @@ function VOD() {
         </div>
 
         <div className="mt-5 space-y-3 text-sm text-ellieGray/70">
-          {loading ? (
+          {loadingCategories ? (
             <p>VOD 데이터를 불러오는 중입니다...</p>
           ) : activeCategory ? (
             <p>
@@ -68,8 +133,10 @@ function VOD() {
       </section>
 
       <section className="space-y-4">
-        {loading ? (
-          <article className="rounded-3xl bg-white p-5 text-sm text-ellieGray/70 shadow-soft">VOD를 불러오는 중입니다...</article>
+        {loadingContents ? (
+          <article className="rounded-3xl bg-white p-5 text-sm text-ellieGray/70 shadow-soft">
+            VOD를 불러오는 중입니다...
+          </article>
         ) : videos.length === 0 ? (
           <article className="rounded-3xl bg-white p-5 text-sm text-ellieGray/70 shadow-soft">
             선택한 카테고리에 등록된 VOD가 없습니다.
@@ -85,7 +152,7 @@ function VOD() {
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <h2 className="text-lg font-semibold text-ellieGray">{video.title}</h2>
                     <span className="text-xs text-ellieGray/60">
-                      {new Date(video.createdAt).toLocaleDateString('ko-KR')}
+                      {video.createdAt ? new Date(video.createdAt).toLocaleDateString('ko-KR') : ''}
                     </span>
                   </div>
                   {video.description ? (
