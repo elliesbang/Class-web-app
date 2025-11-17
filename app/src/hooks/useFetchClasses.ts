@@ -1,33 +1,5 @@
 import { useEffect, useState } from 'react';
-
-type FetchClassesResponse = {
-  data?: unknown;
-  results?: unknown;
-  classes?: unknown;
-};
-
-const extractClassList = (payload: unknown): any[] => {
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  if (payload && typeof payload === 'object') {
-    const data = payload as FetchClassesResponse;
-    if (Array.isArray(data.data)) {
-      return data.data;
-    }
-
-    if (Array.isArray(data.results)) {
-      return data.results;
-    }
-
-    if (Array.isArray(data.classes)) {
-      return data.classes;
-    }
-  }
-
-  return [];
-};
+import { getClasses } from '../lib/api';
 
 export function useFetchClasses() {
   const [classes, setClasses] = useState<any[]>([]);
@@ -41,25 +13,24 @@ export function useFetchClasses() {
         return;
       }
 
-      setClasses([]);
-      setLoading(false);
-
-      // try {
-      //   const res = await apiFetch('/api/classes');
-      //   if (!isMounted) {
-      //     return;
-      //   }
-      //   setClasses(extractClassList(res));
-      // } catch (error) {
-      //   if (!isMounted) {
-      //     return;
-      //   }
-      //   console.error('[useFetchClasses] Failed to load classes', error);
-      // } finally {
-      //   if (isMounted) {
-      //     setLoading(false);
-      //   }
-      // }
+      try {
+        setLoading(true);
+        const records = await getClasses();
+        if (!isMounted) {
+          return;
+        }
+        setClasses(records);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        console.error('[useFetchClasses] Failed to load classes', error);
+        setClasses([]);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     };
 
     fetchData();

@@ -12,22 +12,32 @@ interface Env {
   JWT_SECRET: string;
 }
 
-export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
+const parseId = (value: string | undefined) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    throw new ApiError(400, { error: 'Valid class id is required' });
+  }
+  return numeric;
+};
+
+const fetchClassById = async (db: D1Database, id: number) =>
+  db.prepare('SELECT * FROM classes WHERE id = ?1').bind(id).first();
+
+export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
   handleApi(async () => {
     const method = request.method.toUpperCase();
-    const db = env.DB;
+    const id = parseId(params?.id as string | undefined);
 
     if (method === 'GET') {
-      const { results } = await db
-        .prepare('SELECT * FROM classes ORDER BY created_at DESC')
-        .all();
-
-      return jsonResponse({ classes: results });
+      const record = await fetchClassById(env.DB, id);
+      if (!record) {
+        throw new ApiError(404, { error: 'Class not found' });
+      }
+      return jsonResponse({ class: record });
     }
 
-    if (method === 'POST') {
-      assertMethod(request, 'POST');
-
+    if (method === 'PUT') {
+      assertMethod(request, 'PUT');
       const user = await verifyToken(request, env);
       assertRole(user, 'admin');
 
@@ -63,23 +73,22 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
       const deliveryMethods = toArrayValue(body.deliveryMethods ?? body.delivery_methods);
       const isActive = Boolean(body.isActive ?? body.is_active ?? true) ? 1 : 0;
 
-      const result = await db
+      await env.DB
         .prepare(
-          `INSERT INTO classes (
-            name,
-            code,
-            category,
-            category_id,
-            start_date,
-            end_date,
-            duration,
-            assignment_upload_time,
-            assignment_upload_days,
-            delivery_methods,
-            is_active,
-            created_at,
-            updated_at
-          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+          `UPDATE classes SET
+            name = ?1,
+            code = ?2,
+            category = ?3,
+            category_id = ?4,
+            start_date = ?5,
+            end_date = ?6,
+            duration = ?7,
+            assignment_upload_time = ?8,
+            assignment_upload_days = ?9,
+            delivery_methods = ?10,
+            is_active = ?11,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?12`
         )
         .bind(
           name,
@@ -93,15 +102,23 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
           JSON.stringify(assignmentUploadDays),
           JSON.stringify(deliveryMethods),
           isActive,
+          id,
         )
         .run();
 
-      const created = await db
-        .prepare('SELECT * FROM classes WHERE id = ?1')
-        .bind(result.lastRowId)
-        .first();
+      const record = await fetchClassById(env.DB, id);
 
-      return jsonResponse({ success: true, class: created, id: result.lastRowId });
+      return jsonResponse({ success: true, class: record, id });
+    }
+
+    if (method === 'DELETE') {
+      assertMethod(request, 'DELETE');
+      const user = await verifyToken(request, env);
+      assertRole(user, 'admin');
+
+      await env.DB.prepare('DELETE FROM classes WHERE id = ?1').bind(id).run();
+
+      return jsonResponse({ success: true, id });
     }
 
     throw new ApiError(405, { error: 'Method Not Allowed' });
