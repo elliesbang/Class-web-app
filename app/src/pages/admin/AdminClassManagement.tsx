@@ -1,4 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { getStoredAuthUser } from '../../lib/authUser';
 import type { AssignmentUploadTimeOption, ClassFormPayload, ClassInfo } from '../../lib/api';
 import { useAdminClasses } from './data/AdminClassContext';
 
@@ -140,14 +141,18 @@ const AdminClassManagement = () => {
       }
 
       setIsCategoryLoading(true);
-      setCategoryOptions([]);
-      setCategoryError(null);
+        setCategoryOptions([]);
+        setCategoryError(null);
 
-      try {
-        const response = await fetch('/api/getCategories', { signal: controller.signal });
-        if (!isMounted) {
-          return;
-        }
+        try {
+          const token = getStoredAuthUser()?.token ?? '';
+          const response = await fetch('/api/class_category/list', {
+            signal: controller.signal,
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!isMounted) {
+            return;
+          }
         if (!response.ok) {
           throw new Error('카테고리를 불러오지 못했습니다.');
         }
