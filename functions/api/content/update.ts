@@ -23,6 +23,19 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
       throw new ApiError(400, { error: 'id is required' });
     }
 
+    const type = (body.type as string | undefined)?.toLowerCase();
+    const rawVodCategoryId = body.vod_category_id as number | string | undefined;
+    const vodCategoryId =
+      type === 'vod'
+        ? typeof rawVodCategoryId === 'number'
+          ? rawVodCategoryId
+          : Number(rawVodCategoryId ?? '')
+        : type
+          ? null
+          : undefined;
+    const vodCategoryValue =
+      vodCategoryId === undefined ? undefined : Number.isFinite(vodCategoryId) ? vodCategoryId : null;
+
     const allowedFields = [
       'classroom_id',
       'type',
@@ -31,12 +44,20 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
       'content_url',
       'thumbnail_url',
       'order_num',
+      'vod_category_id',
     ];
 
     const updates: string[] = [];
     const values: unknown[] = [];
 
     for (const field of allowedFields) {
+      if (field === 'vod_category_id') {
+        if (vodCategoryValue !== undefined) {
+          updates.push(`${field} = ?${updates.length + 1}`);
+          values.push(vodCategoryValue);
+        }
+        continue;
+      }
       if (Object.prototype.hasOwnProperty.call(body, field)) {
         updates.push(`${field} = ?${updates.length + 1}`);
         values.push((body as Record<string, unknown>)[field]);
