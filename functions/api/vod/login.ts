@@ -1,4 +1,4 @@
-import { handleLoginRequest } from '../../_utils/login';
+import { handleLoginRequest } from '../../_utils/loginHandler';
 import { handleApi } from '../../_utils/api';
 
 interface Env {
