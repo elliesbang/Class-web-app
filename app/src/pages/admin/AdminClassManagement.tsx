@@ -137,18 +137,18 @@ const AdminClassManagement = () => {
       }
 
       setIsCategoryLoading(true);
-        setCategoryOptions([]);
-        setCategoryError(null);
+      setCategoryOptions([]);
+      setCategoryError(null);
 
-        try {
-          const token = getStoredAuthUser()?.token ?? '';
-          const response = await fetch('/api/categories/list', {
+      try {
+        const token = getStoredAuthUser()?.token ?? '';
+        const response = await fetch('/api/class_category/list', {
           signal: controller.signal,
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!isMounted) {
-            return;
-          }
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!isMounted) {
+          return;
+        }
         if (!response.ok) {
           throw new Error('카테고리를 불러오지 못했습니다.');
         }
@@ -156,18 +156,18 @@ const AdminClassManagement = () => {
         if (!isMounted) {
           return;
         }
-      const raw = Array.isArray(payload) ? payload : [];
+        const raw = Array.isArray(payload) ? payload : [];
 
-// 🔥 하위 카테고리만 필터링 (parent_type 존재하는 항목)
-const subCategories = raw.filter((item: any) => item.parent_type);
+        // 🔥 하위 카테고리만 필터링 (parent_type 존재하는 항목)
+        const subCategories = raw.filter((item: any) => item.parent_type !== null);
 
-// 🔥 하위 카테고리 name 배열 만들기
-const names = subCategories
-  .map((item: any) => item.name)
-  .filter(Boolean);
+        // 🔥 하위 카테고리 name 배열 만들기
+        const names = subCategories
+          .map((item: any) => item.name)
+          .filter(Boolean);
 
-// 🔥 셋팅
-setCategoryOptions(names);
+        // 🔥 셋팅
+        setCategoryOptions(names);
 
         setCategoryError(names.length === 0 ? '카테고리 불러오기 실패' : null);
       } catch (caught) {
