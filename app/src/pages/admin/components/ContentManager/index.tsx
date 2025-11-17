@@ -153,7 +153,8 @@ const buildCategoryOptions = (courses: ClassroomCourseSummary[]): CategoryOption
 
 
 const ContentManager = () => {
-  const { contentCollections, lectureCourses, refresh } = useSheetsData();
+  const { contentCollections, refresh } = useSheetsData();
+  const lectureCourses = contentCollections.courseSummaries ?? [];
   const [activeTab, setActiveTab] = useState<TabKey>('globalNotice');
   const [globalNotices, setGlobalNotices] = useState<GlobalNoticeRecord[]>(contentCollections.globalNotices);
   const [classroomVideos, setClassroomVideos] = useState<ClassroomVideoRecord[]>(contentCollections.classroomVideos);
