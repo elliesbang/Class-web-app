@@ -1,4 +1,10 @@
-import { jsonResponse } from '../../_utils/api';
+import { assertMethod, handleApi, jsonResponse } from '../../_utils/api';
+import { assertRole, verifyToken } from '../../_utils/auth';
+
+interface Env {
+  DB: D1Database;
+  JWT_SECRET: string;
+}
 
 type ClassCategoryRecord = {
   id: number;
@@ -6,18 +12,24 @@ type ClassCategoryRecord = {
   parent_id: number | null;
 };
 
-export const onRequest = async ({ env }) => {
-  const result = await env.DB.prepare(
-    `SELECT id, name, parent_id
-     FROM class_category
-     ORDER BY id ASC;`,
-  ).all();
+export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
+  handleApi(async () => {
+    assertMethod(request, 'GET');
 
-  const records: ClassCategoryRecord[] = (result.results ?? []).map((item: any) => ({
-    id: Number(item.id),
-    name: String(item.name ?? ''),
-    parent_id: item.parent_id == null ? null : Number(item.parent_id),
-  }));
+    const user = await verifyToken(request, env);
+    assertRole(user, 'admin');
 
-  return jsonResponse(records);
-};
+    const result = await env.DB.prepare(
+      `SELECT id, name, parent_id
+       FROM class_category
+       ORDER BY id ASC;`,
+    ).all();
+
+    const records: ClassCategoryRecord[] = (result.results ?? []).map((item: any) => ({
+      id: Number(item.id),
+      name: String(item.name ?? ''),
+      parent_id: item.parent_id == null ? null : Number(item.parent_id),
+    }));
+
+    return jsonResponse(records);
+  });
