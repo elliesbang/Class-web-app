@@ -76,9 +76,22 @@ export const handleLoginRequest = async (
       resolvedName = 'admin';
     }
   } else {
+    const password = normalize(body.password);
+    if (!password) {
+      throw new ApiError(400, { error: 'Password is required' });
+    }
+
     const name = normalize(body.name);
     if (!name) {
       throw new ApiError(400, { error: '이름을 입력하세요.' });
+    }
+
+    const storedPassword =
+      normalize((record as Record<string, unknown>).password) ||
+      normalize((record as Record<string, unknown>).password_hash);
+
+    if (!storedPassword || !passwordsMatch(password, storedPassword)) {
+      throw new ApiError(401, { error: 'Invalid credentials' });
     }
 
     if (resolvedName && resolvedName !== name) {

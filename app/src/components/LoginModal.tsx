@@ -30,9 +30,13 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [studentName, setStudentName] = useState('');
+  const [studentPassword, setStudentPassword] = useState('');
   const [studentEmail, setStudentEmail] = useState('');
   const [vodName, setVodName] = useState('');
+  const [vodPassword, setVodPassword] = useState('');
   const [vodEmail, setVodEmail] = useState('');
+  const [studentError, setStudentError] = useState('');
+  const [vodError, setVodError] = useState('');
   const [studentSubmitting, setStudentSubmitting] = useState(false);
   const [vodSubmitting, setVodSubmitting] = useState(false);
   const [adminSubmitting, setAdminSubmitting] = useState(false);
@@ -44,9 +48,13 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     setAdminEmail('');
     setAdminPassword('');
     setStudentName('');
+    setStudentPassword('');
     setStudentEmail('');
     setVodName('');
+    setVodPassword('');
     setVodEmail('');
+    setStudentError('');
+    setVodError('');
     setStudentSubmitting(false);
     setVodSubmitting(false);
     setAdminSubmitting(false);
@@ -123,15 +131,30 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       event.preventDefault();
       if (studentSubmitting) return;
 
+      setStudentError('');
+      const trimmedName = studentName.trim();
+      const trimmedEmail = studentEmail.trim();
+      const trimmedPassword = studentPassword.trim();
+
+      if (!trimmedName) {
+        setStudentError('이름을 입력하세요.');
+        return;
+      }
+
+      if (!trimmedPassword) {
+        setStudentError('비밀번호를 입력하세요.');
+        return;
+      }
+
       setStudentSubmitting(true);
       await handleRoleLogin(
         '/api/login/student', // 🔥 수정됨
-        { name: studentName.trim(), email: studentEmail.trim() },
+        { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
         'student',
       );
       setStudentSubmitting(false);
     },
-    [handleRoleLogin, studentEmail, studentName, studentSubmitting],
+    [handleRoleLogin, studentEmail, studentName, studentPassword, studentSubmitting],
   );
 
   const handleVodSubmit = useCallback(
@@ -139,15 +162,30 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       event.preventDefault();
       if (vodSubmitting) return;
 
+      setVodError('');
+      const trimmedName = vodName.trim();
+      const trimmedEmail = vodEmail.trim();
+      const trimmedPassword = vodPassword.trim();
+
+      if (!trimmedName) {
+        setVodError('이름을 입력하세요.');
+        return;
+      }
+
+      if (!trimmedPassword) {
+        setVodError('비밀번호를 입력하세요.');
+        return;
+      }
+
       setVodSubmitting(true);
       await handleRoleLogin(
         '/api/login/vod', // 🔥 수정됨
-        { name: vodName.trim(), email: vodEmail.trim() },
+        { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
         'vod',
       );
       setVodSubmitting(false);
     },
-    [handleRoleLogin, vodEmail, vodName, vodSubmitting],
+    [handleRoleLogin, vodEmail, vodName, vodPassword, vodSubmitting],
   );
 
   useEffect(() => {
@@ -209,6 +247,14 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
         setActiveForm('buttons');
         setAdminEmail('');
         setAdminPassword('');
+        setStudentName('');
+        setStudentEmail('');
+        setStudentPassword('');
+        setVodName('');
+        setVodEmail('');
+        setVodPassword('');
+        setStudentError('');
+        setVodError('');
         setAdminSubmitting(false);
       }}
     >
@@ -243,6 +289,17 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           onChange={(event) => setStudentEmail(event.target.value)}
           required
         />
+
+        <label className="block text-sm font-medium mb-1">비밀번호</label>
+        <input
+          type="password"
+          className="border rounded-md w-full p-2 mb-3"
+          value={studentPassword}
+          onChange={(event) => setStudentPassword(event.target.value)}
+          required
+        />
+
+        {studentError && <p className="text-sm text-red-500 mb-3">{studentError}</p>}
 
         <button
           type="submit"
@@ -282,6 +339,17 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           onChange={(event) => setVodEmail(event.target.value)}
           required
         />
+
+        <label className="block text-sm font-medium mb-1">비밀번호</label>
+        <input
+          type="password"
+          className="border rounded-md w-full p-2 mb-3"
+          value={vodPassword}
+          onChange={(event) => setVodPassword(event.target.value)}
+          required
+        />
+
+        {vodError && <p className="text-sm text-red-500 mb-3">{vodError}</p>}
 
         <button
           type="submit"
