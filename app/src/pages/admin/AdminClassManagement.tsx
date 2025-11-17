@@ -162,15 +162,15 @@ const AdminClassManagement = () => {
         }
       const raw = Array.isArray(payload) ? payload : [];
 
-// 1) 상위 카테고리만 필터링
-const topLevel = raw.filter((item: any) => !item.parent_type);
+// 🔥 하위 카테고리만 필터링 (parent_type 존재하는 항목)
+const subCategories = raw.filter((item: any) => item.parent_type);
 
-// 2) 상위 카테고리 name 배열 만들기
-const names = topLevel
+// 🔥 하위 카테고리 name 배열 만들기
+const names = subCategories
   .map((item: any) => item.name)
   .filter(Boolean);
 
-// 3) 셋팅
+// 🔥 셋팅
 setCategoryOptions(names);
 
         setCategoryError(names.length === 0 ? '카테고리 불러오기 실패' : null);
