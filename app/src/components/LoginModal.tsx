@@ -69,11 +69,12 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
 
       try {
         setAdminSubmitting(true);
-        const response = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: adminEmail.trim(), password: adminPassword }),
-        });
+      const response = await fetch('/api/auth/admin', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: adminEmail.trim(), password: adminPassword }),
+});
+
 
         if (!response.ok) {
           throw new Error('LOGIN_FAILED');
@@ -147,11 +148,12 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       }
 
       setStudentSubmitting(true);
-      await handleRoleLogin(
-        '/api/login/student', // 🔥 수정됨
-        { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
-        'student',
-      );
+     await handleRoleLogin(
+  '/api/auth/student',
+  { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
+  'student'
+);
+
       setStudentSubmitting(false);
     },
     [handleRoleLogin, studentEmail, studentName, studentPassword, studentSubmitting],
@@ -178,15 +180,12 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       }
 
       setVodSubmitting(true);
-      await handleRoleLogin(
-        '/api/login/vod', // 🔥 수정됨
-        { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
-        'vod',
-      );
-      setVodSubmitting(false);
-    },
-    [handleRoleLogin, vodEmail, vodName, vodPassword, vodSubmitting],
-  );
+    await handleRoleLogin(
+  '/api/auth/vod',
+  { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
+  'vod'
+);
+
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
