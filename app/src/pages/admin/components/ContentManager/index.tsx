@@ -327,9 +327,20 @@ const ContentManager = () => {
     () =>
       [...globalNotices]
         .slice()
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [globalNotices],
   );
+
+  const handleClassCategoryChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextCategoryId = event.target.value;
+    setSelectedClassCategoryId(nextCategoryId);
+    const category = categoryOptions.find((item) => item.id === nextCategoryId);
+    setSelectedCourseId(category?.courses[0]?.id ?? '');
+  };
+
+  const handleCourseChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCourseId(event.target.value);
+  };
 
   const handleDelete = async (contentId: string, type: ContentDeleteType) => {
     if (!contentId) {
@@ -338,7 +349,12 @@ const ContentManager = () => {
     }
 
     try {
-      const response = await fetch(`/api/content/delete?id=${encodeURIComponent(contentId)}`, {
+      const endpoint =
+        type === 'vod'
+          ? `/api/vod/delete?id=${encodeURIComponent(contentId)}`
+          : `/api/content/delete?id=${encodeURIComponent(contentId)}`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: buildAuthHeaders(),
       });
@@ -394,9 +410,7 @@ const ContentManager = () => {
         body: JSON.stringify({
           type: 'global_notice',
           title: globalNoticeForm.title,
-          description: globalNoticeForm.content,
-          thumbnail_url: globalNoticeForm.thumbnailFile?.name ?? '',
-          content_url: '',
+          url: globalNoticeForm.content,
           order_num: 0,
         }),
       });
@@ -422,9 +436,8 @@ const ContentManager = () => {
         body: JSON.stringify({
           type: 'classroom_video',
           title: classroomVideoForm.title,
-          description: classroomVideoForm.description,
-          content_url: classroomVideoForm.videoUrl,
-          classroom_id: selectedCourseId,
+          url: classroomVideoForm.videoUrl,
+          class_id: selectedCourseId,
           order_num: Number(classroomVideoForm.displayOrder) || 0,
         }),
       });
@@ -444,17 +457,15 @@ const ContentManager = () => {
   const handleVodVideoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const response = await fetch('/api/content/add', {
+      const response = await fetch('/api/vod/add', {
         method: 'POST',
         headers: buildAuthHeaders(),
         body: JSON.stringify({
-          type: 'vod',
           title: vodVideoForm.title,
           description: vodVideoForm.description,
-          content_url: vodVideoForm.videoUrl,
-          thumbnail_url: vodVideoForm.thumbnailFile?.name ?? '',
-          order_num: Number(vodVideoForm.displayOrder) || 0,
-          vod_category_id: selectedVodCategoryId ?? null,
+          url: vodVideoForm.videoUrl,
+          category_id: selectedVodCategoryId ?? null,
+          is_recommended: vodVideoForm.isRecommended,
         }),
       });
 
@@ -486,9 +497,8 @@ const ContentManager = () => {
         body: JSON.stringify({
           type: 'material',
           title: materialForm.title,
-          description: materialForm.description,
-          content_url: materialForm.fileType === 'link' ? materialForm.linkUrl : materialForm.file?.name ?? '',
-          classroom_id: selectedCourseId,
+          url: materialForm.fileType === 'link' ? materialForm.linkUrl : materialForm.file?.name ?? '',
+          class_id: selectedCourseId,
           order_num: 0,
         }),
       });
@@ -514,8 +524,8 @@ const ContentManager = () => {
         body: JSON.stringify({
           type: 'classroom_notice',
           title: classroomNoticeForm.title,
-          description: classroomNoticeForm.content,
-          classroom_id: selectedCourseId,
+          url: classroomNoticeForm.content,
+          class_id: selectedCourseId,
           order_num: classroomNoticeForm.isImportant ? -1 : 0,
         }),
       });
@@ -578,6 +588,40 @@ const ContentManager = () => {
               {tab.label}
             </button>
           ))}
+        </div>
+
+        <div className="flex flex-wrap gap-3 text-sm text-[#7a6f68]">
+          <div className="flex items-center gap-2">
+            <label className="font-semibold text-[#5c5c5c]">강의 카테고리</label>
+            <select
+              className="rounded-2xl border border-[#e9dccf] px-4 py-2"
+              value={selectedClassCategoryId}
+              onChange={handleClassCategoryChange}
+            >
+              {categoryOptions.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {activeTab !== 'globalNotice' && activeTab !== 'vodVideo' ? (
+            <div className="flex items-center gap-2">
+              <label className="font-semibold text-[#5c5c5c]">하위 카테고리</label>
+              <select
+                className="rounded-2xl border border-[#e9dccf] px-4 py-2"
+                value={selectedCourseId}
+                onChange={handleCourseChange}
+              >
+                {courseOptions.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
         </div>
       </div>
 
