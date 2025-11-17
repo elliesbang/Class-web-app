@@ -33,35 +33,35 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
 
       const body = await requireJsonBody<Record<string, unknown>>(request);
 
-      const toStringValue = (value: unknown, fallback = ''): string => {
-        if (typeof value === 'string') return value.trim();
-        if (value == null) return fallback;
-        return String(value).trim();
+      const {
+        name = '',
+        code = '',
+        category = '',
+        category_id = 0,
+        start_date = '',
+        end_date = '',
+        duration = '',
+        assignment_upload_time = '',
+        assignment_upload_days = '',
+        delivery_methods = '',
+        is_active = 1,
+      } = (body || {}) as {
+        name?: string;
+        code?: string;
+        category?: string;
+        category_id?: number;
+        start_date?: string;
+        end_date?: string;
+        duration?: string;
+        assignment_upload_time?: string;
+        assignment_upload_days?: string;
+        delivery_methods?: string;
+        is_active?: number;
       };
-
-      const toArrayValue = (value: unknown): unknown[] => {
-        if (Array.isArray(value)) return value;
-        return [];
-      };
-
-      const name = toStringValue(body.name);
-      const code = toStringValue(body.code);
 
       if (!name || !code) {
         throw new ApiError(400, { error: 'name and code are required' });
       }
-
-      const category = toStringValue(body.category);
-      const categoryId = Number(body.categoryId ?? body.category_id);
-      const startDate = toStringValue(body.startDate ?? body.start_date, '') || null;
-      const endDate = toStringValue(body.endDate ?? body.end_date, '') || null;
-      const duration = toStringValue(body.duration, '');
-      const assignmentUploadTime = toStringValue(body.assignmentUploadTime ?? body.assignment_upload_time, 'all_day');
-      const assignmentUploadDays = toArrayValue(
-        body.assignmentUploadDays ?? body.assignment_upload_days,
-      );
-      const deliveryMethods = toArrayValue(body.deliveryMethods ?? body.delivery_methods);
-      const isActive = Boolean(body.isActive ?? body.is_active ?? true) ? 1 : 0;
 
       const result = await db
         .prepare(
@@ -85,14 +85,14 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
           name,
           code,
           category,
-          Number.isFinite(categoryId) ? categoryId : null,
-          startDate,
-          endDate,
+          category_id,
+          start_date,
+          end_date,
           duration,
-          assignmentUploadTime,
-          JSON.stringify(assignmentUploadDays),
-          JSON.stringify(deliveryMethods),
-          isActive,
+          assignment_upload_time,
+          assignment_upload_days,
+          delivery_methods,
+          is_active,
         )
         .run();
 
