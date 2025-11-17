@@ -28,7 +28,7 @@ function Home() {
         </p>
         <div className="mt-5 flex gap-3">
           <Link
-            to="/internal"
+            to="/classroom"
             className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-md"
           >
             내부 강의실 바로가기
