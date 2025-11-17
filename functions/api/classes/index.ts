@@ -8,15 +8,18 @@ export async function onRequest({ env }) {
           name,
           code,
           category,
-          startDate,
-          endDate,
-          assignmentUploadTime,
-          assignmentUploadDays,
-          isActive,
-          createdAt,
-          updatedAt
+          category_id,
+          start_date,
+          end_date,
+          duration,
+          assignment_upload_time,
+          assignment_upload_days,
+          delivery_methods,
+          is_active,
+          created_at,
+          updated_at
        FROM classes
-       ORDER BY createdAt DESC`
+       ORDER BY created_at DESC`
     )
     .all();
 
