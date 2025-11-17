@@ -80,6 +80,6 @@ export const getStudents = async ({ signal }: FetchStudentsOptions = {}): Promis
 };
 
 export const getVodStudents = async ({ signal }: FetchStudentsOptions = {}): Promise<VodAccountRow[]> => {
-  const rows = await fetchRows('/api/students?type=vod', signal);
+  const rows = await fetchRows('/api/students/vod', signal);
   return rows.map((row) => mapVodRow(row as Record<string, unknown>));
 };
