@@ -356,9 +356,11 @@ export const getClasses = async (): Promise<ClassInfo[]> => {
   const payload = await response.json();
   const records = Array.isArray(payload)
     ? payload
-    : Array.isArray((payload as { results?: unknown[] }).results)
-      ? (payload as { results: unknown[] }).results
-      : (payload as { data?: unknown[] }).data ?? [];
+    : Array.isArray((payload as { classes?: unknown[] }).classes)
+      ? (payload as { classes: unknown[] }).classes
+      : Array.isArray((payload as { results?: unknown[] }).results)
+        ? (payload as { results: unknown[] }).results
+        : (payload as { data?: unknown[] }).data ?? [];
 
   return normaliseClassList(records);
 };
@@ -403,7 +405,7 @@ const toClassMutationResult = (
 
 export const createClass = async (payload: ClassFormPayload): Promise<ClassMutationResult> => {
   const token = getStoredAuthUser()?.token ?? '';
-  const response = await fetch('/api/classes/create', {
+  const response = await fetch('/api/classes', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -413,35 +415,21 @@ export const createClass = async (payload: ClassFormPayload): Promise<ClassMutat
   });
 
   const data = await response.json().catch(() => null);
-  const idValue = typeof (data as { id?: unknown })?.id !== 'undefined' ? Number((data as { id?: unknown }).id) : null;
-
-  const classInfo: ClassInfo = {
-    id: idValue && Number.isFinite(idValue) ? idValue : Date.now(),
-    name: payload.name,
-    code: payload.code,
-    category: payload.category ?? '',
-    categoryId: payload.categoryId ?? null,
-    startDate: payload.startDate ?? null,
-    endDate: payload.endDate ?? null,
-    duration: payload.duration ?? '',
-    assignmentUploadTime: payload.assignmentUploadTime ?? 'all_day',
-    assignmentUploadDays: payload.assignmentUploadDays ?? [],
-    deliveryMethods: payload.deliveryMethods ?? [],
-    isActive: payload.isActive ?? true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
 
   if (!response.ok) {
-    return { success: false, message: (data as { message?: string })?.message ?? '수업 생성에 실패했습니다.' };
+    return { success: false, message: (data as { error?: string; message?: string })?.error ?? '수업 생성에 실패했습니다.' };
   }
 
-  return { success: true, classInfo, message: (data as { message?: string })?.message ?? null };
+  return toClassMutationResult(
+    data as ApiResponse<ClassInfo | ClassInfo[]>,
+    '수업 생성에 실패했습니다.',
+    '생성된 수업 정보를 찾을 수 없습니다.',
+  );
 };
 
 export const updateClass = async (id: string, payload: ClassFormPayload): Promise<ClassMutationResult> => {
   const token = getStoredAuthUser()?.token ?? '';
-  const response = await fetch(`/api/classes/${id}/update`, {
+  const response = await fetch(`/api/classes/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -449,14 +437,36 @@ export const updateClass = async (id: string, payload: ClassFormPayload): Promis
     },
     body: JSON.stringify(payload),
   });
-  return response.json();
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    return { success: false, message: (data as { error?: string; message?: string })?.error ?? '수업 수정에 실패했습니다.' };
+  }
+
+  return toClassMutationResult(
+    data as ApiResponse<ClassInfo | ClassInfo[]>,
+    '수업 수정에 실패했습니다.',
+    '수정된 수업 정보를 찾을 수 없습니다.',
+  );
 };
 
 export const deleteClass = async (id: number): Promise<ClassMutationResult> => {
-  void id;
-  return { success: false, message: '데이터 연동이 비활성화되었습니다.', classInfo: null };
+  const token = getStoredAuthUser()?.token ?? '';
+  const response = await fetch(`/api/classes/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-  // const data = await apiFetch(`/api/classes/remove?id=${id}`, { method: 'DELETE' });
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    return { success: false, message: (data as { error?: string })?.error ?? '수업 삭제에 실패했습니다.' };
+  }
+
+  return { success: true, message: (data as { message?: string })?.message ?? '수업이 삭제되었습니다.', classInfo: null };
 };
 
 export const getVideos = async (params: { classId?: number } = {}) => {

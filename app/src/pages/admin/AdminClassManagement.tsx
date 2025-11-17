@@ -1,6 +1,14 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getStoredAuthUser } from '../../lib/authUser';
-import { createClass, updateClass, type AssignmentUploadTimeOption, type ClassFormPayload, type ClassInfo } from '../../lib/api';
+import {
+  createClass,
+  deleteClass,
+  updateClass,
+  type AssignmentUploadTimeOption,
+  type ClassFormPayload,
+  type ClassInfo,
+} from '../../lib/api';
 import { useAdminClasses } from './data/AdminClassContext';
 
 const DELIVERY_METHOD_OPTIONS = ['영상보기', '과제업로드', '피드백보기', '공지보기', '자료보기'];
@@ -103,6 +111,7 @@ const normaliseDays = (input: string[]) => {
 
 const AdminClassManagement = () => {
   const { classes, isLoading: isClassListLoading, error, refresh } = useAdminClasses();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState({ category: '전체' });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formState, setFormState] = useState<ClassFormState>(() => createInitialFormState(''));
@@ -394,21 +403,20 @@ const AdminClassManagement = () => {
     setIsDeleting(true);
     setIsLoading(true);
     try {
-      void deleteTarget;
-      // const result = await deleteClass(deleteTarget.id);
-      // if (result.success) {
-      //   setFeedbackMessage(result.message ?? '수업이 삭제되었습니다.');
-      //   setDeleteTarget(null);
-      // } else {
-      //   const message = result.message ?? '수업 삭제에 실패했습니다. 다시 시도해주세요.';
-      //   console.error('[admin-class] failed to delete class', message);
-      //   alert(message);
-      // }
+      const result = await deleteClass(deleteTarget.id);
+      if (result.success) {
+        setFeedbackMessage(result.message ?? '수업이 삭제되었습니다.');
+        setDeleteTarget(null);
+        await handleRefresh();
+      } else {
+        const message = result.message ?? '수업 삭제에 실패했습니다. 다시 시도해주세요.';
+        console.error('[admin-class] failed to delete class', message);
+        alert(message);
+      }
     } catch (caught) {
-      void caught;
-      // console.error('[admin-class] failed to delete class', caught);
-      // const message = caught instanceof Error ? caught.message : '수업 삭제에 실패했습니다. 다시 시도해주세요.';
-      // alert(message);
+      console.error('[admin-class] failed to delete class', caught);
+      const message = caught instanceof Error ? caught.message : '수업 삭제에 실패했습니다. 다시 시도해주세요.';
+      alert(message);
     } finally {
       setIsDeleting(false);
       setIsLoading(false);
@@ -590,6 +598,7 @@ const formatDateTime = (value: string | null | undefined) => {
                   <th className="px-4 py-3 text-left font-semibold">상태</th>
                   <th className="px-4 py-3 text-left font-semibold">생성일</th>
                   <th className="px-4 py-3 text-left font-semibold">수정일</th>
+                  <th className="px-4 py-3 text-left font-semibold">강의실</th>
                   <th className="px-4 py-3 text-left font-semibold">수정</th>
                   <th className="px-4 py-3 text-left font-semibold">삭제</th>
                 </tr>
@@ -612,6 +621,15 @@ const formatDateTime = (value: string | null | undefined) => {
                     </td>
                     <td className="px-4 py-3 text-[#5c5c5c]">{formatDateTime(classItem.createdAt)}</td>
                     <td className="px-4 py-3 text-[#5c5c5c]">{formatDateTime(classItem.updatedAt)}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        className="rounded-full border border-[#ffd331] px-3 py-1 text-xs font-semibold text-[#404040] transition-colors hover:bg-[#fff5c2]"
+                        onClick={() => navigate(`/classroom/${classItem.id}`)}
+                      >
+                        강의실 이동
+                      </button>
+                    </td>
                     <td className="px-4 py-3">
                       <button
                         type="button"
