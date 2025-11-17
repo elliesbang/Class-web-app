@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 
 import AccordionItem from '../../components/classroom/AccordionItem';
-import CategoryButton from '../../components/classroom/CategoryButton';
 import useCategories from '../../hooks/useCategories';
+import ClassroomSubCategories from './ClassroomSubCategories';
 
 function ClassroomPage() {
   const { categories, loading, error } = useCategories();
@@ -51,15 +51,13 @@ function ClassroomPage() {
                     isOpen={isOpen}
                     onToggle={() => toggleParent(parent.id)}
                   >
-                    <div className="grid gap-3 pt-1">
-                      {parent.children.length === 0 ? (
-                        <p className="rounded-2xl bg-[#fff8ec] px-4 py-3 text-sm text-ellieGray/70 shadow-soft">
-                          하위 카테고리가 없습니다.
-                        </p>
-                      ) : (
-                        parent.children.map((child) => <CategoryButton key={child.id} category={child} />)
-                      )}
-                    </div>
+                    {parent.children.length === 0 ? (
+                      <p className="rounded-2xl bg-[#fff8ec] px-4 py-3 text-sm text-ellieGray/70 shadow-soft">
+                        하위 카테고리가 없습니다.
+                      </p>
+                    ) : (
+                      <ClassroomSubCategories subCategories={parent.children} />
+                    )}
                   </AccordionItem>
                 );
               })}

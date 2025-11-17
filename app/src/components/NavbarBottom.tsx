@@ -36,12 +36,15 @@ const NavbarBottom = () => {
           const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
           const iconColor = isActive ? '#404040' : '#8e8e8e';
           const textColor = isActive ? 'text-[#404040]' : 'text-[#8e8e8e]';
+          const handleClick = () => {
+            navigate(to);
+          };
 
           return (
             <button
               key={label}
               type="button"
-              onClick={() => navigate(to)}
+              onClick={handleClick}
               className={`${baseButtonClasses} ${textColor} ${isActive ? 'bg-[#fef568]/70' : 'hover:bg-[#fef568]/40'}`}
             >
               <Icon size={22} strokeWidth={1.75} color={iconColor} />
