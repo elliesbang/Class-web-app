@@ -97,7 +97,7 @@ const normaliseDays = (input: string[]) => {
 
 const AdminClassManagement = () => {
   const { classes, isLoading: isClassListLoading, error, refresh } = useAdminClasses();
-  const [filters, setFilters] = useState({ name: '', code: '', category: '전체' });
+  const [filters, setFilters] = useState({ category: '전체' });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formState, setFormState] = useState<ClassFormState>(() => createInitialFormState(''));
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -198,18 +198,14 @@ setCategoryOptions(names);
   }, []);
 
   const filteredClasses = useMemo(() => {
-    const keywordName = filters.name.trim().toLowerCase();
-    const keywordCode = filters.code.trim().toLowerCase();
     const categoryFilter = filters.category.trim();
 
     return classes.filter((item) => {
-      const matchesName = keywordName.length === 0 || item.name.toLowerCase().includes(keywordName);
-      const matchesCode = keywordCode.length === 0 || item.code.toLowerCase().includes(keywordCode);
-      const normalisedCategory = item.category ? item.category.trim() : '';
-      const matchesCategory =
+      const categoryValue = item.category?.trim() || '';
+      return (
         categoryFilter === '전체' ||
-        (categoryFilter === '' ? normalisedCategory.length === 0 : normalisedCategory === categoryFilter);
-      return matchesName && matchesCode && matchesCategory;
+        (categoryFilter === '' ? categoryValue === '' : categoryValue === categoryFilter)
+      );
     });
   }, [classes, filters]);
 
@@ -530,28 +526,6 @@ const formatDateTime = (value: string | null | undefined) => {
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <label className="flex flex-col text-sm font-semibold text-[#404040]">
-            <span className="mb-2">수업명</span>
-            <input
-              type="search"
-              name="name"
-              value={filters.name}
-              onChange={handleFilterChange}
-              placeholder="수업명을 검색하세요"
-              className="rounded-xl border border-[#e9dccf] bg-[#fdf7f0] px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
-            />
-          </label>
-          <label className="flex flex-col text-sm font-semibold text-[#404040]">
-            <span className="mb-2">수업 코드</span>
-            <input
-              type="search"
-              name="code"
-              value={filters.code}
-              onChange={handleFilterChange}
-              placeholder="코드를 입력하세요"
-              className="rounded-xl border border-[#e9dccf] bg-[#fdf7f0] px-4 py-2 text-sm text-[#404040] focus:border-[#ffd331] focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
-            />
-          </label>
           <label className="flex flex-col text-sm font-semibold text-[#404040] md:col-span-2">
             <span className="mb-2">카테고리</span>
             <select
