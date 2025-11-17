@@ -11,7 +11,7 @@ import {
 } from '../../../../lib/contentLibrary';
 import { getStoredAuthUser } from '../../../../lib/authUser';
 import { useSheetsData } from '../../../../contexts/SheetsDataContext';
-import ClassCategorySelector from './CategorySelector';
+import CategorySelector from './CategorySelector';
 import VodCategorySelector from './VodCategorySelector';
 
 const TAB_ITEMS = [
@@ -21,6 +21,8 @@ const TAB_ITEMS = [
   { key: 'material' as const, label: '자료' },
   { key: 'classroomNotice' as const, label: '강의실 공지' },
 ];
+
+const CATEGORY_HIDDEN_TABS = ['globalNotice', 'vodVideo'];
 
 type TabKey = (typeof TAB_ITEMS)[number]['key'];
 
@@ -192,15 +194,7 @@ const ContentManager = () => {
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [selectedVodCategoryId, setSelectedVodCategoryId] = useState<number | null>(null);
 
-  const SHOW_TOP_CLASS_CATEGORY: TabKey[] = [
-    'classroomVideo',
-    'material',
-    'classroomNotice',
-  ];
-
   const SHOW_VOD_CATEGORY = activeTab === 'vodVideo';
-
-  const shouldShowTopCategory = SHOW_TOP_CLASS_CATEGORY.includes(activeTab);
 
   const [globalNoticeForm, setGlobalNoticeForm] = useState<GlobalNoticeFormState>({
     title: '',
@@ -574,13 +568,13 @@ const ContentManager = () => {
           ))}
         </div>
 
-        {shouldShowTopCategory ? (
-          <ClassCategorySelector
+        {!CATEGORY_HIDDEN_TABS.includes(activeTab) && (
+          <CategorySelector
             categories={categoryOptions}
             selected={selectedClassCategoryId}
             onChange={handleCategoryChange}
           />
-        ) : null}
+        )}
 
         {SHOW_VOD_CATEGORY ? (
           <VodCategorySelector
