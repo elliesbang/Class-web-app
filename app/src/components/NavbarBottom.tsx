@@ -5,7 +5,7 @@ import { useAuthUser } from '../hooks/useAuthUser';
 
 const baseItems = [
   { label: '홈', to: '/', Icon: Home },
-  { label: '강의실', to: '/internal', Icon: GraduationCap },
+  { label: '강의실', to: '/classroom', Icon: GraduationCap },
   { label: 'VOD', to: '/vod', Icon: PlayCircle },
   { label: '공지', to: '/notices', Icon: Megaphone },
 ];

@@ -26,7 +26,7 @@ function App() {
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/internal" element={<Classroom />} />
+        <Route path="/classroom" element={<Classroom />} />
         <Route path="/vod" element={<VOD />} />
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
@@ -34,8 +34,9 @@ function App() {
         <Route path="/admin/my" element={<AdminMyPage />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/login" element={<AdminLogin />} />
+        <Route path="/internal" element={<Navigate to="/classroom" replace />} />
         <Route path="/internal/michina" element={<Michina />} />
-        <Route path="/class/:id" element={<ClassroomDetail />} />
+        <Route path="/classroom/:id" element={<ClassroomDetail />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
