@@ -10,11 +10,11 @@ import {
 import { useSheetsData } from '../../contexts/SheetsDataContext';
 
 const tabs = [
-  { key: 'video', label: '영상' },
-  { key: 'notice', label: '공지' },
   { key: 'materials', label: '자료' },
-  { key: 'feedback', label: '피드백' },
+  { key: 'video', label: '강의실 영상' },
+  { key: 'notice', label: '강의실 공지' },
   { key: 'assignment', label: '과제' },
+  { key: 'feedback', label: '피드백' },
 ] as const;
 
 type TabKey = (typeof tabs)[number]['key'];
@@ -23,7 +23,7 @@ function ClassDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { contentCollections, lectureCourses, loading } = useSheetsData();
-  const [activeTab, setActiveTab] = useState<TabKey>('video');
+  const [activeTab, setActiveTab] = useState<TabKey>('materials');
 
   const courseMeta = useMemo(() => (id ? findCourseSummary(lectureCourses, id) : null), [id, lectureCourses]);
   const courseTitle = courseMeta?.courseName ?? '과정 상세 정보';
@@ -39,7 +39,7 @@ function ClassDetailPage() {
     () => (id ? filterNoticesByCourse(contentCollections.classroomNotices, id) : []),
     [contentCollections.classroomNotices, id],
   );
-  const isLoading = loading && !courseMeta;
+  const isLoading = loading;
 
   const renderVideoTab = () => (
     <section className="space-y-4">
@@ -72,7 +72,7 @@ function ClassDetailPage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-ellieGray/70">등록된 강의실 영상이 없습니다.</p>
+          <p className="text-sm text-ellieGray/70">등록된 콘텐츠가 없습니다.</p>
         )}
       </div>
     </section>
@@ -85,7 +85,7 @@ function ClassDetailPage() {
         {isLoading ? (
           <p className="mt-3 text-sm text-ellieGray/70">강의실 공지를 불러오는 중입니다...</p>
         ) : courseNotices.length === 0 ? (
-          <p className="mt-3 text-sm text-ellieGray/70">등록된 공지가 없습니다.</p>
+          <p className="mt-3 text-sm text-ellieGray/70">등록된 콘텐츠가 없습니다.</p>
         ) : (
           <ul className="mt-4 space-y-3">
             {courseNotices.map((notice) => (
@@ -117,7 +117,7 @@ function ClassDetailPage() {
         {isLoading ? (
           <p className="mt-3 text-sm text-ellieGray/70">첨부자료를 불러오는 중입니다...</p>
         ) : courseMaterials.length === 0 ? (
-          <p className="mt-3 text-sm text-ellieGray/70">등록된 자료가 없습니다.</p>
+          <p className="mt-3 text-sm text-ellieGray/70">등록된 콘텐츠가 없습니다.</p>
         ) : (
           <ul className="mt-4 space-y-3 text-sm text-ellieGray/80">
             {courseMaterials.map((material) => (
@@ -151,11 +151,11 @@ function ClassDetailPage() {
   const renderFeedbackTab = () => (
     <section className="space-y-4">
       <div className="rounded-3xl bg-white p-6 shadow-soft">
-        <p className="text-sm text-ellieGray/70">관리자 피드백이 여기에 표시됩니다.</p>
-        <div className="mt-4 space-y-3">
-          <div className="rounded-2xl bg-[#fffaf0] px-4 py-3 text-sm text-ellieGray/80">피드백 항목 1</div>
-          <div className="rounded-2xl bg-[#fffaf0] px-4 py-3 text-sm text-ellieGray/80">피드백 항목 2</div>
-        </div>
+        {isLoading ? (
+          <p className="text-sm text-ellieGray/70">피드백을 불러오는 중입니다...</p>
+        ) : (
+          <p className="text-sm text-ellieGray/70">등록된 콘텐츠가 없습니다.</p>
+        )}
       </div>
     </section>
   );
@@ -163,30 +163,21 @@ function ClassDetailPage() {
   const renderAssignmentTab = () => (
     <section className="space-y-5">
       <div className="space-y-4 rounded-3xl bg-white p-6 shadow-soft">
-        <h3 className="text-base font-semibold text-ellieGray">과제 업로드</h3>
-        <div className="space-y-4 rounded-2xl border border-dashed border-ellieGray/20 bg-[#fffaf0] p-5">
-          <label className="flex w-full cursor-pointer justify-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-ellieGray shadow-soft">
-            이미지 업로드
-            <input type="file" className="hidden" />
-          </label>
-          <input
-            type="url"
-            placeholder="링크 입력"
-            className="w-full rounded-full border border-ellieGray/20 bg-white px-5 py-2 text-sm text-ellieGray focus:outline-none focus:ring-2 focus:ring-[#ffd331]/40"
-          />
-          <button
-            type="button"
-            className="w-full rounded-full bg-[#ffd331] px-5 py-2 text-sm font-semibold text-ellieGray shadow-soft"
-          >
-            과제 제출하기
-          </button>
-          <p className="text-xs text-ellieGray/60">이미지 또는 링크 형태로 과제를 제출하세요.</p>
-        </div>
+        <h3 className="text-base font-semibold text-ellieGray">과제 안내</h3>
+        {isLoading ? (
+          <p className="text-sm text-ellieGray/70">과제 정보를 불러오는 중입니다...</p>
+        ) : (
+          <p className="text-sm text-ellieGray/70">등록된 콘텐츠가 없습니다.</p>
+        )}
       </div>
 
       <div className="space-y-4 rounded-3xl bg-white p-6 shadow-soft">
         <h3 className="text-base font-semibold text-ellieGray">제출된 과제</h3>
-        <p className="text-sm text-ellieGray/70">제출된 과제 내역은 추후 연동 예정입니다.</p>
+        {isLoading ? (
+          <p className="text-sm text-ellieGray/70">과제 제출 내역을 불러오는 중입니다...</p>
+        ) : (
+          <p className="text-sm text-ellieGray/70">등록된 콘텐츠가 없습니다.</p>
+        )}
       </div>
     </section>
   );
@@ -213,7 +204,7 @@ function ClassDetailPage() {
         ) : null}
       </div>
 
-      <nav className="flex gap-2 rounded-3xl bg-white p-2 shadow-soft">
+      <nav className="sticky top-0 z-10 flex gap-2 rounded-3xl bg-white/90 p-2 shadow-soft backdrop-blur">
         {tabs.map((tab) => {
           const isActive = tab.key === activeTab;
           return (
@@ -231,11 +222,11 @@ function ClassDetailPage() {
         })}
       </nav>
 
+      {activeTab === 'materials' && renderMaterialsTab()}
       {activeTab === 'video' && renderVideoTab()}
       {activeTab === 'notice' && renderNoticeTab()}
-      {activeTab === 'materials' && renderMaterialsTab()}
-      {activeTab === 'feedback' && renderFeedbackTab()}
       {activeTab === 'assignment' && renderAssignmentTab()}
+      {activeTab === 'feedback' && renderFeedbackTab()}
     </section>
   );
 }
