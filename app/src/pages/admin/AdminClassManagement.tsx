@@ -857,7 +857,7 @@ const formatDateTime = (value: string | null | undefined) => {
 
               <footer className="flex items-center justify-end gap-3 border-t border-[#f0e3d8] bg-[#fdf7f0] px-6 py-4">
                 <button
-                  type="button"
+                  type="submit"
                   onClick={() => {
                     const wasEditing = Boolean(editingClass);
                     closeModal();
