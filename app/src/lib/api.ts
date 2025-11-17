@@ -387,15 +387,18 @@ const toClassMutationResult = (
 
 export const createClass = async (payload: ClassFormPayload): Promise<ClassMutationResult> => {
   const token = getStoredAuthUser()?.token ?? '';
-  const response = await fetch('/api/classes/create', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-  return response.json();
+  const response = await fetch('/api/content/add', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    type: 'class',
+    ...payload
+  }),
+});
+return response.json();
 };
 
 export const updateClass = async (id: string, payload: ClassFormPayload): Promise<ClassMutationResult> => {
