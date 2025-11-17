@@ -7,11 +7,9 @@ import {
   type ClassroomVideoRecord,
   type GlobalNoticeRecord,
   type VodVideoRecord,
-  type ClassroomCourseSummary,
 } from '../../../../lib/contentLibrary';
 import { getStoredAuthUser } from '../../../../lib/authUser';
 import { useSheetsData } from '../../../../contexts/SheetsDataContext';
-import CategorySelector from './CategorySelector';
 import VodCategorySelector from './VodCategorySelector';
 
 const TAB_ITEMS = [
@@ -22,9 +20,7 @@ const TAB_ITEMS = [
   { key: 'classroomNotice' as const, label: '강의실 공지' },
 ];
 
-const CATEGORY_HIDDEN_TABS = ['globalNotice', 'vodVideo'];
-
-type TabKey = (typeof TAB_ITEMS)[number]['key'];
+export type TabKey = (typeof TAB_ITEMS)[number]['key'];
 
 type GlobalNoticeFormState = {
   title: string;
@@ -112,57 +108,14 @@ const reorderVideoDisplayOrder = (
   });
 };
 
-type CategoryOption = {
-  id: string;
-  name: string;
-  order: number;
-  courses: Array<{ id: string; name: string; description?: string }>;
+type ContentManagerProps = {
+  activeTab: TabKey;
+  onTabChange: (tab: TabKey) => void;
+  selectedClassId: string;
 };
 
-const buildCategoryOptions = (courses: ClassroomCourseSummary[]): CategoryOption[] => {
-  const categoryMap = new Map<string, CategoryOption>();
-
-  courses.forEach((course) => {
-    // 카테고리 누락 방지: course 정보 없어도 카테고리는 무조건 생성
-    if (!categoryMap.has(course.categoryId)) {
-      categoryMap.set(course.categoryId, {
-        id: course.categoryId,
-        name: course.categoryName,
-        order: course.categoryOrder ?? 999, 
-        courses: [],
-      });
-    }
-
-    // 하위 강좌가 있을 때만 추가 (없어도 카테고리는 유지됨)
-    if (course.courseId) {
-      const category = categoryMap.get(course.categoryId)!;
-      category.courses.push({
-        id: course.courseId,
-        name: course.courseName ?? '',
-        description: course.courseDescription ?? '',
-      });
-    }
-  });
-
-  return Array.from(categoryMap.values())
-    .map((category) => ({
-      ...category,
-      courses: category.courses.sort((a, b) =>
-        a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' })
-      ),
-    }))
-    .sort(
-      (a, b) =>
-        (a.order ?? 999) - (b.order ?? 999) ||
-        a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' })
-    );
-};
-
-
-const ContentManager = () => {
+const ContentManager = ({ activeTab, onTabChange, selectedClassId }: ContentManagerProps) => {
   const { contentCollections, refresh } = useSheetsData();
-  const lectureCourses = contentCollections.courseSummaries ?? [];
-  const [activeTab, setActiveTab] = useState<TabKey>('globalNotice');
   const [globalNotices, setGlobalNotices] = useState<GlobalNoticeRecord[]>(contentCollections.globalNotices);
   const [classroomVideos, setClassroomVideos] = useState<ClassroomVideoRecord[]>(contentCollections.classroomVideos);
   const [vodVideos, setVodVideos] = useState<VodVideoRecord[]>(contentCollections.vodVideos);
@@ -190,8 +143,6 @@ const ContentManager = () => {
     setClassroomNotices(contentCollections.classroomNotices);
   }, [contentCollections.classroomNotices]);
 
-  const [selectedClassCategoryId, setSelectedClassCategoryId] = useState<string>('');
-  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [selectedVodCategoryId, setSelectedVodCategoryId] = useState<number | null>(null);
 
   const SHOW_VOD_CATEGORY = activeTab === 'vodVideo';
@@ -241,22 +192,6 @@ const ContentManager = () => {
     return headers;
   };
 
-  const categoryOptions = useMemo(() => buildCategoryOptions(lectureCourses), [lectureCourses]);
-
-  useEffect(() => {
-    if (!selectedClassCategoryId && categoryOptions[0]) {
-      setSelectedClassCategoryId(categoryOptions[0].id);
-      setSelectedCourseId(categoryOptions[0].courses[0]?.id ?? '');
-    }
-  }, [categoryOptions, selectedClassCategoryId]);
-
-  useEffect(() => {
-    const category = categoryOptions.find((item) => item.id === selectedClassCategoryId);
-    if (category && category.courses.length > 0 && !category.courses.some((course) => course.id === selectedCourseId)) {
-      setSelectedCourseId(category.courses[0].id);
-    }
-  }, [categoryOptions, selectedClassCategoryId, selectedCourseId]);
-
   useEffect(() => {
     if (activeTab !== 'vodVideo') {
       return;
@@ -282,31 +217,31 @@ const ContentManager = () => {
   }, [activeTab, selectedVodCategoryId]);
 
   const filteredClassroomVideos = useMemo(() => {
-    if (!selectedCourseId) {
+    if (!selectedClassId) {
       return [] as ClassroomVideoRecord[];
     }
-    return sortVideosForDisplay(classroomVideos.filter((video) => video.courseId === selectedCourseId));
-  }, [classroomVideos, selectedCourseId]);
+    return sortVideosForDisplay(classroomVideos.filter((video) => video.courseId === selectedClassId));
+  }, [classroomVideos, selectedClassId]);
 
   const filteredMaterials = useMemo(() => {
-    if (!selectedCourseId) {
+    if (!selectedClassId) {
       return [] as ClassroomMaterialRecord[];
     }
     return materials
-      .filter((material) => material.courseId === selectedCourseId)
+      .filter((material) => material.courseId === selectedClassId)
       .slice()
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [materials, selectedCourseId]);
+  }, [materials, selectedClassId]);
 
   const filteredClassroomNotices = useMemo(() => {
-    if (!selectedCourseId) {
+    if (!selectedClassId) {
       return [] as ClassroomNoticeRecord[];
     }
     return classroomNotices
-      .filter((notice) => notice.courseId === selectedCourseId)
+      .filter((notice) => notice.courseId === selectedClassId)
       .slice()
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [classroomNotices, selectedCourseId]);
+  }, [classroomNotices, selectedClassId]);
 
   const filteredVodVideos = useMemo(() => {
     if (!selectedVodCategoryId) {
@@ -331,12 +266,6 @@ const ContentManager = () => {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [globalNotices],
   );
-
-  const handleCategoryChange = (nextCategoryId: string) => {
-    setSelectedClassCategoryId(nextCategoryId);
-    const category = categoryOptions.find((item) => item.id === nextCategoryId);
-    setSelectedCourseId(category?.courses[0]?.id ?? '');
-  };
 
   const handleVodCategoryChange = (nextCategoryId: number | null) => {
     setSelectedVodCategoryId(nextCategoryId);
@@ -437,7 +366,7 @@ const ContentManager = () => {
           type: 'classroom_video',
           title: classroomVideoForm.title,
           url: classroomVideoForm.videoUrl,
-          class_id: selectedCourseId,
+          class_id: selectedClassId,
           order_num: Number(classroomVideoForm.displayOrder) || 0,
         }),
       });
@@ -498,7 +427,7 @@ const ContentManager = () => {
           type: 'material',
           title: materialForm.title,
           url: materialForm.fileType === 'link' ? materialForm.linkUrl : materialForm.file?.name ?? '',
-          class_id: selectedCourseId,
+          class_id: selectedClassId,
           order_num: 0,
         }),
       });
@@ -525,7 +454,7 @@ const ContentManager = () => {
           type: 'classroom_notice',
           title: classroomNoticeForm.title,
           url: classroomNoticeForm.content,
-          class_id: selectedCourseId,
+          class_id: selectedClassId,
           order_num: classroomNoticeForm.isImportant ? -1 : 0,
         }),
       });
@@ -559,20 +488,12 @@ const ContentManager = () => {
                 ? 'bg-[#ffd331] text-[#404040]'
                 : 'bg-[#f5eee9] text-[#7a6f68] hover:bg-[#ffd331]/80 hover:text-[#404040]'
             }`}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => onTabChange(tab.key)}
           >
             {tab.label}
           </button>
         ))}
       </div>
-
-      {!CATEGORY_HIDDEN_TABS.includes(activeTab) && (
-        <CategorySelector
-          categories={categoryOptions}
-          selected={selectedClassCategoryId}
-          onChange={handleCategoryChange}
-        />
-      )}
 
       {SHOW_VOD_CATEGORY ? (
         <VodCategorySelector
