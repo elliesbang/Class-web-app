@@ -11,6 +11,8 @@ import {
 } from '../../../../lib/contentLibrary';
 import { getStoredAuthUser } from '../../../../lib/authUser';
 import { useSheetsData } from '../../../../contexts/SheetsDataContext';
+import ClassCategorySelector from './CategorySelector';
+import VodCategorySelector from './VodCategorySelector';
 
 const TAB_ITEMS = [
   { key: 'globalNotice' as const, label: '전체 공지' },
@@ -190,6 +192,16 @@ const ContentManager = () => {
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [selectedVodCategoryId, setSelectedVodCategoryId] = useState<number | null>(null);
 
+  const SHOW_TOP_CLASS_CATEGORY: TabKey[] = [
+    'classroomVideo',
+    'material',
+    'classroomNotice',
+  ];
+
+  const SHOW_VOD_CATEGORY = activeTab === 'vodVideo';
+
+  const shouldShowTopCategory = SHOW_TOP_CLASS_CATEGORY.includes(activeTab);
+
   const [globalNoticeForm, setGlobalNoticeForm] = useState<GlobalNoticeFormState>({
     title: '',
     content: '',
@@ -275,11 +287,6 @@ const ContentManager = () => {
     void fetchVodCategories();
   }, [activeTab, selectedVodCategoryId]);
 
-  const courseOptions = useMemo(() => {
-    const category = categoryOptions.find((item) => item.id === selectedClassCategoryId);
-    return category?.courses ?? [];
-  }, [categoryOptions, selectedClassCategoryId]);
-
   const filteredClassroomVideos = useMemo(() => {
     if (!selectedCourseId) {
       return [] as ClassroomVideoRecord[];
@@ -331,15 +338,14 @@ const ContentManager = () => {
     [globalNotices],
   );
 
-  const handleClassCategoryChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const nextCategoryId = event.target.value;
+  const handleCategoryChange = (nextCategoryId: string) => {
     setSelectedClassCategoryId(nextCategoryId);
     const category = categoryOptions.find((item) => item.id === nextCategoryId);
     setSelectedCourseId(category?.courses[0]?.id ?? '');
   };
 
-  const handleCourseChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCourseId(event.target.value);
+  const handleVodCategoryChange = (nextCategoryId: number | null) => {
+    setSelectedVodCategoryId(nextCategoryId);
   };
 
   const handleDelete = async (contentId: string, type: ContentDeleteType) => {
@@ -550,28 +556,6 @@ const ContentManager = () => {
           <div>
             <h2 className="text-xl font-bold text-[#404040]">콘텐츠 관리</h2>
           </div>
-
-          {activeTab === 'vodVideo' ? (
-            <div className="flex flex-col gap-2 text-sm text-[#7a6f68] md:flex-row md:items-center md:gap-3">
-              <label className="font-semibold text-[#5c5c5c]">VOD 카테고리</label>
-              <select
-                className="rounded-2xl border border-[#e9dccf] px-4 py-2"
-                value={selectedVodCategoryId ?? ''}
-                onChange={(event) =>
-                  setSelectedVodCategoryId(
-                    event.target.value === '' ? null : Number(event.target.value),
-                  )
-                }
-              >
-                <option value="">카테고리를 선택하세요</option>
-                {vodCategories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -590,39 +574,21 @@ const ContentManager = () => {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-3 text-sm text-[#7a6f68]">
-          <div className="flex items-center gap-2">
-            <label className="font-semibold text-[#5c5c5c]">강의 카테고리</label>
-            <select
-              className="rounded-2xl border border-[#e9dccf] px-4 py-2"
-              value={selectedClassCategoryId}
-              onChange={handleClassCategoryChange}
-            >
-              {categoryOptions.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        {shouldShowTopCategory ? (
+          <ClassCategorySelector
+            categories={categoryOptions}
+            selected={selectedClassCategoryId}
+            onChange={handleCategoryChange}
+          />
+        ) : null}
 
-          {activeTab !== 'globalNotice' && activeTab !== 'vodVideo' ? (
-            <div className="flex items-center gap-2">
-              <label className="font-semibold text-[#5c5c5c]">하위 카테고리</label>
-              <select
-                className="rounded-2xl border border-[#e9dccf] px-4 py-2"
-                value={selectedCourseId}
-                onChange={handleCourseChange}
-              >
-                {courseOptions.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-        </div>
+        {SHOW_VOD_CATEGORY ? (
+          <VodCategorySelector
+            categories={vodCategories}
+            selected={selectedVodCategoryId}
+            onChange={handleVodCategoryChange}
+          />
+        ) : null}
       </div>
 
       {/* 이하: 등록 폼 + 리스트 렌더링 (원본 그대로이며 삭제 API만 바꿔둔 상태) */}
