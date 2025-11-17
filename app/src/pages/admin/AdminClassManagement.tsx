@@ -10,6 +10,12 @@ const ASSIGNMENT_UPLOAD_TIME_LABELS: Record<AssignmentUploadTimeOption, string> 
   same_day: '하루 한정',
 };
 
+type ClassCategoryRecord = {
+  id: number;
+  name: string;
+  parent_id: number | null;
+};
+
 const extractCategoryName = (value: unknown): string => {
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
@@ -142,7 +148,7 @@ const AdminClassManagement = () => {
 
       try {
         const token = getStoredAuthUser()?.token ?? '';
-        const response = await fetch('/api/class_category/list', {
+        const response = await fetch('/api/class-category', {
           signal: controller.signal,
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -158,13 +164,16 @@ const AdminClassManagement = () => {
         }
         const raw = Array.isArray(payload) ? payload : [];
 
-        // 🔥 하위 카테고리만 필터링 (parent_type 존재하는 항목)
-        const subCategories = raw.filter((item: any) => item.parent_type !== null);
+        const subCategories = raw
+          .map((item) => item as Partial<ClassCategoryRecord>)
+          .filter(
+            (item): item is ClassCategoryRecord =>
+              item != null && typeof item.id !== 'undefined' && typeof item.name === 'string',
+          )
+          .filter((item) => item.parent_id !== null)
+          .sort((a, b) => a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }));
 
-        // 🔥 하위 카테고리 name 배열 만들기
-        const names = subCategories
-          .map((item: any) => item.name)
-          .filter(Boolean);
+        const names = subCategories.map((item) => item.name).filter(Boolean);
 
         // 🔥 셋팅
         setCategoryOptions(names);
