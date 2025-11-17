@@ -79,7 +79,7 @@ function AdminLoginModal({ isOpen, onClose }) {
           password,
         };
 
-        const response = await fetch('/api/admin/login', {
+        const response = await fetch('/api/auth/admin', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

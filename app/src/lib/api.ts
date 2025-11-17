@@ -1,4 +1,5 @@
 import { type ApiFetchOptions } from '../api/client';
+import { getStoredAuthUser } from './authUser';
 import type {
   ClassroomMaterialRecord,
   ClassroomNoticeRecord,
@@ -109,7 +110,11 @@ type ApiResponse<T> = {
 
 export async function fetchCategories(options: ApiFetchOptions = {}): Promise<unknown[]> {
   const { signal } = options;
-  const response = await fetch('/api/getCategories', { signal });
+  const token = getStoredAuthUser()?.token ?? '';
+  const response = await fetch('/api/class_category/list', {
+    signal,
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!response.ok) {
     throw new Error('카테고리를 불러오지 못했습니다.');
   }
