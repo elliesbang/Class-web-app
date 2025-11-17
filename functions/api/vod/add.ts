@@ -7,20 +7,17 @@ interface Env {
 }
 
 interface Payload {
-  classroom_id?: string | null;
-  class_id?: string | null;
-  type?: string;
+  category_id?: string | null;
   title?: string;
   description?: string | null;
   url?: string | null;
-  content_url?: string | null;
-  order_num?: number | null;
+  is_recommended?: number | boolean | null;
 }
 
 export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
   handleApi(async () => {
     assertMethod(request, 'POST');
-    // 🔥 Authorization 체크 추가
+
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) {
       return jsonResponse({ error: 'Unauthorized' }, 401);
@@ -28,24 +25,20 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
     const user = await verifyToken(request, env);
     assertRole(user, 'admin');
 
-    const { vod_category_id: _vod_category_id, ...body } = await requireJsonBody<Payload>(request);
-    if (!body.type || !body.title) {
-      throw new ApiError(400, { error: 'type and title are required' });
+    const body = await requireJsonBody<Payload>(request);
+    if (!body.title || !body.url) {
+      throw new ApiError(400, { error: 'title and url are required' });
     }
 
     const id = crypto.randomUUID();
-    const rawClassId = (body as Record<string, unknown>).class_id ?? body.classroom_id ?? null;
-    const classId = rawClassId ? String(rawClassId) : null;
-    const url =
-      (body as Record<string, unknown>).url ?? body.content_url ?? body.description ?? null;
-    const orderNum = body.order_num ?? null;
+    const isRecommendedValue = Number(body.is_recommended ?? 0) ? 1 : 0;
 
     await env.DB.prepare(
-      `INSERT INTO classroom_content
-      (id, class_id, type, title, url, order_num, created_at, updated_at)
+      `INSERT INTO vod_video 
+      (id, category_id, title, description, url, is_recommended, created_at, updated_at)
       VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'), datetime('now'))`,
     )
-      .bind(id, classId, body.type, body.title, url, orderNum)
+      .bind(id, body.category_id ?? null, body.title, body.description ?? null, body.url, isRecommendedValue)
       .run();
 
     return jsonResponse({ id });

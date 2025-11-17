@@ -17,47 +17,23 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
     const user = await verifyToken(request, env);
     assertRole(user, 'admin');
 
-    const body = await requireJsonBody<Record<string, unknown>>(request);
-    const id = body.id as string | undefined;
+    const { vod_category_id: _vod_category_id, ...rawBody } = await requireJsonBody<Record<string, unknown>>(request);
+    const id = rawBody.id as string | undefined;
     if (!id) {
       throw new ApiError(400, { error: 'id is required' });
     }
 
-    const type = (body.type as string | undefined)?.toLowerCase();
-    const rawVodCategoryId = body.vod_category_id as number | string | undefined;
-    const vodCategoryId =
-      type === 'vod'
-        ? typeof rawVodCategoryId === 'number'
-          ? rawVodCategoryId
-          : Number(rawVodCategoryId ?? '')
-        : type
-          ? null
-          : undefined;
-    const vodCategoryValue =
-      vodCategoryId === undefined ? undefined : Number.isFinite(vodCategoryId) ? vodCategoryId : null;
+    const body = {
+      ...rawBody,
+      url: rawBody.url ?? rawBody.content_url ?? rawBody.description,
+    } as Record<string, unknown>;
 
-    const allowedFields = [
-      'classroom_id',
-      'type',
-      'title',
-      'description',
-      'content_url',
-      'thumbnail_url',
-      'order_num',
-      'vod_category_id',
-    ];
+    const allowedFields = ['type', 'title', 'url', 'order_num'];
 
     const updates: string[] = [];
     const values: unknown[] = [];
 
     for (const field of allowedFields) {
-      if (field === 'vod_category_id') {
-        if (vodCategoryValue !== undefined) {
-          updates.push(`${field} = ?${updates.length + 1}`);
-          values.push(vodCategoryValue);
-        }
-        continue;
-      }
       if (Object.prototype.hasOwnProperty.call(body, field)) {
         updates.push(`${field} = ?${updates.length + 1}`);
         values.push((body as Record<string, unknown>)[field]);
