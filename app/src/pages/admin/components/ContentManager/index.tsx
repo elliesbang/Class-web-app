@@ -532,45 +532,7 @@ const ContentManager = () => {
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-bold text-[#404040]">콘텐츠 관리</h2>
-            <p className="text-sm text-[#7a6f68]">콘텐츠 유형에 따라 등록하고 노출 위치를 설정하세요.</p>
           </div>
-
-          {activeTab === 'classroomVideo' ||
-          activeTab === 'material' ||
-          activeTab === 'classroomNotice' ? (
-            <div className="flex flex-col gap-2 text-sm text-[#7a6f68] md:flex-row md:items-center md:gap-3">
-              <label className="font-semibold text-[#5c5c5c]">강의실 카테고리</label>
-              <select
-                className="rounded-2xl border border-[#e9dccf] px-4 py-2"
-                value={selectedClassCategoryId}
-                onChange={(event) => {
-                  const id = event.target.value;
-                  setSelectedClassCategoryId(id);
-                  const category = categoryOptions.find((item) => item.id === id);
-                  setSelectedCourseId(category?.courses[0]?.id ?? '');
-                }}
-              >
-                {categoryOptions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-
-              <label className="font-semibold text-[#5c5c5c]">하위 강좌</label>
-              <select
-                className="rounded-2xl border border-[#e9dccf] px-4 py-2"
-                value={selectedCourseId}
-                onChange={(event) => setSelectedCourseId(event.target.value)}
-              >
-                {courseOptions.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
 
           {activeTab === 'vodVideo' ? (
             <div className="flex flex-col gap-2 text-sm text-[#7a6f68] md:flex-row md:items-center md:gap-3">
