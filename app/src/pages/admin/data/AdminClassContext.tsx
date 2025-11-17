@@ -8,7 +8,15 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { ClassFormPayload, ClassInfo, ClassMutationResult } from '../../../lib/api';
+import {
+  createClass as requestCreateClass,
+  deleteClass as requestDeleteClass,
+  getClasses,
+  updateClass as requestUpdateClass,
+  type ClassFormPayload,
+  type ClassInfo,
+  type ClassMutationResult,
+} from '../../../lib/api';
 
 type AdminClassContextValue = {
   classes: ClassInfo[];
@@ -32,78 +40,66 @@ export const AdminClassProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(false);
+  const loadClasses = useCallback(async () => {
+    setIsLoading(true);
     setError(null);
-    setClasses([]);
-    hasFetchedRef.current = true;
-    return [];
 
-    // try {
-    //   const fetched = await getClasses();
-    //   const sorted = sortClasses(fetched);
-    //   setClasses(sorted);
-    //   hasFetchedRef.current = true;
-    //   return sorted;
-    // } catch (caught) {
-    //   const message = caught instanceof Error ? caught.message : '수업 정보를 불러오지 못했습니다.';
-    //   setError(message);
-    //   setClasses([]);
-    //   hasFetchedRef.current = true;
-    //   throw caught;
-    // } finally {
-    //   setIsLoading(false);
-    // }
+    try {
+      const fetched = await getClasses();
+      const sorted = sortClasses(fetched);
+      setClasses(sorted);
+      hasFetchedRef.current = true;
+      return sorted;
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : '수업 정보를 불러오지 못했습니다.';
+      setError(message);
+      setClasses([]);
+      hasFetchedRef.current = true;
+      throw caught;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  const refresh = useCallback(async () => {
+    return loadClasses();
+  }, [loadClasses]);
 
   useEffect(() => {
     if (!hasFetchedRef.current) {
-      refresh().catch((caught) => {
+      loadClasses().catch((caught) => {
         console.error('[AdminClassProvider] failed to load classes', caught);
       });
     }
-  }, [refresh]);
+  }, [loadClasses]);
 
   const createClass = useCallback(async (payload: ClassFormPayload) => {
-    void payload;
-    hasFetchedRef.current = true;
-    return { success: false, message: '데이터 연동이 비활성화되었습니다.', classInfo: null };
-
-    // const result = await requestCreateClass(payload);
-    // if (result.success && result.classInfo) {
-    //   const record = result.classInfo;
-    //   setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== record.id), record]));
-    //   hasFetchedRef.current = true;
-    // }
-    // return result;
+    const result = await requestCreateClass(payload);
+    if (result.success && result.classInfo) {
+      const record = result.classInfo;
+      setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== record.id), record]));
+      hasFetchedRef.current = true;
+    }
+    return result;
   }, []);
 
   const updateClass = useCallback(async (id: number, payload: ClassFormPayload) => {
-    void id;
-    void payload;
-    hasFetchedRef.current = true;
-    return { success: false, message: '데이터 연동이 비활성화되었습니다.', classInfo: null };
-
-    // const result = await requestUpdateClass(id, payload);
-    // if (result.success && result.classInfo) {
-    //   const record = result.classInfo;
-    //   setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== record.id), record]));
-    //   hasFetchedRef.current = true;
-    // }
-    // return result;
+    const result = await requestUpdateClass(String(id), payload);
+    if (result.success && result.classInfo) {
+      const record = result.classInfo;
+      setClasses((prev) => sortClasses([...prev.filter((item) => item.id !== record.id), record]));
+      hasFetchedRef.current = true;
+    }
+    return result;
   }, []);
 
   const deleteClass = useCallback(async (id: number) => {
-    void id;
-    hasFetchedRef.current = true;
-    return { success: false, message: '데이터 연동이 비활성화되었습니다.', classInfo: null };
-
-    // const result = await requestDeleteClass(id);
-    // if (result.success) {
-    //   setClasses((prev) => prev.filter((item) => item.id !== id));
-    //   hasFetchedRef.current = true;
-    // }
-    // return result;
+    const result = await requestDeleteClass(id);
+    if (result.success) {
+      setClasses((prev) => prev.filter((item) => item.id !== id));
+      hasFetchedRef.current = true;
+    }
+    return result;
   }, []);
 
   const value = useMemo<AdminClassContextValue>(

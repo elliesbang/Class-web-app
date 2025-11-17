@@ -386,20 +386,29 @@ const toClassMutationResult = (
 };
 
 export const createClass = async (payload: ClassFormPayload): Promise<ClassMutationResult> => {
-  void payload;
-  return { success: false, message: '데이터 연동이 비활성화되었습니다.', classInfo: null };
-
-  // const data = await apiFetch('/api/classes/create', { ... });
-  // return toClassMutationResult(data, '수업을 등록하지 못했습니다.', '생성된 수업 정보를 확인할 수 없습니다.');
+  const token = getStoredAuthUser()?.token ?? '';
+  const response = await fetch('/api/classes/create', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
 };
 
-export const updateClass = async (id: number, payload: ClassFormPayload): Promise<ClassMutationResult> => {
-  void id;
-  void payload;
-  return { success: false, message: '데이터 연동이 비활성화되었습니다.', classInfo: null };
-
-  // const data = await apiFetch('/api/classes/update', { ... });
-  // return toClassMutationResult(data, '수업 정보를 수정하지 못했습니다.', '수정된 수업 정보를 확인할 수 없습니다.');
+export const updateClass = async (id: string, payload: ClassFormPayload): Promise<ClassMutationResult> => {
+  const token = getStoredAuthUser()?.token ?? '';
+  const response = await fetch(`/api/classes/${id}/update`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
 };
 
 export const deleteClass = async (id: number): Promise<ClassMutationResult> => {
