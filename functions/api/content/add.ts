@@ -7,21 +7,21 @@ interface Env {
 }
 
 interface Payload {
-  classroom_id?: string | null;
   class_id?: string | null;
+  classroom_id?: string | null;
   type?: string;
   title?: string;
   description?: string | null;
-  url?: string | null;
   content_url?: string | null;
+  url?: string | null;
+  thumbnail_url?: string | null;
   order_num?: number | null;
-  vod_category_id?: string | null;
 }
 
 export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
   handleApi(async () => {
     assertMethod(request, 'POST');
-    // 🔥 Authorization 체크 추가
+
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) {
       return jsonResponse({ error: 'Unauthorized' }, 401);
@@ -29,37 +29,63 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
     const user = await verifyToken(request, env);
     assertRole(user, 'admin');
 
-    const { vod_category_id: _vod_category_id, ...body } = await requireJsonBody<Payload>(request);
+    const body = await requireJsonBody<Payload>(request);
 
-    const {
-      class_id = body?.classroom_id ?? 0,
-      type = '',
-      title = '',
-      url: rawUrl = '',
-      content_url = '',
-      description = '',
-      order_num = 0,
-    } = body || {};
+    // class_id와 classroom_id 자동 통합 처리
+    const classId =
+      body.class_id ??
+      body.classroom_id ??
+      null;
 
-    const resolvedClassId =
-      (body as Record<string, unknown>).class_id ?? body.classroom_id ?? class_id ?? 0;
+    if (!classId) {
+      return jsonResponse({ error: 'Missing class_id' }, 400);
+    }
+
+    // url / content_url / thumbnail_url / description 정규화
     const resolvedUrl =
-      (body as Record<string, unknown>).url ?? rawUrl ?? content_url ?? description ?? '';
+      body.content_url ??
+      body.url ??
+      null;
+
+    const resolvedThumbnail =
+      body.thumbnail_url ?? null;
+
+    const resolvedDescription =
+      body.description ?? null;
+
+    const orderNum = body.order_num ?? 0;
+
+    const type = body.type ?? '';
+    const title = body.title ?? '';
+
+    // created_at / updated_at 강제 설정
+    const now = new Date().toISOString();
 
     await env.DB.prepare(
       `INSERT INTO classroom_content
-      (class_id, type, title, url, order_num)
-      VALUES (?, ?, ?, ?, ?)`
+        (class_id, type, title, description, content_url, thumbnail_url, order_num, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-      .bind(resolvedClassId, type, title, resolvedUrl, order_num)
+      .bind(
+        classId,
+        type,
+        title,
+        resolvedDescription,
+        resolvedUrl,
+        resolvedThumbnail,
+        orderNum,
+        now,
+        now
+      )
       .run();
 
+    // 저장 후 최신 목록 반환
     const { results } = await env.DB.prepare(
       `SELECT * FROM classroom_content
        WHERE class_id = ? AND type = ?
        ORDER BY order_num ASC, created_at DESC`
     )
-      .bind(resolvedClassId, type)
+      .bind(classId, type)
       .all();
 
     return jsonResponse({ results });
