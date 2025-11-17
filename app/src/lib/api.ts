@@ -348,12 +348,19 @@ const toNormalisedClassList = (input: unknown): ClassInfo[] => {
 };
 
 export const getClasses = async (): Promise<ClassInfo[]> => {
-  return [];
+  const response = await fetch('/api/classes');
+  if (!response.ok) {
+    throw new Error('수업 정보를 불러오지 못했습니다.');
+  }
 
-  // try {
-  //   const payload = await apiFetch('/api/classes');
-  //   ...
-  // }
+  const payload = await response.json();
+  const records = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as { results?: unknown[] }).results)
+      ? (payload as { results: unknown[] }).results
+      : (payload as { data?: unknown[] }).data ?? [];
+
+  return normaliseClassList(records);
 };
 
 const serialiseClassPayload = (payload: ClassFormPayload) => ({
@@ -405,7 +412,31 @@ export const createClass = async (payload: ClassFormPayload): Promise<ClassMutat
     body: JSON.stringify(payload),
   });
 
-  return response.json();
+  const data = await response.json().catch(() => null);
+  const idValue = typeof (data as { id?: unknown })?.id !== 'undefined' ? Number((data as { id?: unknown }).id) : null;
+
+  const classInfo: ClassInfo = {
+    id: idValue && Number.isFinite(idValue) ? idValue : Date.now(),
+    name: payload.name,
+    code: payload.code,
+    category: payload.category ?? '',
+    categoryId: payload.categoryId ?? null,
+    startDate: payload.startDate ?? null,
+    endDate: payload.endDate ?? null,
+    duration: payload.duration ?? '',
+    assignmentUploadTime: payload.assignmentUploadTime ?? 'all_day',
+    assignmentUploadDays: payload.assignmentUploadDays ?? [],
+    deliveryMethods: payload.deliveryMethods ?? [],
+    isActive: payload.isActive ?? true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (!response.ok) {
+    return { success: false, message: (data as { message?: string })?.message ?? '수업 생성에 실패했습니다.' };
+  }
+
+  return { success: true, classInfo, message: (data as { message?: string })?.message ?? null };
 };
 
 export const updateClass = async (id: string, payload: ClassFormPayload): Promise<ClassMutationResult> => {
