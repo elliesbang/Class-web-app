@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { getStoredAuthUser } from '../../lib/authUser';
-import type { AssignmentUploadTimeOption, ClassFormPayload, ClassInfo } from '../../lib/api';
+import { createClass, updateClass, type AssignmentUploadTimeOption, type ClassFormPayload, type ClassInfo } from '../../lib/api';
 import { useAdminClasses } from './data/AdminClassContext';
 
 const DELIVERY_METHOD_OPTIONS = ['영상보기', '과제업로드', '피드백보기', '공지보기', '자료보기'];
@@ -96,11 +96,7 @@ const normaliseDays = (input: string[]) => {
 };
 
 const AdminClassManagement = () => {
-  const {
-    classes,
-    isLoading: isClassListLoading,
-    error,
-  } = useAdminClasses();
+  const { classes, isLoading: isClassListLoading, error, refresh } = useAdminClasses();
   const [filters, setFilters] = useState({ name: '', code: '', category: '전체' });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formState, setFormState] = useState<ClassFormState>(() => createInitialFormState(''));
@@ -323,6 +319,7 @@ setCategoryOptions(names);
 
   const handleSave = async (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
+    console.log('🔥 handleSave 실행됨', formState);
 
     if (isSaving || isLoading) {
       return;
@@ -350,30 +347,29 @@ setCategoryOptions(names);
     setFormError(null);
 
     try {
-      void buildPayload();
-      void editingClass;
-      // const result = editingClass
-      //   ? await updateClass(editingClass.id, payload)
-      //   : await createClass(payload);
+      const payload = buildPayload();
+      const result = editingClass
+        ? await updateClass(String(editingClass.id), payload)
+        : await createClass(payload);
 
-      // if (result.success) {
-      //   const successMessage = '저장 완료';
-      //   setFeedbackMessage(successMessage);
-      //   alert(successMessage);
-      //   closeModal();
-      //   resetForm();
-      // } else {
-      //   const message = result.message ?? '수업 정보를 저장하지 못했습니다.';
-      //   console.error('[admin-class] failed to save class', message);
-      //   setFormError(message);
-      //   alert(message);
-      // }
+      if (result.success) {
+        const successMessage = '저장 완료';
+        setFeedbackMessage(successMessage);
+        alert(successMessage);
+        closeModal();
+        resetForm();
+        await handleRefresh();
+      } else {
+        const message = result.message ?? '수업 정보를 저장하지 못했습니다.';
+        console.error('[admin-class] failed to save class', message);
+        setFormError(message);
+        alert(message);
+      }
     } catch (caught) {
-      void caught;
-      // console.error('[admin-class] failed to save class', caught);
-      // const message = caught instanceof Error ? caught.message : '수업 정보를 저장하지 못했습니다.';
-      // setFormError(message);
-      // alert(message);
+      console.error('[admin-class] failed to save class', caught);
+      const message = caught instanceof Error ? caught.message : '수업 정보를 저장하지 못했습니다.';
+      setFormError(message);
+      alert(message);
     } finally {
       setIsSaving(false);
       setIsLoading(false);
@@ -382,7 +378,7 @@ setCategoryOptions(names);
 
   const handleRefresh = async () => {
     setFeedbackMessage(null);
-    // await refresh();
+    await refresh();
   };
 
   const handleDelete = async () => {
@@ -871,8 +867,8 @@ const formatDateTime = (value: string | null | undefined) => {
                   취소
                 </button>
                 <button
-                  type="button"
-                  onClick={handleSave}
+                  type="submit"
+                  disabled={isLoading || isSaving}
                   className="rounded-full bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-colors hover:bg-[#e6bd2c]"
                 >
                   {isSaving ? '저장 중...' : '저장'}
