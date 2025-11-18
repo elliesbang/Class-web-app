@@ -16,7 +16,6 @@ import Home from './pages/home/Home';
 import Classroom from './pages/Classroom';
 import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/admin/Notices';
-import VOD from './pages/vod/VOD';
 import ClassroomDetail from './pages/ClassroomDetail.jsx';
 import AdminLogin from './pages/auth/AdminLogin';
 
@@ -26,7 +25,6 @@ function App() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/classroom" element={<Classroom />} />
-        <Route path="/vod" element={<VOD />} />
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
         <Route path="/mypage" element={<MyPage />} />
