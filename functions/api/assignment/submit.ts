@@ -10,6 +10,7 @@ interface Payload {
   classroom_id?: string;
   link_url?: string | null;
   image_url?: string | null;
+  session_no?: number | string;
 }
 
 export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
@@ -31,14 +32,16 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
 
     const linkUrl = body.link_url ? body.link_url.toString() : null;
     const imageUrl = body.image_url ? body.image_url.toString() : null;
+    const sessionNo = Number(body.session_no ?? 1);
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
 
     await env.DB.prepare(
-      `INSERT INTO assignments (id, classroom_id, student_id, image_url, link_url, created_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+      `INSERT INTO assignments 
+   (id, classroom_id, student_id, session_no, image_url, link_url, created_at)
+   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
     )
-      .bind(id, classroomId, user.user_id, imageUrl, linkUrl, createdAt)
+      .bind(id, classroomId, user.user_id, sessionNo, imageUrl, linkUrl, createdAt)
       .run();
 
     return jsonResponse({ id, classroom_id: classroomId, student_id: user.user_id });

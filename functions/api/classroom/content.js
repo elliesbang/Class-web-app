@@ -9,6 +9,32 @@ export async function onRequest({ request, env }) {
 
   const db = env.DB;
 
+  if (tab === "assignment") {
+    const { results } = await db
+      .prepare(
+        `SELECT * FROM assignments
+     WHERE classroom_id = ?
+     ORDER BY datetime(created_at) DESC`
+      )
+      .bind(classId)
+      .all();
+    return Response.json(results ?? []);
+  }
+
+  if (tab === "feedback") {
+    const { results } = await db
+      .prepare(
+        `SELECT f.*, a.session_no
+     FROM feedback f
+     LEFT JOIN assignments a ON a.id = f.assignment_id
+     WHERE a.classroom_id = ?
+     ORDER BY datetime(f.created_at) DESC`
+      )
+      .bind(classId)
+      .all();
+    return Response.json(results ?? []);
+  }
+
   // 탭 → 실제 테이블명 매핑
   const tableMap = {
     globalNotice: 'global_notice',

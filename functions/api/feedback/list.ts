@@ -19,28 +19,19 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
 
     const url = new URL(request.url);
     const classroomId = url.searchParams.get('classroom_id');
-    let studentId = url.searchParams.get('student_id');
 
     if (!classroomId) {
       throw new ApiError(400, { error: 'classroom_id is required' });
     }
 
-    if (user.role === 'student') {
-      studentId = user.user_id;
-    }
-
-    if (!studentId) {
-      throw new ApiError(400, { error: 'student_id is required' });
-    }
-
     const { results } = await env.DB.prepare(
-      `SELECT f.id, f.assignment_id, f.feedback, f.created_at, a.image_url, a.link_url, a.student_id
-       FROM assignment_feedback f
-       INNER JOIN assignments a ON f.assignment_id = a.id
-       WHERE a.classroom_id = ?1 AND a.student_id = ?2
-       ORDER BY datetime(f.created_at) DESC`,
+      `SELECT f.*, a.session_no
+FROM feedback f
+LEFT JOIN assignments a ON a.id = f.assignment_id
+WHERE a.classroom_id = ?
+ORDER BY datetime(f.created_at) DESC`
     )
-      .bind(classroomId, studentId)
+      .bind(classroomId)
       .all();
 
     return jsonResponse(results ?? []);

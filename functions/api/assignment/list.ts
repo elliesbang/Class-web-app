@@ -21,31 +21,18 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
 
     const url = new URL(request.url);
     const classroomId = url.searchParams.get('classroom_id');
-    let studentId = url.searchParams.get('student_id');
 
     if (!classroomId) {
       throw new ApiError(400, { error: 'classroom_id is required' });
     }
 
-    if (user.role === 'student') {
-      studentId = user.user_id;
-    }
+    const { results } = await env.DB.prepare(
+      `SELECT * FROM assignments
+   WHERE classroom_id = ?
+   ORDER BY datetime(created_at) DESC`
+    )
+      .bind(classroomId)
+      .all();
 
-    const conditions = ['classroom_id = ?1'];
-    const bindings: unknown[] = [classroomId];
-
-    if (studentId) {
-      conditions.push('student_id = ?2');
-      bindings.push(studentId);
-    }
-
-    const query = `
-      SELECT id, classroom_id, student_id, image_url, link_url, created_at
-      FROM assignments
-      WHERE ${conditions.join(' AND ')}
-      ORDER BY datetime(created_at) DESC
-    `;
-
-    const { results } = await env.DB.prepare(query).bind(...bindings).all();
     return jsonResponse(results ?? []);
   });
