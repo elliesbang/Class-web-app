@@ -67,12 +67,21 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
     const timestamp = new Date().toISOString();
 
     await env.DB.prepare(
-      `INSERT INTO assignments
+  `INSERT INTO assignments
    (id, classroom_id, student_id, session_no, image_url, link_url, created_at, updated_at)
-   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
-    )
-      .bind(id, classroomId, studentId, sessionNo, imageUrl, linkUrl, timestamp, timestamp)
-      .run();
+   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+)
+.bind(id, classroomId, studentId, sessionNo, imageUrl, linkUrl, timestamp, timestamp)
+.run();
 
-    return jsonResponse({ success: true });
-  });
+// 🔥 저장된 과제 전체 데이터 반환
+return jsonResponse({
+  id,
+  classroom_id: classroomId,
+  student_id: studentId,
+  session_no: sessionNo,
+  image_url: imageUrl,
+  link_url: linkUrl,
+  created_at: timestamp,
+  updated_at: timestamp,
+});
