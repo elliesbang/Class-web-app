@@ -1,44 +1,68 @@
-import { handleApi, assertMethod, jsonResponse } from '../../_utils/api';
+export async function onRequest({ request, env }) {
+  const url = new URL(request.url);
+  const classId = url.searchParams.get("class_id");
+  const tab = url.searchParams.get("tab");
 
-interface Env {
-  DB: D1Database;
-  JWT_SECRET: string;
-}
+  if (!classId || !tab) {
+    return Response.json([]);
+  }
 
-export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
-  handleApi(async () => {
-    assertMethod(request, 'GET');
+  const db = env.DB;
 
-    const url = new URL(request.url);
+  // TAB 처리
+  switch (tab) {
 
-    // class_id 우선, 없으면 classroom_id 사용
-    const classId =
-      url.searchParams.get('class_id') ??
-      url.searchParams.get('classroom_id') ??
-      null;
-
-    let statement;
-
-    if (classId) {
-      // 🔥 class_id + classroom_id 둘 다 읽음 (호환 모드)
-      statement = env.DB.prepare(
-        `SELECT id, class_id, classroom_id, type, title, description, 
-                content_url, thumbnail_url, vod_category_id, order_num, created_at, updated_at
-         FROM classroom_content
-         WHERE class_id = ?1 OR classroom_id = ?1
-         ORDER BY COALESCE(order_num, 0) ASC, created_at DESC`
-      ).bind(classId);
-    } else {
-      // 전체 조회
-      statement = env.DB.prepare(
-        `SELECT id, class_id, classroom_id, type, title, description, 
-                content_url, thumbnail_url, vod_category_id, order_num, created_at, updated_at
-         FROM classroom_content
-         ORDER BY COALESCE(order_num, 0) ASC, created_at DESC`
-      );
+    case "globalNotice": {
+      const { results } = await db.prepare(
+        `SELECT id, class_id, title, content, created_at 
+         FROM global_notice
+         WHERE class_id = ?
+         ORDER BY datetime(created_at) DESC`
+      ).bind(classId).all();
+      return Response.json(results ?? []);
     }
 
-    const { results } = await statement.all();
+    case "classroomVideo": {
+      const { results } = await db.prepare(
+        `SELECT id, class_id, title, url, thumbnail_url, order_num, created_at
+         FROM classroom_video
+         WHERE class_id = ?
+         ORDER BY COALESCE(order_num, 0) ASC, datetime(created_at) DESC`
+      ).bind(classId).all();
+      return Response.json(results ?? []);
+    }
 
-    return jsonResponse(results ?? []);
-  });
+    case "material": {
+      const { results } = await db.prepare(
+        `SELECT id, class_id, title, file_url, created_at
+         FROM material
+         WHERE class_id = ?
+         ORDER BY datetime(created_at) DESC`
+      ).bind(classId).all();
+      return Response.json(results ?? []);
+    }
+
+    case "classroomNotice": {
+      const { results } = await db.prepare(
+        `SELECT id, class_id, content, created_at
+         FROM classroom_notice
+         WHERE class_id = ?
+         ORDER BY datetime(created_at) DESC`
+      ).bind(classId).all();
+      return Response.json(results ?? []);
+    }
+
+    // VOD는 class_id가 아님
+    case "vodVideo": {
+      const { results } = await db.prepare(
+        `SELECT id, vod_category_id, title, url, thumbnail_url, order_num, created_at
+         FROM vod_video
+         ORDER BY COALESCE(order_num, 0) ASC, datetime(created_at) DESC`
+      ).all();
+      return Response.json(results ?? []);
+    }
+
+    default:
+      return Response.json([]);
+  }
+}
