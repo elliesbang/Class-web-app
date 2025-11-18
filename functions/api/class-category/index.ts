@@ -1,5 +1,4 @@
 import { assertMethod, handleApi, jsonResponse } from '../../_utils/api';
-import { assertRole, verifyToken } from '../../_utils/auth';
 
 interface Env {
   DB: D1Database;
@@ -16,8 +15,9 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
   handleApi(async () => {
     assertMethod(request, 'GET');
 
-    const user = await verifyToken(request, env);
-    assertRole(user, 'admin');
+    // 🔥 인증 제거 (중요)
+    // const user = await verifyToken(request, env);
+    // assertRole(user, 'admin');
 
     const result = await env.DB.prepare(
       `SELECT id, name, parent_id
