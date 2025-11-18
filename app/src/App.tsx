@@ -13,6 +13,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminStatistics from './pages/admin/AdminStatistics';
 import AdminMyPage from './pages/admin/AdminMyPage.jsx';
 import Home from './pages/home/Home';
+import VodPage from './pages/Vod/vod';
 import Classroom from './pages/Classroom';
 import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/admin/Notices';
@@ -31,6 +32,7 @@ function App() {
         <Route path="/admin/my" element={<AdminMyPage />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/login" element={<AdminLogin />} />
+        <Route path="/vod" element={<VodPage />} />
         <Route path="/internal" element={<Navigate to="/classroom" replace />} />
        <Route path="/classroom/:id" element={<ClassroomDetail />} />
       </Route>
