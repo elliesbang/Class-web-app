@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { type AssignmentListItem } from '../../../lib/api';
+import { type AssignmentListItem } from '../../../contexts/SheetsDataContext';
 import { useSheetsData } from '../../../contexts/SheetsDataContext';
 
 export type AssignmentStatus = '미제출' | '제출됨' | '피드백 완료';

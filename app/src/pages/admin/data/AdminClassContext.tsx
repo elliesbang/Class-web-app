@@ -16,7 +16,7 @@ import {
   type ClassFormPayload,
   type ClassInfo,
   type ClassMutationResult,
-} from '../../../lib/api';
+} from '../../../lib/api/class';
 
 type AdminClassContextValue = {
   classes: ClassInfo[];

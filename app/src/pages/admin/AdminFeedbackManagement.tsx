@@ -5,9 +5,8 @@ import CourseResetModal from '../../components/admin/CourseResetModal';
 import AdminModal from '../../components/admin/AdminModal';
 import Toast, { type ToastVariant } from '../../components/admin/Toast';
 import { useAdminData, type Assignment, type Feedback } from './data/AdminDataContext';
-import type { ClassInfo } from '../../lib/api';
-import { createFeedback } from '../../lib/api';
-import { DEFAULT_CLASS_NAME_BY_ID, DEFAULT_CLASS_NAMES } from '../../lib/default-classes';
+import type { ClassInfo } from '../../lib/api/class';
+import { createFeedback } from '../../lib/api/classroom';
 
 type ToastState = {
   message: string;
@@ -235,7 +234,7 @@ const AdminFeedbackManagement = () => {
   }, [assignments, viewTarget]);
 
   const courses = useMemo(() => {
-    const courseSet = new Set<string>(DEFAULT_CLASS_NAMES);
+    const courseSet = new Set<string>();
     assignments.forEach((assignment) => courseSet.add(assignment.course));
     feedbacks.forEach((feedback) => courseSet.add(feedback.course));
     return Array.from(courseSet).sort((a, b) => a.localeCompare(b, 'ko-KR'));
@@ -258,14 +257,7 @@ const AdminFeedbackManagement = () => {
   }, [assignments, feedbacks]);
 
   const classOptions = useMemo(() => {
-    const merged = new Map<number, string>(DEFAULT_CLASS_NAME_BY_ID);
-    fallbackClasses.forEach((item) => {
-      if (!merged.has(item.id)) {
-        merged.set(item.id, item.name);
-      }
-    });
-
-    return Array.from(merged.entries()).map(([id, name]) => ({ id, name }));
+    return fallbackClasses.map((item) => ({ id: item.id, name: item.name }));
   }, [fallbackClasses]);
 
   const filteredFeedbacks = useMemo(() => {
