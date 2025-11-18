@@ -29,7 +29,7 @@ export default function CourseForm({ onSaved }: { [key: string]: any }) {
     setIsSubmitting(true);
 
     try {
-      // const res = await fetch('/api/classes/create', {
+      // const res = await fetch('/.netlify/functions/classes/create', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(form),

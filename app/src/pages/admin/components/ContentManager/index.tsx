@@ -1,11 +1,7 @@
  import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 
-import type {
-  ClassroomMaterial,
-  ClassroomNotice,
-  ClassroomVideo,
-} from '../../../../lib/api/classroom';
+import type { ClassroomMaterial, ClassroomNotice, ClassroomVideo } from '../../../../lib/api/classroom';
 import type { GlobalNotice } from '../../../../lib/api/notice';
 import type { VodVideo } from '../../../../lib/api/vod';
 
@@ -96,7 +92,7 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }) => {
 
     const fetchVodCategories = async () => {
       try {
-        const res = await fetch('/api/vod-category');
+        const res = await fetch('/.netlify/functions/vod-category');
         const data = await res.json();
         setVodCategories(data);
         if (data.length > 0 && selectedVodCategoryId === null) {
@@ -151,7 +147,7 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }) => {
   const handleGlobalNoticeSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/content/add', {
+      const res = await fetch('/.netlify/functions/content/add', {
         method: 'POST',
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -176,7 +172,7 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }) => {
   const handleClassroomVideoSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/content/add', {
+      const res = await fetch('/.netlify/functions/content/add', {
         method: 'POST',
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -200,7 +196,7 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }) => {
   const handleVodVideoSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/vod/add', {
+      const res = await fetch('/.netlify/functions/vod/add', {
         method: 'POST',
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -235,7 +231,7 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }) => {
         ? materialForm.linkUrl
         : materialForm.file?.name ?? '';
 
-      const res = await fetch('/api/content/add', {
+      const res = await fetch('/.netlify/functions/content/add', {
         method: 'POST',
         headers: buildAuthHeaders(),
         body: JSON.stringify({
@@ -259,7 +255,7 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }) => {
   const handleClassroomNoticeSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/content/add', {
+      const res = await fetch('/.netlify/functions/content/add', {
         method: 'POST',
         headers: buildAuthHeaders(),
         body: JSON.stringify({

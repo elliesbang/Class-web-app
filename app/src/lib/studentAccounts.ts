@@ -75,11 +75,11 @@ const mapVodRow = (row: Record<string, unknown>): VodAccountRow => ({
 });
 
 export const getStudents = async ({ signal }: FetchStudentsOptions = {}): Promise<StudentAccountRow[]> => {
-  const rows = await fetchRows('/api/students', signal);
+  const rows = await fetchRows('/.netlify/functions/students', signal);
   return rows.map((row) => mapStudentRow(row as Record<string, unknown>));
 };
 
 export const getVodStudents = async ({ signal }: FetchStudentsOptions = {}): Promise<VodAccountRow[]> => {
-  const rows = await fetchRows('/api/students/vod', signal);
+  const rows = await fetchRows('/.netlify/functions/students/vod', signal);
   return rows.map((row) => mapVodRow(row as Record<string, unknown>));
 };

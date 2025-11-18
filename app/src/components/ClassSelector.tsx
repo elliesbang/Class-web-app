@@ -103,7 +103,7 @@ export default function ClassSelector() {
     // async function fetchCategories() {
     //   setLoading((prev) => ({ ...prev, categories: true }));
     //   try {
-    //     const payload = await apiFetch("/api/categories");
+    //     const payload = await apiFetch("/.netlify/functions/categories");
     //     const nextCategories = extractArrayPayload(payload)
     //       .map((item) => normaliseCategoryItem(item))
     //       .filter((item) => item !== null);
@@ -126,7 +126,7 @@ export default function ClassSelector() {
     // async function fetchClasses() {
     //   setLoading((prev) => ({ ...prev, classes: true }));
     //   try {
-    //     const payload = await apiFetch("/api/classes");
+    //     const payload = await apiFetch("/.netlify/functions/classes");
     //     const nextClasses = extractArrayPayload(payload);
     //     setClasses(nextClasses);
     //   } catch (err) {

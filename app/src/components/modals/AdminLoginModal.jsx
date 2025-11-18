@@ -79,7 +79,7 @@ function AdminLoginModal({ isOpen, onClose }) {
           password,
         };
 
-        const response = await fetch('/api/auth/admin', {
+        const response = await fetch('/.netlify/functions/auth/admin', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

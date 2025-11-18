@@ -72,9 +72,9 @@ const AdminDashboardHome = () => {
       // try {
       //   const classList = DEFAULT_CLASS_LIST;
       //   const [videoResult, materialResult, noticeResult] = await Promise.all([
-      //     fetchDashboardResource<VideoPayload>('/api/videos', 'videos'),
-      //     fetchDashboardResource<MaterialPayload>('/api/materials', 'materials'),
-      //     fetchDashboardResource<NoticePayload>('/api/notices', 'notices'),
+      //     fetchDashboardResource<VideoPayload>('/.netlify/functions/videos', 'videos'),
+      //     fetchDashboardResource<MaterialPayload>('/.netlify/functions/materials', 'materials'),
+      //     fetchDashboardResource<NoticePayload>('/.netlify/functions/notices', 'notices'),
       //   ]);
       //   ...
       // } catch (error) {

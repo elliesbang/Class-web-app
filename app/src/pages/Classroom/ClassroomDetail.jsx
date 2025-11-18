@@ -13,7 +13,7 @@ const AssignmentSubmit = ({ classroomId, onSubmitted }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await fetch('/api/assignment/submit', {
+      await fetch('/.netlify/functions/assignment/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ const AssignmentList = ({ items = [], onChanged }) => {
   const handleDelete = async (assignmentId) => {
     const token = localStorage.getItem('token');
     try {
-      await fetch('/api/assignment/delete', {
+      await fetch('/.netlify/functions/assignment/delete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +103,7 @@ const AssignmentList = ({ items = [], onChanged }) => {
     const nextImage = window.prompt('새 이미지 URL을 입력하세요.');
     if (nextLink === null && nextImage === null) return;
     try {
-      await fetch('/api/assignment/update', {
+      await fetch('/.netlify/functions/assignment/update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,7 +200,7 @@ function ClassroomDetail() {
       setIsLoadingDetail(true);
       setError('');
       try {
-        const response = await fetch(`/api/classroom/detail?class_id=${classroomId}`, {
+        const response = await fetch(`/.netlify/functions/classroom/detail?class_id=${classroomId}`, {
           signal: controller.signal,
         });
         if (!response.ok) {
@@ -233,7 +233,7 @@ function ClassroomDetail() {
       setIsLoadingTabs(true);
       setError('');
       try {
-        const response = await fetch(`/api/classroom/tabs?class_id=${classroomId}`, { signal: controller.signal });
+        const response = await fetch(`/.netlify/functions/classroom/tabs?class_id=${classroomId}`, { signal: controller.signal });
         if (!response.ok) {
           throw new Error('탭 정보를 불러오지 못했습니다.');
         }
@@ -268,7 +268,7 @@ function ClassroomDetail() {
       setError('');
       try {
         const query = new URLSearchParams({ class_id: classroomId, tab: activeTab });
-        const response = await fetch(`/api/classroom/content?${query.toString()}`, { signal: controller.signal });
+        const response = await fetch(`/.netlify/functions/classroom/content?${query.toString()}`, { signal: controller.signal });
         if (!response.ok) {
           throw new Error('탭 콘텐츠를 불러오지 못했습니다.');
         }

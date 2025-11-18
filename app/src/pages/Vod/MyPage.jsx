@@ -61,7 +61,7 @@ export default function VodMyPage() {
     setLoading(true);
     setError(null);
 
-    fetch('/api/getVOD')
+    fetch('/.netlify/functions/getVOD')
       .then((response) => {
         if (!response.ok) {
           throw new Error('VOD 목록을 불러오지 못했습니다.');

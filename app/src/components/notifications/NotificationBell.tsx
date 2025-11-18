@@ -80,7 +80,7 @@ const NotificationBell: React.FC = () => {
       setIsLoading(true);
       setError(null);
       const userId = ensureUserId();
-      const response = await fetch('/api/notifications', {
+      const response = await fetch('/.netlify/functions/notifications', {
         headers: {
           'X-User-Id': userId,
         },
@@ -173,7 +173,7 @@ const NotificationBell: React.FC = () => {
 
       try {
         const userId = ensureUserId();
-      const response = await fetch('/api/notifications/delete', {
+      const response = await fetch('/.netlify/functions/notifications/delete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

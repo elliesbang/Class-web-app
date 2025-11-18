@@ -59,7 +59,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       if (authUser?.token) {
         headers.Authorization = `Bearer ${authUser.token}`;
       }
-      const response = await fetch(`/api/classroom/content?${query.toString()}`, { headers });
+      const response = await fetch(`/.netlify/functions/classroom/content?${query.toString()}`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to load assignments. status=${response.status}`);
       }
@@ -125,7 +125,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
         link_url: trimmedLink || undefined,
       };
 
-      const response = await fetch('/api/assignment/submit', {
+      const response = await fetch('/.netlify/functions/assignment/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

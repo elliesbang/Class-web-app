@@ -16,7 +16,7 @@ export default function AdminMyPage() {
     setLoading(true);
     setError(null);
 
-    fetch('/api/admin')
+    fetch('/.netlify/functions/admin')
       .then((response) => {
         if (!response.ok) {
           throw new Error('대시보드 데이터를 불러오지 못했습니다.');
