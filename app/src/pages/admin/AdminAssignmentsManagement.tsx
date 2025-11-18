@@ -4,7 +4,6 @@ import CourseResetModal from '../../components/admin/CourseResetModal';
 import AdminModal from '../../components/admin/AdminModal';
 import Toast, { type ToastVariant } from '../../components/admin/Toast';
 import { useAdminData, type Assignment, type AssignmentStatus } from './data/AdminDataContext';
-import { DEFAULT_CLASS_NAMES } from '../../lib/default-classes';
 
 const statusBadgeClassName: Record<AssignmentStatus, string> = {
   미제출: 'bg-[#fff5f5] text-[#c43c3c] border border-[#ffd1d1]',
@@ -106,7 +105,7 @@ const AdminAssignmentsManagement = () => {
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const courses = useMemo(() => {
-    const courseSet = new Set<string>(DEFAULT_CLASS_NAMES);
+    const courseSet = new Set<string>();
     assignments.forEach((assignment) => courseSet.add(assignment.course));
     return Array.from(courseSet).sort((a, b) => a.localeCompare(b, 'ko-KR'));
   }, [assignments]);

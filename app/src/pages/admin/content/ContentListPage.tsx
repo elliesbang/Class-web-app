@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { fetchCategories } from '../../../lib/api';
+import { fetchCategories } from '../../../lib/api/category';
 import ContentManager, { type TabKey } from '../components/ContentManager';
 
 type CategoryRecord = { id: number; name: string; parent_id: number | null };

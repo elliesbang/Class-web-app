@@ -1,13 +1,9 @@
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { GripVertical, Trash2 } from 'lucide-react';
 
-import {
-  type ClassroomMaterialRecord,
-  type ClassroomNoticeRecord,
-  type ClassroomVideoRecord,
-  type GlobalNoticeRecord,
-  type VodVideoRecord,
-} from '../../../../lib/contentLibrary';
+import type { ClassroomMaterial, ClassroomNotice, ClassroomVideo } from '../../../../lib/api/classroom';
+import type { GlobalNotice } from '../../../../lib/api/notice';
+import type { VodVideo } from '../../../../lib/api/vod';
 import { getStoredAuthUser } from '../../../../lib/authUser';
 import { useSheetsData } from '../../../../contexts/SheetsDataContext';
 import VodCategorySelector from './VodCategorySelector';
@@ -72,7 +68,7 @@ const formatDisplayDate = (value: string) => {
   }
 };
 
-const sortVideosForDisplay = (list: ClassroomVideoRecord[]) =>
+const sortVideosForDisplay = (list: ClassroomVideo[]) =>
   [...list].sort((a, b) => {
     if (a.displayOrder !== b.displayOrder) {
       return a.displayOrder - b.displayOrder;
@@ -81,7 +77,7 @@ const sortVideosForDisplay = (list: ClassroomVideoRecord[]) =>
   });
 
 const reorderVideoDisplayOrder = (
-  list: ClassroomVideoRecord[],
+  list: ClassroomVideo[],
   courseId: string,
   sourceId: string,
   targetId: string,
@@ -116,11 +112,11 @@ type ContentManagerProps = {
 
 const ContentManager = ({ activeTab, onTabChange, selectedClassId }: ContentManagerProps) => {
   const { contentCollections, refresh } = useSheetsData();
-  const [globalNotices, setGlobalNotices] = useState<GlobalNoticeRecord[]>(contentCollections.globalNotices);
-  const [classroomVideos, setClassroomVideos] = useState<ClassroomVideoRecord[]>(contentCollections.classroomVideos);
-  const [vodVideos, setVodVideos] = useState<VodVideoRecord[]>(contentCollections.vodVideos);
-  const [materials, setMaterials] = useState<ClassroomMaterialRecord[]>(contentCollections.classroomMaterials);
-  const [classroomNotices, setClassroomNotices] = useState<ClassroomNoticeRecord[]>(contentCollections.classroomNotices);
+  const [globalNotices, setGlobalNotices] = useState<GlobalNotice[]>(contentCollections.globalNotices);
+  const [classroomVideos, setClassroomVideos] = useState<ClassroomVideo[]>(contentCollections.classroomVideos);
+  const [vodVideos, setVodVideos] = useState<VodVideo[]>(contentCollections.vodVideos);
+  const [materials, setMaterials] = useState<ClassroomMaterial[]>(contentCollections.classroomMaterials);
+  const [classroomNotices, setClassroomNotices] = useState<ClassroomNotice[]>(contentCollections.classroomNotices);
   const [vodCategories, setVodCategories] = useState<VodCategory[]>([]);
 
   useEffect(() => {
@@ -218,14 +214,14 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }: ContentMana
 
   const filteredClassroomVideos = useMemo(() => {
     if (!selectedClassId) {
-      return [] as ClassroomVideoRecord[];
+      return [] as ClassroomVideo[];
     }
     return sortVideosForDisplay(classroomVideos.filter((video) => video.courseId === selectedClassId));
   }, [classroomVideos, selectedClassId]);
 
   const filteredMaterials = useMemo(() => {
     if (!selectedClassId) {
-      return [] as ClassroomMaterialRecord[];
+      return [] as ClassroomMaterial[];
     }
     return materials
       .filter((material) => material.courseId === selectedClassId)
@@ -235,7 +231,7 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }: ContentMana
 
   const filteredClassroomNotices = useMemo(() => {
     if (!selectedClassId) {
-      return [] as ClassroomNoticeRecord[];
+      return [] as ClassroomNotice[];
     }
     return classroomNotices
       .filter((notice) => notice.courseId === selectedClassId)
@@ -245,7 +241,7 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }: ContentMana
 
   const filteredVodVideos = useMemo(() => {
     if (!selectedVodCategoryId) {
-      return [] as VodVideoRecord[];
+      return [] as VodVideo[];
     }
     const selectedId = String(selectedVodCategoryId);
     return vodVideos

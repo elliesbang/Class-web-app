@@ -8,7 +8,7 @@ import {
   type AssignmentUploadTimeOption,
   type ClassFormPayload,
   type ClassInfo,
-} from '../../lib/api';
+} from '../../lib/api/class';
 import { useAdminClasses } from './data/AdminClassContext';
 
 const DELIVERY_METHOD_OPTIONS = ['영상보기', '과제업로드', '피드백보기', '공지보기', '자료보기'];

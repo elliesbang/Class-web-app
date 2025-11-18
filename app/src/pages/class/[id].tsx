@@ -6,7 +6,7 @@ import {
   filterNoticesByCourse,
   filterVideosByCourse,
   findCourseSummary,
-} from '../../lib/contentLibrary';
+} from '../../lib/api/classroom';
 import { useSheetsData } from '../../contexts/SheetsDataContext';
 
 const tabs = [

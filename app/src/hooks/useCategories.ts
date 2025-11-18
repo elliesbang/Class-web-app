@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { fetchCategories } from '../lib/api';
+import { fetchCategories } from '../lib/api/category';
 
 export type Category = { id: number; name: string; parent_id: number | null };
 

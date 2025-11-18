@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getClasses } from '../lib/api';
+import { getClasses } from '../lib/api/class';
 
 export function useFetchClasses() {
   const [classes, setClasses] = useState<any[]>([]);
