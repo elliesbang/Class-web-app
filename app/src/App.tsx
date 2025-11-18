@@ -14,7 +14,6 @@ import AdminStatistics from './pages/admin/AdminStatistics';
 import AdminMyPage from './pages/admin/AdminMyPage.jsx';
 import Home from './pages/home/Home';
 import Classroom from './pages/Classroom';
-import Michina from './pages/classroom/Michina';
 import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/admin/Notices';
 import VOD from './pages/vod/VOD';
@@ -35,8 +34,7 @@ function App() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/login" element={<AdminLogin />} />
         <Route path="/internal" element={<Navigate to="/classroom" replace />} />
-        <Route path="/internal/michina" element={<Michina />} />
-        <Route path="/classroom/:id" element={<ClassroomDetail />} />
+       <Route path="/classroom/:id" element={<ClassroomDetail />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
