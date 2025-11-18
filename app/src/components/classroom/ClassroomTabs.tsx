@@ -1,3 +1,4 @@
+import AssignmentTab from '@/pages/Classroom/tabs/AssignmentTab';
 import React, { useEffect, useMemo, useState } from 'react';
 import { hasCourseAccess, subscribeCourseAccessChanges } from '@/lib/course-access';
 import { useAuthUser } from '@/hooks/useAuthUser';
@@ -8,11 +9,11 @@ import FeedbackTab from './FeedbackTab';
 import NoticeTab from './NoticeTab';
 
 const TAB_CONFIG: any[] = [
-  { id: 'video', label: 'Video', icon: '🎬', Component: VideoTab },
-  { id: 'materials', label: 'Material', icon: '📂', Component: MaterialTab },
-  { id: 'upload', label: 'Upload', icon: '📝', Component: UploadTab },
-  { id: 'feedback', label: 'Feedback', icon: '💬', Component: FeedbackTab },
-  { id: 'notice', label: 'Notice', icon: '📢', Component: NoticeTab },
+  { id: 'video', label: '강의실 영상', icon: '🎬', Component: VideoTab },
+  { id: 'materials', label: '자료', icon: '📂', Component: MaterialTab },
+  { id: 'notice', label: '강의실 공지', icon: '📢', Component: NoticeTab },
+  { id: 'assignment', label: '과제', icon: '📝', Component: AssignmentTab },
+  { id: 'feedback', label: '피드백', icon: '💬', Component: FeedbackTab },
 ];
 
 function ClassroomTabs({ courseId, courseName, className = '' }: { [key: string]: any }) {
