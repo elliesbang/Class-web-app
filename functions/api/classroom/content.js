@@ -9,54 +9,62 @@ export async function onRequest({ request, env }) {
 
   const db = env.DB;
 
+  // 📌 assignment (제출 목록)
   if (tab === "assignment") {
     const { results } = await db
       .prepare(
-        `SELECT * FROM assignments
-     WHERE classroom_id = ?
-     ORDER BY datetime(created_at) DESC`
+        `SELECT *
+         FROM assignments
+         WHERE classroom_id = ?
+         ORDER BY datetime(created_at) DESC`
       )
       .bind(classId)
       .all();
+
     return Response.json(results ?? []);
   }
 
+  // 📌 feedback (피드백)
   if (tab === "feedback") {
     const { results } = await db
       .prepare(
         `SELECT f.*, a.session_no
-     FROM feedback f
-     LEFT JOIN assignments a ON a.id = f.assignment_id
-     WHERE a.classroom_id = ?
-     ORDER BY datetime(f.created_at) DESC`
+         FROM feedback f
+         LEFT JOIN assignments a ON a.id = f.assignment_id
+         WHERE a.classroom_id = ?
+         ORDER BY datetime(f.created_at) DESC`
       )
       .bind(classId)
       .all();
+
     return Response.json(results ?? []);
   }
 
-  // 탭 → 실제 테이블명 매핑
-  const tableMap = {
-    globalNotice: 'global_notice',
-    classroomVideo: 'classroom_video',
-    vodVideo: 'vod_video',
-    material: 'material',
+  // 📌 탭 → type 매핑
+  const typeMap = {
+    globalNotice: 'globalNotice',
+    classroomVideo: 'video',
     classroomNotice: 'classroom_notice',
+    material: 'material',
   };
 
-  const tableName = tableMap[tab];
-  if (!tableName) {
+  const mappedType = typeMap[tab];
+
+  if (!mappedType) {
     return Response.json([]);
   }
 
-  const stmt = db.prepare(
-    `SELECT id, classroom_id, class_id, type, title, description,
-            content_url, thumbnail_url, order_num, created_at, updated_at
-     FROM ${tableName}
-     WHERE class_id = ? OR classroom_id = ?
-     ORDER BY COALESCE(order_num, 0) ASC, created_at DESC`
-  ).bind(classId, classId);
+  // 📌 이제 통합 테이블에서 type으로 조회
+  const { results } = await db
+    .prepare(
+      `SELECT *
+       FROM classroom_content
+       WHERE (class_id = ? OR classroom_id = ?)
+       AND type = ?
+       ORDER BY COALESCE(order_num, 0) ASC, created_at DESC`
+    )
+    .bind(classId, classId, mappedType)
+    .all();
 
-  const { results } = await stmt.all();
   return Response.json(results ?? []);
 }
