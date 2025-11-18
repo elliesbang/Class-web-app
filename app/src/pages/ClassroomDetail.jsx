@@ -1,6 +1,177 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+const AssignmentSubmit = ({ classroomId, onSubmitted }) => {
+  const [linkUrl, setLinkUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [sessionNo, setSessionNo] = useState('1');
+  const [status, setStatus] = useState('');
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setStatus('제출 중...');
+
+    try {
+      const token = localStorage.getItem('token');
+      await fetch('/api/assignment/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          classroom_id: classroomId,
+          link_url: linkUrl || null,
+          image_url: imageUrl || null,
+          session_no: sessionNo,
+        }),
+      });
+      setStatus('제출 완료');
+      setLinkUrl('');
+      setImageUrl('');
+      if (onSubmitted) {
+        onSubmitted();
+      }
+    } catch (submitError) {
+      setStatus(submitError.message || '제출 중 오류가 발생했습니다.');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-[#f1e6c7] bg-[#fffaf2] p-4 shadow-soft">
+      <h3 className="text-base font-semibold text-ellieGray">과제 제출</h3>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label className="text-sm text-ellieGray/70">회차</label>
+        <select
+          value={sessionNo}
+          onChange={(e) => setSessionNo(e.target.value)}
+          className="rounded-xl border border-[#f1e6c7] px-3 py-2 text-sm text-ellieGray"
+        >
+          {Array.from({ length: 15 }).map((_, i) => (
+            <option key={i + 1} value={i + 1}>{i + 1}회차</option>
+          ))}
+        </select>
+      </div>
+      <input
+        type="url"
+        value={linkUrl}
+        onChange={(e) => setLinkUrl(e.target.value)}
+        placeholder="과제 링크"
+        className="w-full rounded-xl border border-[#f1e6c7] px-3 py-2 text-sm"
+      />
+      <input
+        type="url"
+        value={imageUrl}
+        onChange={(e) => setImageUrl(e.target.value)}
+        placeholder="이미지 URL"
+        className="w-full rounded-xl border border-[#f1e6c7] px-3 py-2 text-sm"
+      />
+      <button
+        type="submit"
+        className="w-full rounded-2xl bg-[#ffd331] px-4 py-2 text-sm font-semibold text-ellieGray shadow-soft"
+      >
+        제출하기
+      </button>
+      {status ? <p className="text-xs text-ellieGray/70">{status}</p> : null}
+    </form>
+  );
+};
+
+const AssignmentList = ({ items = [], onChanged }) => {
+  const handleDelete = async (assignmentId) => {
+    const token = localStorage.getItem('token');
+    try {
+      await fetch('/api/assignment/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ assignment_id: assignmentId }),
+      });
+      if (onChanged) {
+        onChanged();
+      }
+    } catch (error) {
+      console.error('과제 삭제 실패', error);
+    }
+  };
+
+  const handleEdit = async (assignmentId) => {
+    const token = localStorage.getItem('token');
+    const nextLink = window.prompt('새 링크 URL을 입력하세요.');
+    const nextImage = window.prompt('새 이미지 URL을 입력하세요.');
+    if (nextLink === null && nextImage === null) return;
+    try {
+      await fetch('/api/assignment/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ assignment_id: assignmentId, link_url: nextLink, image_url: nextImage }),
+      });
+      if (onChanged) {
+        onChanged();
+      }
+    } catch (error) {
+      console.error('과제 수정 실패', error);
+    }
+  };
+
+  if (items.length === 0) {
+    return <p className="text-sm text-ellieGray/70">등록된 과제가 없습니다.</p>;
+  }
+
+  return (
+    <ul className="flex flex-col gap-3">
+      {items.map((item) => (
+        <li key={item.id} className="rounded-2xl border border-[#f1e6c7] bg-[#fffaf2] p-4 shadow-soft">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-ellieGray">{item.title || '과제 제출'}</p>
+              <p className="text-xs text-ellieGray/70">{item.session_no ? `${item.session_no}회차` : '회차 정보 없음'}</p>
+              {item.link_url ? (
+                <a href={item.link_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#d98200] underline">
+                  제출 링크 열기
+                </a>
+              ) : null}
+              {item.image_url ? (
+                <img src={item.image_url} alt="제출 이미지" className="mt-2 max-h-48 rounded-xl object-contain" />
+              ) : null}
+            </div>
+            <div className="flex gap-2 text-xs font-semibold text-ellieGray">
+              <button onClick={() => handleDelete(item.id)} className="rounded-full bg-[#fff0d6] px-3 py-1 shadow-soft">
+                삭제
+              </button>
+              <button onClick={() => handleEdit(item.id)} className="rounded-full bg-[#ffd331] px-3 py-1 shadow-soft">
+                수정
+              </button>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+const FeedbackList = ({ items = [] }) => {
+  if (items.length === 0) {
+    return <p className="text-sm text-ellieGray/70">등록된 피드백이 없습니다.</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((f) => (
+        <div key={f.id} className="rounded-2xl border border-[#f1e6c7] bg-[#fffaf2] p-4 shadow-soft">
+          <p className="text-sm text-ellieGray">{f.content || f.feedback}</p>
+          <span className="mt-1 inline-block text-xs font-semibold text-ellieGray/70">{f.session_no}회차</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const normalizeResults = (payload) => {
   if (!payload) return [];
   if (Array.isArray(payload)) return payload;
@@ -15,6 +186,7 @@ function ClassroomDetail() {
   const [tabs, setTabs] = useState([]);
   const [activeTab, setActiveTab] = useState('');
   const [tabContent, setTabContent] = useState([]);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isLoadingDetail, setIsLoadingDetail] = useState(true);
   const [isLoadingTabs, setIsLoadingTabs] = useState(true);
   const [isLoadingContent, setIsLoadingContent] = useState(true);
@@ -116,7 +288,7 @@ function ClassroomDetail() {
     loadContent();
 
     return () => controller.abort();
-  }, [classroomId, activeTab]);
+  }, [classroomId, activeTab, reloadKey]);
 
   const renderContentBody = (item) => {
     const title = item.title || item.heading || item.name || '';
@@ -141,6 +313,8 @@ function ClassroomDetail() {
       </li>
     );
   };
+
+  const handleRefreshContent = () => setReloadKey((key) => key + 1);
 
   if (!classroomId) {
     return (
@@ -210,6 +384,13 @@ function ClassroomDetail() {
             <p className="text-sm text-red-500">{error}</p>
           ) : isLoadingContent ? (
             <p className="text-sm text-ellieGray/70">콘텐츠를 불러오는 중입니다...</p>
+          ) : activeTab === 'assignment' ? (
+            <div className="space-y-4">
+              <AssignmentSubmit classroomId={classroomId} onSubmitted={handleRefreshContent} />
+              <AssignmentList items={tabContent} onChanged={handleRefreshContent} />
+            </div>
+          ) : activeTab === 'feedback' ? (
+            <FeedbackList items={tabContent} />
           ) : tabContent.length === 0 ? (
             <p className="text-sm text-ellieGray/70">표시할 콘텐츠가 없습니다.</p>
           ) : (
