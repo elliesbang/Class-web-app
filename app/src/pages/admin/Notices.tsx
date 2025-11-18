@@ -38,7 +38,7 @@ function Notices() {
 
     const fetchNotices = async () => {
       try {
-        const response = await fetch('/api/content/global-notice/list', {
+        const response = await fetch('/.netlify/functions/content/global-notice/list', {
           signal: controller.signal,
         });
 

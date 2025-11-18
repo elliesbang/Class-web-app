@@ -12,7 +12,7 @@ const shouldAttachHeaders = (resource: string): boolean => {
     if (url.origin !== window.location.origin) {
       return false;
     }
-    return url.pathname.startsWith('/api');
+    return url.pathname.startsWith('/.netlify/functions');
   } catch (error) {
     console.warn('[authFetch] Failed to parse request URL', resource, error);
     return false;

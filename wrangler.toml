@@ -1,7 +1,0 @@
-name = "class-elliesbang"
-compatibility_date = "2025-11-16"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "elliesbang-class"
-database_id = "d6b29d8e-84ab-48c2-b003-f0350d65ad89"

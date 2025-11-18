@@ -109,7 +109,7 @@ export const verifyCourseCode = async (courseId: string, code: string): Promise<
   return { ok: true, courseId };
 
   // try {
-  //   const data = await apiFetch('/api/courses/verify', { method: 'POST', body: JSON.stringify({ courseId, code: trimmedCode }) });
+  //   const data = await apiFetch('/.netlify/functions/courses/verify', { method: 'POST', body: JSON.stringify({ courseId, code: trimmedCode }) });
   //   ...
   // } catch (error) {
   //   console.warn('[course-verification] Failed to verify course code.', error);

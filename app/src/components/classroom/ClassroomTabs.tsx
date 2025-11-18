@@ -55,7 +55,7 @@ function ClassroomTabs({ courseId, courseName, className = '' }: { [key: string]
     //
     //   try {
     //     const query = new URLSearchParams({ class_id: String(courseId) });
-    //     const response = await fetch(`/api/students/contents?${query.toString()}`);
+    //     const response = await fetch(`/.netlify/functions/students/contents?${query.toString()}`);
     //     if (!response.ok) {
     //       throw new Error(`Failed to fetch contents. status=${response.status}`);
     //     }

@@ -1,6 +1,6 @@
 import { getStoredAuthUser } from '../authUser';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = '/.netlify/functions';
 
 const resolveUrl = (input: string) => {
   if (/^https?:\/\//.test(input)) {

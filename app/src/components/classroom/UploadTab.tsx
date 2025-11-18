@@ -111,7 +111,7 @@ function UploadTab({ courseId, courseName }: { [key: string]: any }) {
     //
     //   try {
     //     const query = new URLSearchParams({ classId: String(courseId) });
-    //     const response = await fetch(`/api/assignments?${query.toString()}`);
+    //     const response = await fetch(`/.netlify/functions/assignments?${query.toString()}`);
     //     if (!response.ok) {
     //       throw new Error(`Failed to fetch assignments. status=${response.status}`);
     //     }

@@ -80,7 +80,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       try {
         setAdminSubmitting(true);
 
-         const response = await fetch('/api/admin/login', {
+         const response = await fetch('/.netlify/functions/admin/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -152,7 +152,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       setStudentSubmitting(true);
       try {
         await handleRoleLogin(
-          '/api/student/login',
+          '/.netlify/functions/student/login',
           { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
           'student'
         );
@@ -187,7 +187,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       setVodSubmitting(true);
       try {
         await handleRoleLogin(
-          '/api/vod/login',
+          '/.netlify/functions/vod/login',
           { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
           'vod'
         );

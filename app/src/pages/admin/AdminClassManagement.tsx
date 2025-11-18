@@ -157,7 +157,7 @@ const AdminClassManagement = () => {
 
       try {
         const token = getStoredAuthUser()?.token ?? '';
-        const response = await fetch('/api/class-category', {
+        const response = await fetch('/.netlify/functions/class-category', {
           signal: controller.signal,
           headers: { Authorization: `Bearer ${token}` },
         });

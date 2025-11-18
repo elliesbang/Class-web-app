@@ -36,15 +36,15 @@ export default function StudentMyPage() {
     setLoading(true);
     setError(null);
 
-    const classroomUrl = `/api/classroom?student=${encodeURIComponent(studentIdentifier)}`;
-    const assignmentUrl = `/api/assignment-submit?student=${encodeURIComponent(studentIdentifier)}`;
-    const feedbackUrl = `/api/feedback?student=${encodeURIComponent(studentIdentifier)}`;
+    const classroomUrl = `/.netlify/functions/classroom?student=${encodeURIComponent(studentIdentifier)}`;
+    const assignmentUrl = `/.netlify/functions/assignment-submit?student=${encodeURIComponent(studentIdentifier)}`;
+    const feedbackUrl = `/.netlify/functions/feedback?student=${encodeURIComponent(studentIdentifier)}`;
 
     Promise.all([
       fetchJSON(classroomUrl),
       fetchJSON(assignmentUrl),
       fetchJSON(feedbackUrl),
-      fetchJSON('/api/course'),
+      fetchJSON('/.netlify/functions/course'),
     ])
       .then(([classroomData, assignmentData, feedbackData, courseData]) => {
         if (!isMounted) return;

@@ -12,7 +12,7 @@ const VodList = () => {
   const [activeVideo, setActiveVideo] = useState(null); // 모달에서 재생할 영상
 
   useEffect(() => {
-    fetch(`/api/vod/list?category=${selectedCategory}`)
+    fetch(`/.netlify/functions/vod/list?category=${selectedCategory}`)
       .then((res) => res.json())
       .then((json) => setVodList(json.results || []))
       .catch(() => setVodList([]));

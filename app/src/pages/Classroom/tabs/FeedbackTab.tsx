@@ -85,7 +85,7 @@ function FeedbackTab({ courseId, courseName }: { [key: string]: any }) {
     //
     //   try {
     //     const query = new URLSearchParams({ classId: String(courseId) });
-    //     const response = await fetch(`/api/feedback?${query.toString()}`);
+    //     const response = await fetch(`/.netlify/functions/feedback?${query.toString()}`);
     //     if (!response.ok) {
     //       throw new Error(`Failed to fetch feedback. status=${response.status}`);
     //     }
