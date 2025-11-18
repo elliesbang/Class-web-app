@@ -1,92 +1,64 @@
 import { assertMethod, handleApi, jsonResponse, requireJsonBody } from '../../_utils/api';
 import { assertRole, verifyToken } from '../../_utils/auth';
 
-interface Env {
-  DB: D1Database;
-  JWT_SECRET: string;
-}
-
-interface Payload {
-  class_id?: string | null;
-  classroom_id?: string | null;
-  type?: string;
-  title?: string;
-  description?: string | null;
-  content_url?: string | null;
-  url?: string | null;
-  thumbnail_url?: string | null;
-  order_num?: number | null;
-}
-
-export const onRequest: PagesFunction<Env> = async ({ request, env }) =>
-  handleApi(async () => {
+export async function onRequest({ request, env }) {
+  return handleApi(async () => {
     assertMethod(request, 'POST');
 
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
-      return jsonResponse({ error: 'Unauthorized' }, 401);
-    }
+    // 인증
     const user = await verifyToken(request, env);
     assertRole(user, 'admin');
 
-    const body = await requireJsonBody<Payload>(request);
+    const body = await requireJsonBody(request);
 
-    // class_id와 classroom_id 자동 통합 처리
-    const classId =
-      body.class_id ??
-      body.classroom_id ??
-      null;
+    const classId = body.class_id || body.classroom_id;
+    const tab = body.tab; // 관리자 UI가 보내는 탭 이름
+    const title = body.title || '';
+    const description = body.description || '';
+    const url = body.content_url || body.url || null;
+    const thumbnail = body.thumbnail_url || null;
+    const orderNum = body.order_num || 0;
 
     if (!classId) {
       return jsonResponse({ error: 'Missing class_id' }, 400);
     }
+    if (!tab) {
+      return jsonResponse({ error: 'Missing tab' }, 400);
+    }
 
-    // url / content_url / thumbnail_url / description 정규화
-    const resolvedUrl =
-      body.content_url ??
-      body.url ??
-      null;
+    // 탭 → 실제 테이블 매핑
+    const tableMap = {
+      globalNotice: 'global_notice',
+      classroomNotice: 'classroom_notice',
+      classroomVideo: 'classroom_video',
+      vodVideo: 'vod_video',
+      material: 'material',
+    };
 
-    const resolvedThumbnail =
-      body.thumbnail_url ?? null;
+    const table = tableMap[tab];
+    if (!table) {
+      return jsonResponse({ error: 'Invalid tab' }, 400);
+    }
 
-    const resolvedDescription =
-      body.description ?? null;
-
-    const orderNum = body.order_num ?? 0;
-
-    const type = body.type ?? '';
-    const title = body.title ?? '';
-
-    // created_at / updated_at 강제 설정
     const now = new Date().toISOString();
 
     await env.DB.prepare(
-      `INSERT INTO classroom_content
-        (class_id, type, title, description, content_url, thumbnail_url, order_num, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO ${table}
+        (class_id, classroom_id, type, title, description, content_url, thumbnail_url, order_num, created_at, updated_at)
+       VALUES (?1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)`
     )
-      .bind(
-        classId,
-        type,
-        title,
-        resolvedDescription,
-        resolvedUrl,
-        resolvedThumbnail,
-        orderNum,
-        now,
-        now
-      )
+      .bind(classId, tab, title, description, url, thumbnail, orderNum, now)
       .run();
 
     // 저장 후 최신 목록 반환
     const { results } = await env.DB.prepare(
-      `SELECT * FROM classroom_content
-       WHERE class_id = ? AND type = ?
+      `SELECT * FROM ${table}
+       WHERE class_id = ?1
        ORDER BY order_num ASC, created_at DESC`
     )
-      .bind(classId, type)
+      .bind(classId)
       .all();
 
     return jsonResponse({ results });
   });
+}
