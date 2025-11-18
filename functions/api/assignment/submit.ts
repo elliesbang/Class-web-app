@@ -1,6 +1,6 @@
 import { ApiError, assertMethod, handleApi, jsonResponse, requireJsonBody } from '../../_utils/api';
 import { assertRole, verifyToken } from '../../_utils/auth';
-import { uploadImage } from '../_utils/uploadImage';
+import { uploadImage } from '../../_utils/uploadImage';
 
 interface Env {
   DB: D1Database;
