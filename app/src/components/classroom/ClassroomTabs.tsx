@@ -1,12 +1,12 @@
-import AssignmentTab from '@/pages/Classroom/tabs/AssignmentTab';
 import React, { useEffect, useMemo, useState } from 'react';
 import { hasCourseAccess, subscribeCourseAccessChanges } from '@/lib/course-access';
 import { useAuthUser } from '@/hooks/useAuthUser';
-import VideoTab from './VideoTab';
-import MaterialTab from './MaterialTab';
+import AssignmentTab from '@/pages/Classroom/tabs/AssignmentTab';
+import VideoTab from '@/pages/Classroom/tabs/VideoTab';
+import MaterialTab from '@/pages/Classroom/tabs/MaterialTab';
 import UploadTab from './UploadTab';
-import FeedbackTab from './FeedbackTab';
-import NoticeTab from './NoticeTab';
+import FeedbackTab from '@/pages/Classroom/tabs/FeedbackTab';
+import NoticeTab from '@/pages/Classroom/tabs/NoticeTab';
 
 const TAB_CONFIG: any[] = [
   { id: 'video', label: '강의실 영상', icon: '🎬', Component: VideoTab },
