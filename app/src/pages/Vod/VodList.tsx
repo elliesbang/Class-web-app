@@ -6,9 +6,10 @@ const CATEGORY_OPTIONS = [
   { id: 'advanced', label: '심화' },
 ];
 
-const VodPage = () => {
+const VodList = () => {
   const [selectedCategory, setSelectedCategory] = useState('recommended');
   const [vodList, setVodList] = useState([]);
+  const [activeVideo, setActiveVideo] = useState(null); // 모달에서 재생할 영상
 
   useEffect(() => {
     fetch(`/api/vod/list?category=${selectedCategory}`)
@@ -16,6 +17,23 @@ const VodPage = () => {
       .then((json) => setVodList(json.results || []))
       .catch(() => setVodList([]));
   }, [selectedCategory]);
+
+  const openModal = (item: any) => {
+    setActiveVideo(item);
+  };
+
+  const closeModal = () => {
+    setActiveVideo(null);
+  };
+
+  const formatDate = (date: string) => {
+    if (!date) return '';
+    try {
+      return new Date(date).toLocaleDateString('ko-KR');
+    } catch {
+      return '';
+    }
+  };
 
   return (
     <div
@@ -25,7 +43,7 @@ const VodPage = () => {
         margin: '0 auto',
       }}
     >
-      {/* 페이지 제목 */}
+      {/* 제목 */}
       <h2
         style={{
           fontSize: '22px',
@@ -50,7 +68,6 @@ const VodPage = () => {
                 selectedCategory === cat.id ? '#fff4ce' : '#ffffff',
               fontWeight: 600,
               fontSize: '14px',
-              color: '#333',
               boxShadow:
                 selectedCategory === cat.id
                   ? '0 0 0 2px #ffd331 inset'
@@ -63,7 +80,7 @@ const VodPage = () => {
         ))}
       </div>
 
-      {/* VOD 리스트 */}
+      {/* 리스트 */}
       {vodList.length === 0 ? (
         <p
           style={{
@@ -76,52 +93,116 @@ const VodPage = () => {
           등록된 영상이 없습니다.
         </p>
       ) : (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          {vodList.map((item) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {vodList.map((item: any) => (
             <div
               key={item.id}
+              onClick={() => openModal(item)}
               style={{
                 background: '#ffffff',
-                border: '1px solid #eee',
+                padding: '16px 20px',
                 borderRadius: '12px',
-                padding: '18px 20px',
+                border: '1px solid #eee',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
               }}
             >
-              <div
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  color: '#333',
-                  marginBottom: '6px',
-                }}
-              >
-                {item.title}
+              <div>
+                <div
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    marginBottom: '6px',
+                  }}
+                >
+                  {item.title}
+                </div>
+                <div style={{ fontSize: '12px', color: '#999' }}>
+                  {formatDate(item.created_at)}
+                </div>
               </div>
 
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: '14px',
-                  color: '#666',
-                  textDecoration: 'underline',
-                }}
-              >
-                영상 보기
-              </a>
+              <div style={{ fontSize: '20px', color: '#555' }}>▶</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 모달 */}
+      {activeVideo && (
+        <div
+          onClick={closeModal}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px',
+            zIndex: 999,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff',
+              borderRadius: '16px',
+              maxWidth: '700px',
+              width: '100%',
+              padding: '20px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '18px',
+                fontWeight: 700,
+                marginBottom: '14px',
+              }}
+            >
+              {activeVideo.title}
+            </div>
+
+            <div
+              style={{
+                width: '100%',
+                aspectRatio: '16/9',
+                background: '#000',
+                borderRadius: '10px',
+                overflow: 'hidden',
+              }}
+            >
+              <iframe
+                src={activeVideo.url}
+                title={activeVideo.title}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                allowFullScreen
+              />
+            </div>
+
+            <button
+              onClick={closeModal}
+              style={{
+                marginTop: '20px',
+                padding: '10px 16px',
+                width: '100%',
+                background: '#ffd331',
+                borderRadius: '10px',
+                border: 'none',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              닫기
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 };
 
-export default VodPage;
+export default VodList;
