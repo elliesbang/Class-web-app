@@ -29,7 +29,7 @@ function ClassroomContentTab({ tab, Component }: ContentTabProps) {
       setState({ contents: [], loading: true, error: '' });
       try {
         const query = new URLSearchParams({ class_id: classId, tab });
-        const response = await fetch(`/.netlify/functions/classroom/content?${query.toString()}`, {
+        const response = await fetch(`/.netlify/functions/classroom-content?${query.toString()}`, {
           signal: controller.signal,
         });
 
