@@ -90,10 +90,10 @@ function AdminLoginModal({ isOpen, onClose }) {
         setStoredAuthUser({
           user_id: String(data.id ?? data.user_id ?? ''),
           role: data.role ?? 'admin',
-          name: (data.name as string | undefined) ?? '',
-          email: (data.email as string | undefined) ?? email,
-          token: (data.token as string | undefined) ?? String(data.id ?? data.email ?? Date.now()),
-        });
+          name: data.name ?? '',
+          email: data.email ?? email,
+          token: data.token ?? String(data.id ?? data.email ?? Date.now()),
+         });
 
         handleClose();
         navigate('/admin/my');
