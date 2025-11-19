@@ -17,8 +17,15 @@ import VodList from '@/pages/Vod/VodList';
 import Classroom from './pages/Classroom';
 import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/admin/Notices';
-import ClassroomDetail from './pages/Classroom/ClassroomDetail.jsx';
 import AdminLogin from './pages/auth/AdminLogin';
+import ClassroomDetailPage from './pages/Classroom/ClassroomDetailPage';
+import {
+  AssignmentTabRoute,
+  FeedbackTabRoute,
+  MaterialTabRoute,
+  NoticeTabRoute,
+  VideoTabRoute,
+} from './pages/Classroom/ClassroomTabRoutes';
 
 function App() {
   return (
@@ -26,6 +33,14 @@ function App() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/classroom" element={<Classroom />} />
+        <Route path="/classroom/:classId" element={<ClassroomDetailPage />}>
+          <Route index element={<Navigate to="video" replace />} />
+          <Route path="video" element={<VideoTabRoute />} />
+          <Route path="material" element={<MaterialTabRoute />} />
+          <Route path="notice" element={<NoticeTabRoute />} />
+          <Route path="assignment" element={<AssignmentTabRoute />} />
+          <Route path="feedback" element={<FeedbackTabRoute />} />
+        </Route>
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
         <Route path="/mypage" element={<MyPage />} />
@@ -34,7 +49,6 @@ function App() {
         <Route path="/login" element={<AdminLogin />} />
         <Route path="/vod" element={<VodList />} />
         <Route path="/internal" element={<Navigate to="/classroom" replace />} />
-       <Route path="/classroom/:id" element={<ClassroomDetail />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
