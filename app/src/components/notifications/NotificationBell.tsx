@@ -173,7 +173,7 @@ const NotificationBell: React.FC = () => {
 
       try {
         const userId = ensureUserId();
-      const response = await fetch('/.netlify/functions/notifications/delete', {
+      const response = await fetch('/.netlify/functions/notifications-delete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

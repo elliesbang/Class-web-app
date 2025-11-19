@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuthUser } from '../../hooks/useAuthUser';
+import NotificationSettings from '../MyPage/NotificationSettings';
 
 function fetchJSON(url) {
   return fetch(url).then((response) => {
@@ -229,6 +230,8 @@ export default function StudentMyPage() {
           </div>
         </article>
       </section>
+
+      <NotificationSettings />
     </div>
   );
 }
