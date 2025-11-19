@@ -75,7 +75,7 @@ const NotificationSettings: React.FC = () => {
       setIsLoading(true);
       setError(null);
       const userId = getOrCreateUserId();
-      const response = await fetch('/.netlify/functions/user-preferences', {
+      const response = await fetch('/.netlify/functions/notification-settings', {
         headers: {
           'X-User-Id': userId,
         },
@@ -111,7 +111,7 @@ const NotificationSettings: React.FC = () => {
       setMessage(null);
       setError(null);
       const userId = getOrCreateUserId();
-      const response = await fetch('/.netlify/functions/user-preferences', {
+      const response = await fetch('/.netlify/functions/notification-settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
