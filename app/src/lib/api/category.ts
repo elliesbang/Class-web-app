@@ -1,13 +1,19 @@
-import { apiFetch, type ApiFetchOptions } from './apiClient';
+import { supabase } from '../supabaseClient';
 
 export type CategoryRecord = { id: number; name: string; parent_id: number | null };
 
-export async function fetchCategories(options: ApiFetchOptions = {}): Promise<CategoryRecord[]> {
-  const payload = await apiFetch<unknown>('/class-category', options);
-  const raw = Array.isArray(payload) ? payload : Array.isArray((payload as { data?: unknown[] })?.data) ? (payload as { data: unknown[] }).data : [];
+export async function fetchCategories(): Promise<CategoryRecord[]> {
+  const { data, error } = await supabase
+    .from('class_categories')
+    .select('*')
+    .order('order_num', { ascending: true });
 
-  return raw
-    .map((item) => item as Partial<CategoryRecord>)
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? [])
+    .map((item) => item as Partial<CategoryRecord & { order_num?: number }>)
     .filter((item): item is CategoryRecord => item != null && typeof item.id !== 'undefined' && typeof item.name === 'string')
     .map((item) => ({
       id: Number(item.id),

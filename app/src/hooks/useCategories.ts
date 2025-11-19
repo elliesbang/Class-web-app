@@ -24,7 +24,7 @@ export function useCategories(): UseCategoriesResult {
       setError('');
 
       try {
-        const data = await fetchCategories({ signal: controller.signal });
+        const data = await fetchCategories();
         if (!isMounted) return;
 
         setCategories(data);
