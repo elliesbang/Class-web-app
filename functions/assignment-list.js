@@ -10,10 +10,10 @@ export async function onRequest(context) {
       return new Response("Missing class_id", { status: 400 });
     }
 
-    const supabase = createClient(
-      env.SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+      global: { fetch: fetch }
+    });
 
     const { data, error } = await supabase
       .from("assignments")
@@ -22,7 +22,7 @@ export async function onRequest(context) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error(error);
+      console.error("[assignment-list] DB error", error);
       return new Response("DB fetch failed", { status: 500 });
     }
 
@@ -31,7 +31,7 @@ export async function onRequest(context) {
       headers: { "Content-Type": "application/json" }
     });
   } catch (err) {
-    console.error(err);
+    console.error("[assignment-list] Internal Error", err);
     return new Response("Internal Error", { status: 500 });
   }
 }
