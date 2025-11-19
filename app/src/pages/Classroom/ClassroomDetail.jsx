@@ -268,7 +268,7 @@ function ClassroomDetail() {
       setError('');
       try {
         const query = new URLSearchParams({ class_id: classroomId, tab: activeTab });
-        const response = await fetch(`/.netlify/functions/classroom/content?${query.toString()}`, { signal: controller.signal });
+        const response = await fetch(`/.netlify/functions/classroom-content?${query.toString()}`, { signal: controller.signal });
         if (!response.ok) {
           throw new Error('탭 콘텐츠를 불러오지 못했습니다.');
         }

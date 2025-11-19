@@ -59,7 +59,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       if (authUser?.token) {
         headers.Authorization = `Bearer ${authUser.token}`;
       }
-      const response = await fetch(`/.netlify/functions/classroom/content?${query.toString()}`, { headers });
+      const response = await fetch(`/.netlify/functions/classroom-content?${query.toString()}`, { headers });
       if (!response.ok) {
         throw new Error(`Failed to load assignments. status=${response.status}`);
       }

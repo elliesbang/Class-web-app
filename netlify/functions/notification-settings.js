@@ -1,67 +1,75 @@
-import { supabase } from './_supabaseClient.js';
-
-const jsonResponse = (statusCode, body) => ({
-  statusCode,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify(body),
-});
+import { supabase } from './_supabaseClient.js'
 
 const parseBoolean = (value, fallback = false) => {
-  if (typeof value === 'boolean') return value;
-  if (value === 1 || value === '1' || value === 'true') return true;
-  if (value === 0 || value === '0' || value === 'false') return false;
-  return fallback;
-};
+  if (typeof value === 'boolean') return value
+  if (value === 1 || value === '1' || value === 'true') return true
+  if (value === 0 || value === '0' || value === 'false') return false
+  return fallback
+}
 
-export const handler = async (event) => {
-  const userId = event.headers['x-user-id'];
-  if (!userId) {
-    return jsonResponse(400, { message: 'X-User-Id header is required.' });
-  }
+export async function handler(event, context) {
+  try {
+    const userId = event.headers['x-user-id'] || event.headers['X-User-Id']
 
-  if (event.httpMethod === 'GET') {
-    const { data, error } = await supabase
-      .from('user_notification_settings')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error) {
-      return jsonResponse(500, { message: 'Failed to fetch notification settings', error: error.message });
+    if (!userId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'X-User-Id header is required.' })
+      }
     }
 
-    return jsonResponse(200, { data: data ?? null });
-  }
+    if (event.httpMethod === 'GET') {
+      const { data, error } = await supabase
+        .from('notification_settings')
+        .select('user_id, notify_assignment, notify_feedback, notify_global_notice')
+        .eq('user_id', userId)
+        .maybeSingle()
 
-  if (event.httpMethod === 'POST') {
-    let payload;
-    try {
-      payload = JSON.parse(event.body || '{}');
-    } catch (error) {
-      return jsonResponse(400, { message: 'Invalid JSON payload.' });
+      if (error) {
+        throw error
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ data: data || null })
+      }
     }
 
-    const settings = {
-      user_id: userId,
-      notify_assignment: parseBoolean(payload?.notify_assignment),
-      notify_feedback: parseBoolean(payload?.notify_feedback),
-      notify_global_notice: parseBoolean(payload?.notify_global_notice),
-    };
+    if (event.httpMethod === 'POST') {
+      const payload = JSON.parse(event.body || '{}')
+      const preferences = payload.preferences ?? payload
 
-    const { data, error } = await supabase
-      .from('user_notification_settings')
-      .upsert(settings, { onConflict: 'user_id' })
-      .select()
-      .maybeSingle();
+      const settings = {
+        user_id: userId,
+        notify_assignment: parseBoolean(preferences?.notify_assignment),
+        notify_feedback: parseBoolean(preferences?.notify_feedback),
+        notify_global_notice: parseBoolean(preferences?.notify_global_notice)
+      }
 
-    if (error) {
-      return jsonResponse(500, { message: 'Failed to save notification settings', error: error.message });
+      const { data, error } = await supabase
+        .from('notification_settings')
+        .upsert(settings, { onConflict: 'user_id' })
+        .select('user_id, notify_assignment, notify_feedback, notify_global_notice')
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ success: true, data })
+      }
     }
 
-    return jsonResponse(200, { success: true, data });
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    }
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message })
+    }
   }
-
-  return jsonResponse(405, { message: 'Method not allowed' });
-};
+}
