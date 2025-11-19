@@ -10,6 +10,7 @@ const AssignmentTab = ({
   const [linkUrl, setLinkUrl] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [preview, setPreview] = useState('');
+  const [submitMessage, setSubmitMessage] = useState('');
 
   const canSubmit = useMemo(() => !!studentId && (!!linkUrl || !!imageFile), [studentId, linkUrl, imageFile]);
 
@@ -22,10 +23,12 @@ const AssignmentTab = ({
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!canSubmit) return;
+    setSubmitMessage('');
     await onSubmit({ linkUrl, imageFile });
     setLinkUrl('');
     setImageFile(null);
     setPreview('');
+    setSubmitMessage('제출되었습니다.');
   };
 
   return (
@@ -65,6 +68,7 @@ const AssignmentTab = ({
               <img src={preview} alt="preview" className="h-32 w-full rounded-2xl object-cover" />
             ) : null}
           </div>
+          {submitMessage ? <p className="text-xs text-ellieGray/70">{submitMessage}</p> : null}
           <button
             type="submit"
             disabled={!canSubmit || isSubmitting}

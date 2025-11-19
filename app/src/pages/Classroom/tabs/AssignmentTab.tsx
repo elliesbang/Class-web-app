@@ -143,7 +143,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       setImageBase64('');
       setImageName('');
       setSessionNo(SESSION_OPTIONS[0]);
-      setStatusMessage('제출이 완료되었습니다.');
+      setStatusMessage('제출되었습니다.');
       await loadAssignments();
     } catch (error: any) {
       console.error('[AssignmentTab] Failed to submit assignment', error);
