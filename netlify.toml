@@ -2,4 +2,6 @@
   base = "app"
   publish = "dist"
   command = "npm --workspace elliesroom-class run build"
-  functions = "netlify/functions"
+
+[functions]
+  directory = "app/netlify/functions"
