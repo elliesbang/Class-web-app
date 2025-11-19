@@ -1,4 +1,5 @@
 [build]
   base = "app"
-  publish = "app/dist"
+  publish = "dist"
+  command = "npm --workspace elliesroom-class run build"
   functions = "netlify/functions"
