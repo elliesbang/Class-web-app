@@ -1,6 +1,6 @@
-import { createClient } from './_supabaseClient';
+const { createClient } = require('./_supabaseClient');
 
-exports.handler = async () => {
+exports.handler = async (event, context) => {
   try {
     const supabase = createClient();
     const { data, error } = await supabase

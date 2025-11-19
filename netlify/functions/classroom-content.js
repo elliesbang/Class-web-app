@@ -1,6 +1,6 @@
-import { supabase } from './_supabaseClient'
+const { supabase } = require('./_supabaseClient')
 
-export async function handler(event, context) {
+exports.handler = async (event, context) => {
   try {
     if (event.httpMethod !== 'GET') {
       return {

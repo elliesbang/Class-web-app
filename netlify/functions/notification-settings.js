@@ -1,4 +1,4 @@
-import { supabase } from './_supabaseClient'
+const { supabase } = require('./_supabaseClient')
 
 const parseBoolean = (value, fallback = false) => {
   if (typeof value === 'boolean') return value
@@ -7,7 +7,7 @@ const parseBoolean = (value, fallback = false) => {
   return fallback
 }
 
-export async function handler(event, context) {
+exports.handler = async (event, context) => {
   try {
     const userId = event.headers['x-user-id'] || event.headers['X-User-Id']
 
