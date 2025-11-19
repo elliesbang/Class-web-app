@@ -311,6 +311,191 @@ const ContentManager = ({ activeTab, onTabChange, selectedClassId }) => {
   );
 };
 
+/* --- 생략: 위쪽 import, 상태 선언 등 기존 코드 그대로 유지 --- */
+
+return (
+  <div className="flex flex-col gap-6 rounded-3xl bg-white p-6 shadow-md">
+    {/* 상단 탭 */}
+    <div className="flex flex-wrap gap-2">
+      {TAB_ITEMS.map((tab) => (
+        <button
+          key={tab.key}
+          className={`rounded-2xl px-4 py-2 text-sm font-semibold ${
+            activeTab === tab.key
+              ? 'bg-[#ffd331] text-[#404040]'
+              : 'bg-[#f5eee9] text-[#7a6f68] hover:bg-[#ffd331]/80 hover:text-[#404040]'
+          }`}
+          onClick={() => onTabChange(tab.key)}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+
+    {/* VOD 카테고리 */}
+    {activeTab === 'vodVideo' && (
+      <VodCategorySelector
+        categories={vodCategories}
+        selected={selectedVodCategoryId}
+        onChange={setSelectedVodCategoryId}
+      />
+    )}
+
+    {/* -------------------------
+        각 탭별 입력 폼 렌더링
+       ------------------------- */}
+    {/* 전체 공지 */}
+    {activeTab === 'globalNotice' && (
+      <form onSubmit={handleGlobalNoticeSubmit} className="flex flex-col gap-4">
+        <input
+          type="text"
+          placeholder="제목"
+          className="border rounded px-3 py-2"
+          value={globalNoticeForm.title}
+          onChange={(e) =>
+            setGlobalNoticeForm((prev) => ({ ...prev, title: e.target.value }))
+          }
+        />
+        <textarea
+          placeholder="내용"
+          className="border rounded px-3 py-2 h-32"
+          value={globalNoticeForm.content}
+          onChange={(e) =>
+            setGlobalNoticeForm((prev) => ({ ...prev, content: e.target.value }))
+          }
+        />
+        <button className="rounded-full bg-ellieYellow px-4 py-2 font-bold">
+          저장
+        </button>
+      </form>
+    )}
+
+    {/* 강의실 영상 */}
+    {activeTab === 'classroomVideo' && (
+      <form onSubmit={handleClassroomVideoSubmit} className="flex flex-col gap-4">
+        <input
+          type="text"
+          placeholder="제목"
+          className="border rounded px-3 py-2"
+          value={classroomVideoForm.title}
+          onChange={(e) =>
+            setClassroomVideoForm((prev) => ({ ...prev, title: e.target.value }))
+          }
+        />
+        <input
+          type="text"
+          placeholder="영상 URL"
+          className="border rounded px-3 py-2"
+          value={classroomVideoForm.videoUrl}
+          onChange={(e) =>
+            setClassroomVideoForm((prev) => ({ ...prev, videoUrl: e.target.value }))
+          }
+        />
+        <input
+          type="number"
+          placeholder="정렬 순서"
+          className="border rounded px-3 py-2"
+          value={classroomVideoForm.displayOrder}
+          onChange={(e) =>
+            setClassroomVideoForm((prev) => ({ ...prev, displayOrder: e.target.value }))
+          }
+        />
+        <button className="rounded-full bg-ellieYellow px-4 py-2 font-bold">
+          저장
+        </button>
+      </form>
+    )}
+
+    {/* VOD 영상 */}
+    {activeTab === 'vodVideo' && (
+      <form onSubmit={handleVodVideoSubmit} className="flex flex-col gap-4">
+        <input
+          type="text"
+          placeholder="제목"
+          className="border rounded px-3 py-2"
+          value={vodVideoForm.title}
+          onChange={(e) =>
+            setVodVideoForm((prev) => ({ ...prev, title: e.target.value }))
+          }
+        />
+        <textarea
+          placeholder="설명"
+          className="border rounded px-3 py-2"
+          value={vodVideoForm.description}
+          onChange={(e) =>
+            setVodVideoForm((prev) => ({ ...prev, description: e.target.value }))
+          }
+        />
+        <input
+          type="text"
+          placeholder="영상 URL"
+          className="border rounded px-3 py-2"
+          value={vodVideoForm.videoUrl}
+          onChange={(e) =>
+            setVodVideoForm((prev) => ({ ...prev, videoUrl: e.target.value }))
+          }
+        />
+        <button className="rounded-full bg-ellieYellow px-4 py-2 font-bold">
+          저장
+        </button>
+      </form>
+    )}
+
+    {/* 자료 */}
+    {activeTab === 'material' && (
+      <form onSubmit={handleMaterialSubmit} className="flex flex-col gap-4">
+        <input
+          type="text"
+          placeholder="자료 제목"
+          className="border rounded px-3 py-2"
+          value={materialForm.title}
+          onChange={(e) =>
+            setMaterialForm((prev) => ({ ...prev, title: e.target.value }))
+          }
+        />
+        <input
+          type="text"
+          placeholder="링크"
+          className="border rounded px-3 py-2"
+          value={materialForm.linkUrl}
+          onChange={(e) =>
+            setMaterialForm((prev) => ({ ...prev, linkUrl: e.target.value }))
+          }
+        />
+        <button className="rounded-full bg-ellieYellow px-4 py-2 font-bold">
+          저장
+        </button>
+      </form>
+    )}
+
+    {/* 강의실 공지 */}
+    {activeTab === 'classroomNotice' && (
+      <form onSubmit={handleClassroomNoticeSubmit} className="flex flex-col gap-4">
+        <input
+          type="text"
+          placeholder="공지 제목"
+          className="border rounded px-3 py-2"
+          value={classroomNoticeForm.title}
+          onChange={(e) =>
+            setClassroomNoticeForm((prev) => ({ ...prev, title: e.target.value }))
+          }
+        />
+        <textarea
+          placeholder="내용"
+          className="border rounded px-3 py-2"
+          value={classroomNoticeForm.content}
+          onChange={(e) =>
+            setClassroomNoticeForm((prev) => ({ ...prev, content: e.target.value }))
+          }
+        />
+        <button className="rounded-full bg-ellieYellow px-4 py-2 font-bold">
+          저장
+        </button>
+      </form>
+    )}
+  </div>
+);
+
 export default ContentManager;
     
 
