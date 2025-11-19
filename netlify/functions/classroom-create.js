@@ -1,6 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('./_supabaseClient');
 
-export async function handler(event, context) {
+exports.handler = async (event, context) => {
   try {
     if (event.httpMethod !== 'POST') {
       return {
