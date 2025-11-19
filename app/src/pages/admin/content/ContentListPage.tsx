@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { fetchCategories } from '../../../lib/api/category';
+import { getCategories } from '@/lib/api/category';
 import ContentManager, { type TabKey } from '../components/ContentManager';
 
 type CategoryRecord = { id: number; name: string; parent_id: number | null };
@@ -13,27 +13,40 @@ const ContentListPage = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('globalNotice');
 
   useEffect(() => {
-    const controller = new AbortController();
-    setIsLoading(true);
-    setError(null);
+    let isMounted = true;
 
-    fetchCategories({ signal: controller.signal })
-      .then((records) => {
+    const loadCategories = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const records = await getCategories();
+        if (!isMounted) return;
+
         setCategories(records);
         const firstSubCategory = records
           .filter((item) => item.parent_id !== null)
           .sort((a, b) => a.name.localeCompare(b.name, 'ko', { sensitivity: 'base' }))
           .at(0);
         setSelectedCategoryId((firstSubCategory?.id ?? '').toString());
-      })
-      .catch((caught) => {
+      } catch (caught) {
+        if (!isMounted) return;
+
         console.error('[content] failed to fetch categories', caught);
         setError('카테고리를 불러오지 못했습니다.');
         setCategories([]);
-      })
-      .finally(() => setIsLoading(false));
+      } finally {
+        if (!isMounted) return;
 
-    return () => controller.abort();
+        setIsLoading(false);
+      }
+    };
+
+    void loadCategories();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const categoryOptions = useMemo(
