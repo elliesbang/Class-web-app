@@ -11,14 +11,20 @@ export async function handler(event, context) {
 
     const body = JSON.parse(event.body || '{}');
 
-    // 날짜는 null 또는 그대로 문자열로 전달
+    // --- 🔥 공통 Normalizer ---
+    const normalizeInt = (v) => {
+      if (v === '' || v === null || v === undefined) return null;
+      const n = Number(v);
+      return Number.isNaN(n) ? null : n;
+    };
+
     const normalizeDate = (v) => {
       if (!v || v === '') return null;
-      return v; // '2025-01-20' 같은 문자열 그대로 저장
+      return v;
     };
 
     const normalizeArray = (v) => {
-      if (!v) return [];
+      if (!v || v === '') return [];
       if (Array.isArray(v)) return v;
       return [v];
     };
@@ -35,22 +41,25 @@ export async function handler(event, context) {
           name: body.name ?? '',
           code: body.code ?? '',
           category: body.category ?? '',
-          category_id: body.category_id ? Number(body.category_id) : null,
+
+          // 🔥 Integer는 무조건 normalizeInt로
+          category_id: normalizeInt(body.category_id),
 
           // 🔥 날짜는 문자열 또는 null
           start_date: normalizeDate(body.startDate),
           end_date: normalizeDate(body.endDate),
 
-          // 🔥 업로드 시간은 문자열 그대로
-          assignment_upload_time: body.assignmentUploadTime ?? 'all_day',
+          // 🔥 업로드 시간은 문자열 또는 null
+          assignment_upload_time:
+            body.assignmentUploadTime === '' ? null : body.assignmentUploadTime ?? 'all_day',
 
-          // 🔥 배열로 저장
+          // 🔥 배열 처리
           assignment_upload_days: normalizeArray(body.assignmentUploadDays),
 
-          // 🔥 배열로 저장
+          // 🔥 배열 처리
           delivery_methods: normalizeArray(body.deliveryMethods),
 
-          // 🔥 boolean 그대로 저장
+          // 🔥 boolean
           is_active: body.isActive === undefined ? true : Boolean(body.isActive),
         },
       ])
