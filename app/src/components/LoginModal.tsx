@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { setStoredAuthUser } from '../lib/authUser';
+import { supabase } from '../lib/supabaseClient';
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95 },
@@ -80,21 +81,23 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       try {
         setAdminSubmitting(true);
 
-         const response = await fetch('/.netlify/functions/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: adminEmail.trim(),
-            password: adminPassword
-          }),
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', adminEmail.trim())
+          .eq('password', adminPassword)
+          .eq('role', 'admin')
+          .single();
+
+        if (error || !data) throw new Error('LOGIN_FAILED');
+
+        setStoredAuthUser({
+          user_id: String(data.id ?? data.user_id ?? ''),
+          role: data.role ?? 'admin',
+          name: (data.name as string | undefined) ?? '',
+          email: (data.email as string | undefined) ?? adminEmail,
+          token: (data.token as string | undefined) ?? String(data.id ?? data.email ?? Date.now()),
         });
-
-        if (!response.ok) throw new Error('LOGIN_FAILED');
-
-        const data = await response.json();
-        if (!data?.token) throw new Error('INVALID_RESPONSE');
-
-        setStoredAuthUser(data);
         closeModal();
         navigate('/admin/my');
       } catch (error) {
@@ -112,19 +115,24 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
    * 공통 로그인 처리(student / vod)
    * ------------------------ */
   const handleRoleLogin = useCallback(
-    async (endpoint: string, payload: Record<string, string>, role: 'student' | 'vod') => {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+    async (payload: { name: string; email: string; password: string }, role: 'student' | 'vod') => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', payload.email)
+        .eq('password', payload.password)
+        .eq('role', role)
+        .single();
+
+      if (error || !data) throw new Error('LOGIN_FAILED');
+
+      setStoredAuthUser({
+        user_id: String(data.id ?? data.user_id ?? ''),
+        role: data.role ?? role,
+        name: (data.name as string | undefined) ?? payload.name,
+        email: (data.email as string | undefined) ?? payload.email,
+        token: (data.token as string | undefined) ?? String(data.id ?? data.email ?? Date.now()),
       });
-
-      if (!response.ok) throw new Error('LOGIN_FAILED');
-
-      const data = await response.json();
-      if (!data?.token) throw new Error('INVALID_RESPONSE');
-
-      setStoredAuthUser(data);
       closeModal();
       navigate(role === 'vod' ? '/vod' : '/my');
     },
@@ -151,11 +159,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
 
       setStudentSubmitting(true);
       try {
-        await handleRoleLogin(
-          '/.netlify/functions/student/login',
-          { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
-          'student'
-        );
+        await handleRoleLogin({ name: trimmedName, email: trimmedEmail, password: trimmedPassword }, 'student');
       } catch (e) {
         console.error(e);
         setStudentError('로그인에 실패했습니다.');
@@ -186,11 +190,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
 
       setVodSubmitting(true);
       try {
-        await handleRoleLogin(
-          '/.netlify/functions/vod/login',
-          { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
-          'vod'
-        );
+        await handleRoleLogin({ name: trimmedName, email: trimmedEmail, password: trimmedPassword }, 'vod');
       } catch (e) {
         console.error(e);
         setVodError('로그인에 실패했습니다.');

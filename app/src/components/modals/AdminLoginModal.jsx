@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { setStoredAuthUser } from '../../lib/authUser';
+import { supabase } from '../../lib/supabaseClient';
 
 const MODAL_ROOT_ID = 'modal-root';
 
@@ -74,29 +75,25 @@ function AdminLoginModal({ isOpen, onClose }) {
       setIsSubmitting(true);
 
       try {
-        const credentials = {
-          email: email.trim(),
-          password,
-        };
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email.trim())
+          .eq('password', password)
+          .eq('role', 'admin')
+          .single();
 
-        const response = await fetch('/.netlify/functions/auth/admin', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(credentials),
-        });
-
-        if (!response.ok) {
+        if (error || !data) {
           throw new Error('LOGIN_FAILED');
         }
 
-        const data = await response.json();
-        if (!data?.token) {
-          throw new Error('INVALID_RESPONSE');
-        }
-
-        setStoredAuthUser(data);
+        setStoredAuthUser({
+          user_id: String(data.id ?? data.user_id ?? ''),
+          role: data.role ?? 'admin',
+          name: (data.name as string | undefined) ?? '',
+          email: (data.email as string | undefined) ?? email,
+          token: (data.token as string | undefined) ?? String(data.id ?? data.email ?? Date.now()),
+        });
 
         handleClose();
         navigate('/admin/my');
