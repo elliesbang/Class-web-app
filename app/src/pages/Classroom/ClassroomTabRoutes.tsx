@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 
 import AssignmentTab from './tabs/AssignmentTab';
 import { FeedbackTab, MaterialTab, NoticeTab, VideoTab } from './tabs';
