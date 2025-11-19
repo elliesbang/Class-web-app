@@ -11,10 +11,16 @@ export async function handler(event, context) {
 
     const body = JSON.parse(event.body || '{}');
 
-    const toInt = (v) => {
-      if (v === '' || v === undefined || v === null) return null;
-      const n = parseInt(v, 10);
-      return isNaN(n) ? null : n;
+    // 날짜는 null 또는 그대로 문자열로 전달
+    const normalizeDate = (v) => {
+      if (!v || v === '') return null;
+      return v; // '2025-01-20' 같은 문자열 그대로 저장
+    };
+
+    const normalizeArray = (v) => {
+      if (!v) return [];
+      if (Array.isArray(v)) return v;
+      return [v];
     };
 
     const supabase = createClient(
@@ -26,17 +32,26 @@ export async function handler(event, context) {
       .from('classes')
       .insert([
         {
-          name: body.name,
-          code: body.code,
-          category: body.category,
-          category_id: toInt(body.category_id),
-          start_date: toInt(body.start_date),
-          end_date: toInt(body.end_date),
-          duration: toInt(body.duration),
-          assignment_upload_time: toInt(body.assignment_upload_time),
-          assignment_upload_days: toInt(body.assignment_upload_days),
-          delivery_methods: body.delivery_methods || '',
-          is_active: toInt(body.is_active),
+          name: body.name ?? '',
+          code: body.code ?? '',
+          category: body.category ?? '',
+          category_id: body.category_id ? Number(body.category_id) : null,
+
+          // 🔥 날짜는 문자열 또는 null
+          start_date: normalizeDate(body.startDate),
+          end_date: normalizeDate(body.endDate),
+
+          // 🔥 업로드 시간은 문자열 그대로
+          assignment_upload_time: body.assignmentUploadTime ?? 'all_day',
+
+          // 🔥 배열로 저장
+          assignment_upload_days: normalizeArray(body.assignmentUploadDays),
+
+          // 🔥 배열로 저장
+          delivery_methods: normalizeArray(body.deliveryMethods),
+
+          // 🔥 boolean 그대로 저장
+          is_active: body.isActive === undefined ? true : Boolean(body.isActive),
         },
       ])
       .select();
