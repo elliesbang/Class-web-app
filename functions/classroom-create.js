@@ -1,15 +1,15 @@
 const { createClient } = require('./_supabaseClient');
 
-exports.handler = async (event, context) => {
+export async function onRequest(context) {
   try {
-    if (event.httpMethod !== 'POST') {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: 'Method Not Allowed' }),
-      };
+    if (context.request.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+        status: 405,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    const body = JSON.parse(event.body || '{}');
+    const body = await context.request.json();
 
     // --- 🔥 공통 Normalizer ---
     const normalizeInt = (v) => {
@@ -66,21 +66,21 @@ exports.handler = async (event, context) => {
       .select();
 
     if (error) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: error.message }),
-      };
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ ok: true, data }),
-    };
+    return new Response(JSON.stringify({ ok: true, data }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
   } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
-    };
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
