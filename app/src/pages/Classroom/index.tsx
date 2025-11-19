@@ -1,17 +1,12 @@
 import React, { useMemo, useState } from 'react';
 
 import AccordionItem from '../../components/classroom/AccordionItem';
-import ClassroomTabs from '../../components/classroom/ClassroomTabs';
 import useCategories from '../../hooks/useCategories';
 import ClassroomSubCategories from './ClassroomSubCategories';
-import AssignmentTab from './tabs/AssignmentTab';
 
 function ClassroomPage() {
   const { categories, loading, error } = useCategories();
   const [openParentId, setOpenParentId] = useState<number | null>(null);
-  const classId = '';
-  const courseName = '';
-  const activeTab = '';
 
   const groupedCategories = useMemo(() => {
     const parents = categories.filter((category) => category.parent_id === null);
@@ -69,8 +64,6 @@ function ClassroomPage() {
             </div>
           )}
         </section>
-        <ClassroomTabs courseId={classId} courseName={courseName} />
-        {activeTab === 'assignment' && <AssignmentTab classId={classId} />}
       </div>
     </div>
   );
