@@ -3,10 +3,11 @@ const { createClient } = require('./_supabaseClient');
 exports.handler = async (event, context) => {
   try {
     const supabase = createClient();
+
     const { data, error } = await supabase
       .from('vod_category')
       .select('*')
-      .order('order_num', { ascending: true });
+      .order('sort_order', { ascending: true }); // ← 수정됨!
 
     if (error) throw error;
 
