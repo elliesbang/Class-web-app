@@ -2,15 +2,17 @@ import { supabase } from '../supabaseClient';
 
 export type CategoryRecord = { id: number; name: string; parent_id: number | null };
 
-export async function fetchCategories(): Promise<CategoryRecord[]> {
+export const getCategories = async (): Promise<CategoryRecord[]> => {
   const { data, error } = await supabase
     .from('class_categories')
     .select('*')
     .order('order_num', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CategoryRecord[];
+};
 
-  if (error) {
-    throw new Error(error.message);
-  }
+export async function fetchCategories(): Promise<CategoryRecord[]> {
+  const data = await getCategories();
 
   return (data ?? [])
     .map((item) => item as Partial<CategoryRecord & { order_num?: number }>)

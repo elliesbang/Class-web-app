@@ -1,6 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStoredAuthUser } from '../../lib/authUser';
 import {
   createClass,
   deleteClass,
@@ -9,6 +8,7 @@ import {
   type ClassFormPayload,
   type ClassInfo,
 } from '../../lib/api/class';
+import { getCategories } from '@/lib/api/category';
 import { useAdminClasses } from './data/AdminClassContext';
 
 const DELIVERY_METHOD_OPTIONS = ['영상보기', '과제업로드', '피드백보기', '공지보기', '자료보기'];
@@ -156,22 +156,10 @@ const AdminClassManagement = () => {
       setCategoryError(null);
 
       try {
-        const token = getStoredAuthUser()?.token ?? '';
-        const response = await fetch('/.netlify/functions/class-category', {
-          signal: controller.signal,
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const raw = await getCategories();
         if (!isMounted) {
           return;
         }
-        if (!response.ok) {
-          throw new Error('카테고리를 불러오지 못했습니다.');
-        }
-        const payload = await response.json();
-        if (!isMounted) {
-          return;
-        }
-        const raw = Array.isArray(payload) ? payload : [];
 
         const subCategories = raw
           .map((item) => item as Partial<ClassCategoryRecord>)
