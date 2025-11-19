@@ -1,15 +1,35 @@
-const { supabase } = require('./_supabaseClient')
+import { createClient } from '@supabase/supabase-js'
 
-exports.handler = async (event, context) => {
+const getSupabaseClient = (env) => {
+  const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
+  const key =
+    env.SUPABASE_SERVICE_ROLE_KEY ??
+    env.SUPABASE_KEY ??
+    env.SUPABASE_ANON_KEY ??
+    env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
+    env.VITE_SUPABASE_ANON_KEY
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables')
+  }
+
+  return createClient(url, key)
+}
+
+const jsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
+
+export const onRequest = async ({ request, env }) => {
   try {
-    if (event.httpMethod !== 'POST') {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: 'Method not allowed' })
-      }
+    if (request.method !== 'POST') {
+      return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
-    const { email, password } = JSON.parse(event.body)
+    const { email, password } = await request.json()
+    const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
       .from('users')
@@ -19,20 +39,11 @@ exports.handler = async (event, context) => {
       .single()
 
     if (error || !data) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Invalid credentials' })
-      }
+      return jsonResponse({ error: 'Invalid credentials' }, 401)
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, user: data })
-    }
+    return jsonResponse({ success: true, user: data })
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    }
+    return jsonResponse({ error: error.message }, 500)
   }
 }

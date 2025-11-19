@@ -1,37 +1,48 @@
-const { supabase } = require('./_supabaseClient')
+import { createClient } from '@supabase/supabase-js'
 
-exports.handler = async (event, context) => {
+const getSupabaseClient = (env) => {
+  const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
+  const key =
+    env.SUPABASE_SERVICE_ROLE_KEY ??
+    env.SUPABASE_KEY ??
+    env.SUPABASE_ANON_KEY ??
+    env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
+    env.VITE_SUPABASE_ANON_KEY
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables')
+  }
+
+  return createClient(url, key)
+}
+
+const jsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
+
+export const onRequest = async ({ request, env }) => {
   try {
-    if (event.httpMethod !== 'POST' && event.httpMethod !== 'DELETE') {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: 'Method not allowed' })
-      }
+    if (request.method !== 'POST' && request.method !== 'DELETE') {
+      return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
-    const { id } = JSON.parse(event.body || '{}')
+    const { id } = await request.json().catch(() => ({}))
 
     if (!id) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Notification id is required.' })
-      }
+      return jsonResponse({ error: 'Notification id is required.' }, 400)
     }
 
+    const supabase = getSupabaseClient(env)
     const { error } = await supabase.from('notifications').delete().eq('id', id)
 
     if (error) {
       throw error
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true })
-    }
+    return jsonResponse({ success: true })
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    }
+    return jsonResponse({ error: error.message }, 500)
   }
 }

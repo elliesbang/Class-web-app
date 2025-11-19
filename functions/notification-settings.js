@@ -1,4 +1,26 @@
-const { supabase } = require('./_supabaseClient')
+import { createClient } from '@supabase/supabase-js'
+
+const getSupabaseClient = (env) => {
+  const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
+  const key =
+    env.SUPABASE_SERVICE_ROLE_KEY ??
+    env.SUPABASE_KEY ??
+    env.SUPABASE_ANON_KEY ??
+    env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
+    env.VITE_SUPABASE_ANON_KEY
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables')
+  }
+
+  return createClient(url, key)
+}
+
+const jsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
 
 const parseBoolean = (value, fallback = false) => {
   if (typeof value === 'boolean') return value
@@ -7,18 +29,17 @@ const parseBoolean = (value, fallback = false) => {
   return fallback
 }
 
-exports.handler = async (event, context) => {
+export const onRequest = async ({ request, env }) => {
   try {
-    const userId = event.headers['x-user-id'] || event.headers['X-User-Id']
+    const userId = request.headers.get('x-user-id') || request.headers.get('X-User-Id')
 
     if (!userId) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'X-User-Id header is required.' })
-      }
+      return jsonResponse({ error: 'X-User-Id header is required.' }, 400)
     }
 
-    if (event.httpMethod === 'GET') {
+    const supabase = getSupabaseClient(env)
+
+    if (request.method === 'GET') {
       const { data, error } = await supabase
         .from('notification_settings')
         .select('user_id, notify_assignment, notify_feedback, notify_global_notice')
@@ -29,14 +50,13 @@ exports.handler = async (event, context) => {
         throw error
       }
 
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ data: data || null })
-      }
+      return jsonResponse({ data: data || null })
     }
 
-    if (event.httpMethod === 'POST') {
-      const payload = JSON.parse(event.body || '{}')
+    if (request.method === 'POST') {
+      const payload = await request
+        .json()
+        .catch(() => ({}))
       const preferences = payload.preferences ?? payload
 
       const settings = {
@@ -56,20 +76,11 @@ exports.handler = async (event, context) => {
         throw error
       }
 
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ success: true, data })
-      }
+      return jsonResponse({ success: true, data })
     }
 
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    }
+    return jsonResponse({ error: 'Method not allowed' }, 405)
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    }
+    return jsonResponse({ error: error.message }, 500)
   }
 }
