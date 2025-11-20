@@ -58,12 +58,16 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       if (authUser?.token) {
         headers.Authorization = `Bearer ${authUser.token}`;
       }
-      const response = await fetch(`/functions/assignment-list?class_id=${classId}`, {
+
+      // ⭐ 수정됨 — Cloudflare Pages Functions 라우트 규칙 적용
+      const response = await fetch(`/assignment-list?class_id=${classId}`, {
         headers,
       });
+
       if (!response.ok) {
         throw new Error(`Failed to load assignments. status=${response.status}`);
       }
+
       const payload = await response.json();
       setAssignments(Array.isArray(payload) ? payload : []);
     } catch (error: any) {
@@ -126,7 +130,8 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
         link_url: trimmedLink || undefined,
       };
 
-      const response = await fetch(`/functions/assignment-submit`, {
+      // ⭐ 수정됨 — Cloudflare Pages Functions 라우트 규칙 적용
+      const response = await fetch(`/assignment-submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
