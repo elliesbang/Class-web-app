@@ -34,10 +34,12 @@ export const onRequest = async ({ request, env }) => {
     }
 
     const { data, error } = await supabase
-      .from('classroom_videos')
+      .from('classroom_content')
       .select('*')
-      .eq('classroom_id', classroomId)
-      .order('order_num', { ascending: true })
+      .eq('class_id', classroomId)
+      .eq('type', 'video')
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: false })
 
     if (error) {
       throw error

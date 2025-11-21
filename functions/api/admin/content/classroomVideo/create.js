@@ -24,22 +24,23 @@ export const onRequest = async ({ request, env }) => {
       return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
-    const { category_id, title, video_url, description } = await request.json()
+    const { classroom_id, title, video_url, description, display_order } = await request.json()
 
-    if (!category_id || !title || !video_url) {
-      return jsonResponse({ error: 'category_id, title, and video_url are required' }, 400)
+    if (!classroom_id || !title || !video_url) {
+      return jsonResponse({ error: 'classroom_id, title, and video_url are required' }, 400)
     }
 
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('classroom_contents')
+      .from('classroom_content')
       .insert({
         type: 'video',
-        category_id,
+        class_id: classroom_id,
         title,
-        video_url,
+        url: video_url,
         description: description ?? null,
+        display_order: display_order ?? null,
         created_at: new Date().toISOString()
       })
       .select()

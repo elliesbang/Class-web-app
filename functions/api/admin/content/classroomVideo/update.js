@@ -32,26 +32,30 @@ export const onRequest = async ({ request, env }) => {
       return jsonResponse({ error: 'ID is required' }, 400)
     }
 
-    const { category_id, title, video_url, description } = await request.json()
+    const { classroom_id, title, video_url, description, display_order } = await request.json()
 
     if (!title || !video_url) {
       return jsonResponse({ error: 'title and video_url are required' }, 400)
     }
 
-    const updates = { title, video_url }
+    const updates = { title, url: video_url }
 
-    if (typeof category_id !== 'undefined') {
-      updates.category_id = category_id
+    if (typeof classroom_id !== 'undefined') {
+      updates.class_id = classroom_id
     }
 
     if (typeof description !== 'undefined') {
       updates.description = description
     }
 
+    if (typeof display_order !== 'undefined') {
+      updates.display_order = display_order
+    }
+
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('classroom_contents')
+      .from('classroom_content')
       .update(updates)
       .eq('id', id)
       .eq('type', 'video')

@@ -27,9 +27,10 @@ export const onRequest = async ({ request, env }) => {
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('global_notice')
-      .select('id, title, content, isImportant, createdAt')
-      .order('createdAt', { ascending: false })
+      .from('classroom_content')
+      .select('*')
+      .eq('type', 'global_notice')
+      .order('created_at', { ascending: false })
 
     if (error) throw error
 

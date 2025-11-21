@@ -32,7 +32,7 @@ export const onRequest = async ({ request, env }) => {
       return jsonResponse({ error: 'ID is required' }, 400)
     }
 
-    const { title, content } = await request.json()
+    const { title, content, is_visible } = await request.json()
 
     if (!title || !content) {
       return jsonResponse({ error: 'title and content are required' }, 400)
@@ -41,9 +41,14 @@ export const onRequest = async ({ request, env }) => {
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('notifications')
-      .update({ title, content })
+      .from('classroom_content')
+      .update({
+        title,
+        content,
+        is_visible: typeof is_visible === 'boolean' ? is_visible : undefined
+      })
       .eq('id', id)
+      .eq('type', 'global_notice')
       .select()
       .single()
 

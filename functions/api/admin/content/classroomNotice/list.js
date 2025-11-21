@@ -34,9 +34,10 @@ export const onRequest = async ({ request, env }) => {
     }
 
     const { data, error } = await supabase
-      .from('classroom_notices')
+      .from('classroom_content')
       .select('*')
-      .eq('classroom_id', classroomId)
+      .eq('class_id', classroomId)
+      .eq('type', 'notice')
       .order('created_at', { ascending: false })
 
     if (error) {

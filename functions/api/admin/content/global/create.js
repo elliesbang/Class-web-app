@@ -24,7 +24,7 @@ export const onRequest = async ({ request, env }) => {
       return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
-    const { title, content } = await request.json()
+    const { title, content, is_visible } = await request.json()
 
     if (!title || !content) {
       return jsonResponse({ error: 'title and content are required' }, 400)
@@ -33,8 +33,14 @@ export const onRequest = async ({ request, env }) => {
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('notifications')
-      .insert({ title, content, created_at: new Date().toISOString() })
+      .from('classroom_content')
+      .insert({
+        type: 'global_notice',
+        title,
+        content,
+        is_visible: typeof is_visible === 'boolean' ? is_visible : true,
+        created_at: new Date().toISOString()
+      })
       .select()
       .single()
 
