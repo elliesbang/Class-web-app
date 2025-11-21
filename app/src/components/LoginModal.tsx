@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { setStoredAuthUser } from '../lib/authUser';
-import { supabase } from '../lib/supabaseClient';
+import { login } from '@/lib/api/auth/login';
+import { getUserRole } from '@/lib/api/auth/getUserRole';
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95 },
@@ -81,28 +82,25 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       try {
         setAdminSubmitting(true);
 
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', adminEmail.trim())
-          .eq('password', adminPassword)
-          .eq('role', 'admin')
-          .single();
+        const user = await login(adminEmail.trim(), adminPassword);
+        const role = await getUserRole(user.id);
 
-        if (error || !data) throw new Error('LOGIN_FAILED');
+        if (role !== 'admin') {
+          throw new Error('NOT_ADMIN');
+        }
 
         setStoredAuthUser({
-          user_id: String(data.id ?? data.user_id ?? ''),
-          role: data.role ?? 'admin',
-          name: (data.name as string | undefined) ?? '',
-          email: (data.email as string | undefined) ?? adminEmail,
-          token: (data.token as string | undefined) ?? String(data.id ?? data.email ?? Date.now()),
+          user_id: user.id,
+          role: 'admin',
+          name: (user.user_metadata?.name as string | undefined) ?? '',
+          email: user.email ?? adminEmail,
+          token: user.id,
         });
         closeModal();
         navigate('/admin/my');
       } catch (error) {
         console.error('[LoginModal] admin login failed', error);
-        alert('관리자 로그인에 실패했습니다.');
+        alert('관리자 권한이 없거나 로그인에 실패했습니다.');
       } finally {
         setAdminSubmitting(false);
       }
@@ -116,22 +114,17 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
    * ------------------------ */
   const handleRoleLogin = useCallback(
     async (payload: { name: string; email: string; password: string }, role: 'student' | 'vod') => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', payload.email)
-        .eq('password', payload.password)
-        .eq('role', role)
-        .single();
+      const user = await login(payload.email, payload.password);
+      const userRole = await getUserRole(user.id);
 
-      if (error || !data) throw new Error('LOGIN_FAILED');
+      if (userRole !== role) throw new Error('LOGIN_FAILED');
 
       setStoredAuthUser({
-        user_id: String(data.id ?? data.user_id ?? ''),
-        role: data.role ?? role,
-        name: (data.name as string | undefined) ?? payload.name,
-        email: (data.email as string | undefined) ?? payload.email,
-        token: (data.token as string | undefined) ?? String(data.id ?? data.email ?? Date.now()),
+        user_id: user.id,
+        role,
+        name: (user.user_metadata?.name as string | undefined) ?? payload.name,
+        email: user.email ?? payload.email,
+        token: user.id,
       });
       closeModal();
       navigate(role === 'vod' ? '/vod' : '/my');
