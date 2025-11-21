@@ -13,7 +13,7 @@ const menuItems = [
   { label: '피드백 관리', icon: '💬', to: '/admin/feedback' },
   { label: '콘텐츠 관리', icon: '🎥', to: '/admin/dashboard/content' },
   { label: '통계 & 리포트', icon: '📊', to: '/admin/statistics' },
- 
+ ];
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReady, setIsReady] = useState(false);
