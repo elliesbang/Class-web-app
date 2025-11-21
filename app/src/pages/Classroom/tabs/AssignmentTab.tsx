@@ -60,7 +60,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       }
 
       // ⭐ 수정됨 — Cloudflare Pages Functions 라우트 규칙 적용
-      const response = await fetch(`/assignment-list?class_id=${classId}`, {
+      const response = await fetch(`/api/assignment-list?class_id=${classId}`, {
         headers,
       });
 
@@ -91,11 +91,33 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       return;
     }
 
+    setSubmitError('');
+    setStatusMessage('');
     setImageName(file.name);
 
-    const arrayBuffer = await file.arrayBuffer();
-    const base64String = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    setImageBase64(`data:${file.type};base64,${base64String}`);
+    try {
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            resolve(reader.result);
+          } else {
+            reject(new Error('이미지 데이터를 불러오지 못했습니다.'));
+          }
+        };
+
+        reader.onerror = () => reject(new Error('이미지 파일을 불러오지 못했습니다.'));
+        reader.readAsDataURL(file);
+      });
+
+      setImageBase64(fileBase64);
+    } catch (error: any) {
+      console.error('[AssignmentTab] Failed to read image file', error);
+      setImageBase64('');
+      setImageName('');
+      setSubmitError('이미지를 불러오지 못했습니다. 다른 파일을 선택하거나 링크로 제출해주세요.');
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -131,7 +153,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       };
 
       // ⭐ 수정됨 — Cloudflare Pages Functions 라우트 규칙 적용
-      const response = await fetch(`/assignment-submit`, {
+      const response = await fetch(`/api/assignment-submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
