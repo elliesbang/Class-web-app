@@ -25,15 +25,22 @@ export const onRequest = async ({ request, env }) => {
     }
 
     const supabase = getSupabaseClient(env)
+    const { searchParams } = new URL(request.url)
 
-    const { data, error } = await supabase
+    const categoryId = searchParams.get('vod_category_id')
+
+    let query = supabase
       .from('vod_videos')
-      .select('id, title, video_url, description, category_id, created_at')
+      .select('id, title, url, vod_category_id, created_at')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      throw error
+    if (categoryId) {
+      query = query.eq('vod_category_id', categoryId)
     }
+
+    const { data, error } = await query
+
+    if (error) throw error
 
     return jsonResponse(data ?? [])
   } catch (error) {
