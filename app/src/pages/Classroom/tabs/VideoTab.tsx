@@ -1,4 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+
+import { supabase } from '@/lib/supabaseClient';
 
 const getVideoLink = (video: any) => {
   if (!video || typeof video !== 'object') {
@@ -38,56 +40,79 @@ const formatDateTime = (value: any) => {
   }
 };
 
-const normaliseType = (value: any) => {
-  if (typeof value === 'string') {
-    return value.trim().toLowerCase();
-  }
-  if (value == null) {
-    return '';
-  }
-  return String(value).trim().toLowerCase();
-};
-
 const normaliseVideos = (items: any) => {
   if (!Array.isArray(items)) {
     return [];
   }
 
-  return items
-    .filter((item) => {
-      const type = normaliseType(item?.type ?? item?.category ?? item?.contentType);
-      return type === 'video' || type === '영상' || type === 'videos';
-    })
-    .map((item, index) => {
-      const id = item?.id ?? item?.content_id ?? item?.contentId ?? `video-${index}`;
-      const titleCandidate =
-        item?.title ?? item?.name ?? item?.content_title ?? item?.contentTitle ?? `영상 ${index + 1}`;
-      const descriptionCandidate =
-        item?.description ?? item?.summary ?? item?.content ?? item?.text ?? '';
-      const urlCandidate =
-        item?.file_url ?? item?.fileUrl ?? item?.url ?? item?.link ?? item?.linkUrl ?? null;
-      const createdAtCandidate =
-        item?.created_at ?? item?.createdAt ?? item?.published_at ?? item?.publishedAt ?? null;
+  return items.map((item, index) => {
+    const id = item?.id ?? item?.content_id ?? item?.contentId ?? `video-${index}`;
+    const titleCandidate =
+      item?.title ?? item?.name ?? item?.content_title ?? item?.contentTitle ?? `영상 ${index + 1}`;
+    const descriptionCandidate = item?.description ?? item?.summary ?? item?.content ?? item?.text ?? '';
+    const urlCandidate = item?.file_url ?? item?.fileUrl ?? item?.url ?? item?.link ?? item?.linkUrl ?? null;
+    const createdAtCandidate = item?.created_at ?? item?.createdAt ?? item?.published_at ?? item?.publishedAt ?? null;
 
-      return {
-        id,
-        title: typeof titleCandidate === 'string' ? titleCandidate : String(titleCandidate ?? ''),
-        description:
-          typeof descriptionCandidate === 'string'
-            ? descriptionCandidate
-            : descriptionCandidate != null
-            ? String(descriptionCandidate)
-            : '',
-        url: urlCandidate,
-        createdAt: createdAtCandidate,
-      };
-    });
+    return {
+      id,
+      title: typeof titleCandidate === 'string' ? titleCandidate : String(titleCandidate ?? ''),
+      description:
+        typeof descriptionCandidate === 'string'
+          ? descriptionCandidate
+          : descriptionCandidate != null
+          ? String(descriptionCandidate)
+          : '',
+      url: urlCandidate,
+      createdAt: createdAtCandidate,
+    };
+  });
 };
 
-function VideoTab({ courseName, contents = [], isLoadingContents = false, contentError = null }: { [key: string]: any }) {
-  const videos = useMemo(() => normaliseVideos(contents), [contents]);
-  const isLoading = isLoadingContents;
-  const error = contentError;
+function VideoTab({ courseName, classId }: { [key: string]: any }) {
+  const [videos, setVideos] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!classId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadVideos = async () => {
+      setIsLoading(true);
+      setError('');
+
+      try {
+        const { data, error } = await supabase
+          .from('classroom_videos')
+          .select('*')
+          .eq('classroom_id', classId)
+          .order('order_num', { ascending: true });
+
+        if (error) throw error;
+
+        if (isMounted) {
+          setVideos(normaliseVideos(data ?? []));
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || '영상 정보를 불러오지 못했습니다.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadVideos();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [classId]);
 
   const headerDescription = useMemo(() => {
     if (!courseName) {
