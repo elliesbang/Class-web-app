@@ -1,32 +1,26 @@
-import { supabase } from '../supabaseClient';
-
 export type ClassroomVideo = {
   id: number | string;
-  courseId: number | string;
-  categoryId: number | string;
+  classroomId: number | string;
   title: string;
-  videoUrl: string;
+  url: string;
   description?: string | null;
-  displayOrder: number;
+  orderNum: number;
   createdAt: string;
 };
 
 export type ClassroomMaterial = {
   id: number | string;
-  courseId: number | string;
-  categoryId: number | string;
+  classroomId: number | string;
   title: string;
-  description?: string | null;
   fileUrl: string;
   fileName?: string | null;
-  fileType: 'file' | 'link';
+  fileType?: string | null;
   createdAt: string;
 };
 
 export type ClassroomNotice = {
   id: number | string;
-  courseId: number | string;
-  categoryId: number | string;
+  classroomId: number | string;
   title: string;
   content: string;
   isImportant: boolean;
@@ -35,231 +29,218 @@ export type ClassroomNotice = {
 
 const normaliseVideo = (record: Record<string, any> | null): ClassroomVideo | null => {
   if (!record) return null;
-  const id = record.id ?? record.videoId;
-  const title = (record.title ?? record.name ?? '') as string;
-  const videoUrl = (record.video_url as string | undefined) ?? (record.videoUrl as string | undefined) ?? '';
-  const courseId = record.class_id ?? record.courseId;
-  if (!id || !title || !videoUrl || courseId == null) return null;
+  const id = record.id;
+  const classroomId = record.classroom_id ?? record.classroomId;
+  const title = (record.title ?? '') as string;
+  const url = (record.url as string | undefined) ?? (record.videoUrl as string | undefined) ?? '';
+  if (!id || !classroomId || !title || !url) return null;
   return {
     id,
-    courseId,
-    categoryId: record.category_id ?? record.categoryId ?? 'default',
+    classroomId,
     title,
-    videoUrl,
+    url,
     description: (record.description as string | undefined) ?? null,
-    displayOrder: Number(record.display_order ?? record.order ?? 0) || 0,
-    createdAt: (record.created_at as string | undefined) ?? new Date().toISOString(),
+    orderNum: Number(record.order_num ?? record.orderNum ?? 0) || 0,
+    createdAt: (record.created_at as string | undefined) ?? (record.createdAt as string | undefined) ?? new Date().toISOString(),
   };
 };
 
 const normaliseMaterial = (record: Record<string, any> | null): ClassroomMaterial | null => {
   if (!record) return null;
-  const id = record.id ?? record.materialId;
-  const title = (record.title ?? record.name ?? '') as string;
+  const id = record.id;
+  const classroomId = record.classroom_id ?? record.classroomId;
+  const title = (record.title ?? '') as string;
   const fileUrl = (record.file_url as string | undefined) ?? (record.fileUrl as string | undefined) ?? '';
-  const courseId = record.class_id ?? record.courseId;
-  if (!id || !title || !fileUrl || courseId == null) return null;
+  if (!id || !classroomId || !title || !fileUrl) return null;
   return {
     id,
-    courseId,
-    categoryId: record.category_id ?? record.categoryId ?? 'default',
+    classroomId,
     title,
-    description: (record.description as string | undefined) ?? null,
     fileUrl,
     fileName: (record.file_name as string | undefined) ?? (record.fileName as string | undefined) ?? null,
-    fileType: (record.file_type as ClassroomMaterial['fileType'] | undefined) ?? 'file',
-    createdAt: (record.created_at as string | undefined) ?? new Date().toISOString(),
+    fileType: (record.file_type as string | undefined) ?? (record.fileType as string | undefined) ?? null,
+    createdAt: (record.created_at as string | undefined) ?? (record.createdAt as string | undefined) ?? new Date().toISOString(),
   };
 };
 
 const normaliseNotice = (record: Record<string, any> | null): ClassroomNotice | null => {
   if (!record) return null;
-  const id = record.id ?? record.noticeId;
-  const title = (record.title ?? record.name ?? '') as string;
+  const id = record.id;
+  const classroomId = record.classroom_id ?? record.classroomId;
+  const title = (record.title ?? '') as string;
   const content = (record.content ?? '') as string;
-  const courseId = record.class_id ?? record.courseId;
-  if (!id || !title || !courseId) return null;
+  if (!id || !classroomId || !title) return null;
   return {
     id,
-    courseId,
-    categoryId: record.category_id ?? record.categoryId ?? 'default',
+    classroomId,
     title,
     content,
     isImportant: Boolean(record.is_important ?? record.isImportant ?? false),
-    createdAt: (record.created_at as string | undefined) ?? new Date().toISOString(),
+    createdAt: (record.created_at as string | undefined) ?? (record.createdAt as string | undefined) ?? new Date().toISOString(),
   };
 };
 
-const fetchContent = async (classId: number | string, type: string) => {
-  const { data, error } = await supabase
-    .from('classroom_content')
-    .select('*')
-    .eq('class_id', classId)
-    .eq('type', type);
-
-  if (error) {
-    throw new Error(error.message);
+const fetchJson = async (input: RequestInfo, init?: RequestInit) => {
+  const response = await fetch(input, init);
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
   }
-
-  return data ?? [];
+  return response.json();
 };
 
-export const getClassroomVideos = async (classId: number | string) => {
-  const data = await fetchContent(classId, 'video');
-  return data.map((item) => normaliseVideo(item as Record<string, any>)).filter((item): item is ClassroomVideo => item != null);
+const resolveArrayData = (data: any): any[] => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
 };
 
-export const getClassroomMaterials = async (classId: number | string) => {
-  const data = await fetchContent(classId, 'material');
-  return data
+const resolveSingleData = (data: any) => (data?.data ? data.data : data);
+
+export const getClassroomVideos = async (classroomId: number | string): Promise<ClassroomVideo[]> => {
+  const data = await fetchJson(`/api/classroomVideo/list?classroom_id=${encodeURIComponent(classroomId)}`);
+  return resolveArrayData(data)
+    .map((item) => normaliseVideo(item as Record<string, any>))
+    .filter((item): item is ClassroomVideo => item != null);
+};
+
+export const createClassroomVideo = async (payload: Partial<ClassroomVideo>): Promise<ClassroomVideo | null> => {
+  const data = await fetchJson('/api/classroomVideo/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      classroom_id: payload.classroomId,
+      title: payload.title,
+      url: payload.url,
+      description: payload.description,
+      order_num: payload.orderNum,
+    }),
+  });
+  return normaliseVideo(resolveSingleData(data) as Record<string, any>);
+};
+
+export const updateClassroomVideo = async (
+  id: string | number,
+  payload: Partial<ClassroomVideo>
+): Promise<ClassroomVideo | null> => {
+  const data = await fetchJson(`/api/classroomVideo/update?id=${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: payload.title,
+      url: payload.url,
+      description: payload.description,
+      order_num: payload.orderNum,
+    }),
+  });
+  return normaliseVideo(resolveSingleData(data) as Record<string, any>);
+};
+
+export const deleteClassroomVideo = async (id: string | number): Promise<void> => {
+  await fetchJson(`/api/classroomVideo/delete?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+};
+
+export const getClassroomMaterials = async (classroomId: number | string): Promise<ClassroomMaterial[]> => {
+  const data = await fetchJson(`/api/material/list?classroom_id=${encodeURIComponent(classroomId)}`);
+  return resolveArrayData(data)
     .map((item) => normaliseMaterial(item as Record<string, any>))
     .filter((item): item is ClassroomMaterial => item != null);
 };
 
-export const getClassroomNotices = async (classId: number | string) => {
-  const data = await fetchContent(classId, 'notice');
-  return data.map((item) => normaliseNotice(item as Record<string, any>)).filter((item): item is ClassroomNotice => item != null);
-};
-
-export const createClassroomVideo = async (payload: Partial<ClassroomVideo>) => {
-  const { data, error } = await supabase
-    .from('classroom_content')
-    .insert({
-      type: 'video',
-      class_id: payload.courseId,
-      category_id: payload.categoryId,
+export const createClassroomMaterial = async (
+  payload: Partial<ClassroomMaterial>
+): Promise<ClassroomMaterial | null> => {
+  const data = await fetchJson('/api/material/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      classroom_id: payload.classroomId,
       title: payload.title,
-      description: payload.description,
-      video_url: payload.videoUrl,
-      display_order: payload.displayOrder,
-    })
-    .select();
-
-  if (error) throw new Error(error.message);
-  return normaliseVideo((data ?? [])[0] as Record<string, any>);
-};
-
-export const updateClassroomVideo = async (id: string | number, payload: Partial<ClassroomVideo>) => {
-  const { data, error } = await supabase
-    .from('classroom_content')
-    .update({
-      title: payload.title,
-      description: payload.description,
-      video_url: payload.videoUrl,
-      display_order: payload.displayOrder,
-      category_id: payload.categoryId,
-    })
-    .eq('id', id)
-    .select();
-
-  if (error) throw new Error(error.message);
-  return normaliseVideo((data ?? [])[0] as Record<string, any>);
-};
-
-export const deleteClassroomVideo = async (id: string | number) => {
-  const { error } = await supabase.from('classroom_content').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-};
-
-export const createClassroomMaterial = async (payload: Partial<ClassroomMaterial>) => {
-  const { data, error } = await supabase
-    .from('classroom_content')
-    .insert({
-      type: 'material',
-      class_id: payload.courseId,
-      category_id: payload.categoryId,
-      title: payload.title,
-      description: payload.description,
       file_url: payload.fileUrl,
       file_name: payload.fileName,
       file_type: payload.fileType,
-    })
-    .select();
-
-  if (error) throw new Error(error.message);
-  return normaliseMaterial((data ?? [])[0] as Record<string, any>);
-};
-
-export const updateClassroomMaterial = async (id: string | number, payload: Partial<ClassroomMaterial>) => {
-  const { data, error } = await supabase
-    .from('classroom_content')
-    .update({
-      title: payload.title,
-      description: payload.description,
-      file_url: payload.fileUrl,
-      file_name: payload.fileName,
-      file_type: payload.fileType,
-      category_id: payload.categoryId,
-    })
-    .eq('id', id)
-    .select();
-
-  if (error) throw new Error(error.message);
-  return normaliseMaterial((data ?? [])[0] as Record<string, any>);
-};
-
-export const deleteClassroomMaterial = async (id: string | number) => {
-  const { error } = await supabase.from('classroom_content').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-};
-
-export const createClassroomNotice = async (payload: Partial<ClassroomNotice>) => {
-  const { data, error } = await supabase
-    .from('classroom_content')
-    .insert({
-      type: 'notice',
-      class_id: payload.courseId,
-      category_id: payload.categoryId,
-      title: payload.title,
-      content: payload.content,
-      is_important: payload.isImportant,
-    })
-    .select();
-
-  if (error) throw new Error(error.message);
-  return normaliseNotice((data ?? [])[0] as Record<string, any>);
-};
-
-export const updateClassroomNotice = async (id: string | number, payload: Partial<ClassroomNotice>) => {
-  const { data, error } = await supabase
-    .from('classroom_content')
-    .update({
-      title: payload.title,
-      content: payload.content,
-      is_important: payload.isImportant,
-      category_id: payload.categoryId,
-    })
-    .eq('id', id)
-    .select();
-
-  if (error) throw new Error(error.message);
-  return normaliseNotice((data ?? [])[0] as Record<string, any>);
-};
-
-export const deleteClassroomNotice = async (id: string | number) => {
-  const { error } = await supabase.from('classroom_content').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-};
-
-export const createFeedback = async (payload: { userName: string; comment: string; classId: number }) => {
-  const { error } = await supabase.from('classroom_content').insert({
-    type: 'feedback',
-    class_id: payload.classId,
-    content: payload.comment,
-    title: payload.userName,
+    }),
   });
-
-  if (error) throw new Error(error.message);
+  return normaliseMaterial(resolveSingleData(data) as Record<string, any>);
 };
 
-export const filterVideosByCourse = (videos: ClassroomVideo[], courseId: string | number) =>
-  videos.filter((video) => String(video.courseId) === String(courseId));
+export const updateClassroomMaterial = async (
+  id: string | number,
+  payload: Partial<ClassroomMaterial>
+): Promise<ClassroomMaterial | null> => {
+  const data = await fetchJson(`/api/material/update?id=${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: payload.title,
+      file_url: payload.fileUrl,
+      file_name: payload.fileName,
+      file_type: payload.fileType,
+    }),
+  });
+  return normaliseMaterial(resolveSingleData(data) as Record<string, any>);
+};
 
-export const filterMaterialsByCourse = (materials: ClassroomMaterial[], courseId: string | number) =>
-  materials.filter((material) => String(material.courseId) === String(courseId));
+export const deleteClassroomMaterial = async (id: string | number): Promise<void> => {
+  await fetchJson(`/api/material/delete?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+};
 
-export const filterNoticesByCourse = (notices: ClassroomNotice[], courseId: string | number) =>
-  notices.filter((notice) => String(notice.courseId) === String(courseId));
+export const getClassroomNotices = async (classroomId: number | string): Promise<ClassroomNotice[]> => {
+  const data = await fetchJson(`/api/classroomNotice/list?classroom_id=${encodeURIComponent(classroomId)}`);
+  return resolveArrayData(data)
+    .map((item) => normaliseNotice(item as Record<string, any>))
+    .filter((item): item is ClassroomNotice => item != null);
+};
+
+export const createClassroomNotice = async (
+  payload: Partial<ClassroomNotice>
+): Promise<ClassroomNotice | null> => {
+  const data = await fetchJson('/api/classroomNotice/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      classroom_id: payload.classroomId,
+      title: payload.title,
+      content: payload.content,
+      is_important: payload.isImportant,
+    }),
+  });
+  return normaliseNotice(resolveSingleData(data) as Record<string, any>);
+};
+
+export const updateClassroomNotice = async (
+  id: string | number,
+  payload: Partial<ClassroomNotice>
+): Promise<ClassroomNotice | null> => {
+  const data = await fetchJson(`/api/classroomNotice/update?id=${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: payload.title,
+      content: payload.content,
+      is_important: payload.isImportant,
+    }),
+  });
+  return normaliseNotice(resolveSingleData(data) as Record<string, any>);
+};
+
+export const deleteClassroomNotice = async (id: string | number): Promise<void> => {
+  await fetchJson(`/api/classroomNotice/delete?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+};
+
+export const filterVideosByCourse = (videos: ClassroomVideo[], classroomId: string | number) =>
+  videos.filter((video) => String(video.classroomId) === String(classroomId));
+
+export const filterMaterialsByCourse = (materials: ClassroomMaterial[], classroomId: string | number) =>
+  materials.filter((material) => String(material.classroomId) === String(classroomId));
+
+export const filterNoticesByCourse = (notices: ClassroomNotice[], classroomId: string | number) =>
+  notices.filter((notice) => String(notice.classroomId) === String(classroomId));
 
 export type ClassroomCourseSummary = {
   categoryId: string | number;
