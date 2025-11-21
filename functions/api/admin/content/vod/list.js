@@ -30,12 +30,14 @@ export const onRequest = async ({ request, env }) => {
     const categoryId = searchParams.get('vod_category_id')
 
     let query = supabase
-      .from('vod_videos')
-      .select('id, title, url, vod_category_id, created_at')
+      .from('classroom_content')
+      .select('*')
+      .eq('type', 'vod')
+      .order('display_order', { ascending: true })
       .order('created_at', { ascending: false })
 
     if (categoryId) {
-      query = query.eq('vod_category_id', categoryId)
+      query = query.eq('vod_category', categoryId)
     }
 
     const { data, error } = await query

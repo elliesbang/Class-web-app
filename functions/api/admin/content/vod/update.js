@@ -32,7 +32,8 @@ export const onRequest = async ({ request, env }) => {
       return jsonResponse({ error: 'ID is required' }, 400)
     }
 
-    const { title, video_url, description, category_id } = await request.json()
+    const { title, video_url, description, category_id, display_order, is_recommended, thumbnail_url } =
+      await request.json()
 
     if (!title || !video_url) {
       return jsonResponse({ error: 'title and video_url are required' }, 400)
@@ -45,15 +46,28 @@ export const onRequest = async ({ request, env }) => {
     }
 
     if (typeof category_id !== 'undefined') {
-      updates.category_id = category_id
+      updates.vod_category = category_id
+    }
+
+    if (typeof display_order !== 'undefined') {
+      updates.display_order = display_order
+    }
+
+    if (typeof is_recommended !== 'undefined') {
+      updates.is_recommended = is_recommended
+    }
+
+    if (typeof thumbnail_url !== 'undefined') {
+      updates.thumbnail_url = thumbnail_url
     }
 
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('vod_videos')
+      .from('classroom_content')
       .update(updates)
       .eq('id', id)
+      .eq('type', 'vod')
       .select()
       .single()
 

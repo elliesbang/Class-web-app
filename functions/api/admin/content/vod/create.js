@@ -24,7 +24,8 @@ export const onRequest = async ({ request, env }) => {
       return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
-    const { title, video_url, description, category_id } = await request.json()
+    const { title, video_url, description, category_id, display_order, is_recommended, thumbnail_url } =
+      await request.json()
 
     if (!title || !video_url) {
       return jsonResponse({ error: 'title and video_url are required' }, 400)
@@ -33,12 +34,16 @@ export const onRequest = async ({ request, env }) => {
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('vod_videos')
+      .from('classroom_content')
       .insert({
+        type: 'vod',
         title,
         video_url,
         description: description ?? null,
-        category_id: category_id ?? null,
+        vod_category: category_id ?? null,
+        display_order: display_order ?? null,
+        is_recommended: is_recommended ?? false,
+        thumbnail_url: thumbnail_url ?? null,
         created_at: new Date().toISOString()
       })
       .select()

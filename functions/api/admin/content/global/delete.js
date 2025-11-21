@@ -34,7 +34,11 @@ export const onRequest = async ({ request, env }) => {
 
     const supabase = getSupabaseClient(env)
 
-    const { error } = await supabase.from('notifications').delete().eq('id', id)
+    const { error } = await supabase
+      .from('classroom_content')
+      .delete()
+      .eq('id', id)
+      .eq('type', 'global_notice')
 
     if (error) {
       throw error

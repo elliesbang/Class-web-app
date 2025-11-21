@@ -34,7 +34,11 @@ export const onRequest = async ({ request, env }) => {
 
     const supabase = getSupabaseClient(env)
 
-    const { error } = await supabase.from('vod_videos').delete().eq('id', id)
+    const { error } = await supabase
+      .from('classroom_content')
+      .delete()
+      .eq('id', id)
+      .eq('type', 'vod')
 
     if (error) {
       throw error
