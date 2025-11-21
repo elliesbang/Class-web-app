@@ -24,14 +24,14 @@ export const onRequest = async ({ request, env }) => {
       return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
+    const supabase = getSupabaseClient(env)
+
     const { searchParams } = new URL(request.url)
     const categoryId = searchParams.get('category_id')
 
     if (!categoryId) {
       return jsonResponse({ error: 'category_id is required' }, 400)
     }
-
-    const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
       .from('classroom_contents')
