@@ -1,22 +1,102 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
-import { useSheetsData } from '../../contexts/SheetsDataContext';
+/**
+ * Supabase 데이터 로딩용 공통 fetch 함수
+ */
+async function fetchData(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch: ${url}`);
+  return res.json();
+}
 
 function Home() {
-  const { contentCollections, loading } = useSheetsData();
-  const visibleNotices = useMemo(
-    () => contentCollections.globalNotices.filter((notice) => notice.isVisible).slice(0, 2),
-    [contentCollections.globalNotices],
-  );
+  /**
+   * 전체 공지
+   */
+  const [notices, setNotices] = useState([]);
+  const [loadingNotices, setLoadingNotices] = useState(true);
+
+  /**
+   * VOD 추천 영상
+   */
+  const [vodVideos, setVodVideos] = useState([]);
+  const [loadingVod, setLoadingVod] = useState(true);
+
+  /**
+   * VOD 카테고리
+   */
+  const [vodCategories, setVodCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  /**
+   * 전체 공지 로딩
+   */
+  useEffect(() => {
+    async function loadNotices() {
+      try {
+        const json = await fetchData('/api/global/list');
+        setNotices(json.data ?? []);
+      } catch (e) {
+        console.error('공지 불러오기 실패:', e);
+      } finally {
+        setLoadingNotices(false);
+      }
+    }
+    loadNotices();
+  }, []);
+
+  /**
+   * VOD 추천 영상 로딩
+   */
+  useEffect(() => {
+    async function loadVodVideos() {
+      try {
+        const json = await fetchData('/api/vod/list');
+        setVodVideos(json.data ?? []);
+      } catch (e) {
+        console.error('VOD 불러오기 실패:', e);
+      } finally {
+        setLoadingVod(false);
+      }
+    }
+    loadVodVideos();
+  }, []);
+
+  /**
+   * VOD 카테고리 로딩
+   */
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const json = await fetchData('/api/vod/categories');
+        setVodCategories(json.data ?? []);
+      } catch (e) {
+        console.error('카테고리 불러오기 실패:', e);
+      } finally {
+        setLoadingCategories(false);
+      }
+    }
+    loadCategories();
+  }, []);
+
+  /**
+   * 표시용 데이터
+   */
+  const visibleNotices = useMemo(() => notices.slice(0, 2), [notices]);
   const featuredVodVideos = useMemo(
-    () => contentCollections.vodVideos.filter((video) => video.isRecommended).slice(0, 3),
-    [contentCollections.vodVideos],
+    () => vodVideos.filter((video) => video.isRecommended).slice(0, 3),
+    [vodVideos],
   );
   const featuredCategory = useMemo(
-    () => contentCollections.vodCategories.find((category) => category.id === 'featured'),
-    [contentCollections.vodCategories],
+    () => vodCategories.find((category) => category.id === 'featured'),
+    [vodCategories],
   );
+
+  /**
+   * 전체 로딩 플래그
+   */
+  const loading = loadingNotices || loadingVod || loadingCategories;
 
   return (
     <div className="space-y-6">
@@ -43,6 +123,7 @@ function Home() {
       </section>
 
       <section className="grid gap-4">
+        {/* 추천 VOD 섹션 */}
         <article className="space-y-4 rounded-3xl bg-white p-5 shadow-soft">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-ellieGray">
@@ -52,6 +133,7 @@ function Home() {
               전체 보기
             </Link>
           </div>
+
           {loading ? (
             <p className="text-sm text-ellieGray/60">콘텐츠를 불러오는 중입니다...</p>
           ) : featuredVodVideos.length === 0 ? (
@@ -65,9 +147,9 @@ function Home() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-ellieGray">{video.title}</p>
-                    {video.description ? (
+                    {video.description && (
                       <p className="mt-1 line-clamp-2 text-xs text-ellieGray/70">{video.description}</p>
-                    ) : null}
+                    )}
                   </div>
                 </li>
               ))}
@@ -75,6 +157,7 @@ function Home() {
           )}
         </article>
 
+        {/* 전체 공지(2개) 섹션 */}
         <article className="space-y-4 rounded-3xl bg-white p-5 shadow-soft">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-ellieGray">새로운 소식</h2>
@@ -82,6 +165,7 @@ function Home() {
               공지 바로가기
             </Link>
           </div>
+
           {loading ? (
             <p className="text-sm text-ellieGray/60">공지 데이터를 불러오는 중입니다...</p>
           ) : visibleNotices.length === 0 ? (
