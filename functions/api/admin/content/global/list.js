@@ -27,15 +27,13 @@ export const onRequest = async ({ request, env }) => {
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('notifications')
-      .select('id, title, content, created_at')
-      .order('created_at', { ascending: false })
+      .from('global_notice')
+      .select('id, title, content, isImportant, createdAt')
+      .order('createdAt', { ascending: false })
 
-    if (error) {
-      throw error
-    }
+    if (error) throw error
 
-    return jsonResponse(data ?? [])
+    return jsonResponse({ data: data ?? [] })
   } catch (error) {
     return jsonResponse({ error: error.message }, 500)
   }
