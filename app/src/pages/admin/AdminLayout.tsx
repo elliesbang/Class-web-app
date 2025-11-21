@@ -4,6 +4,7 @@ import { useAuthUser } from '../../hooks/useAuthUser';
 import { clearStoredAuthUser } from '../../lib/authUser';
 import { AdminDataProvider } from './data/AdminDataContext';
 import { AdminClassProvider } from './data/AdminClassContext';
+import { supabase } from '@/lib/supabaseClient';
 
 const menuItems = [
   { label: '대시보드 홈', icon: '🏠', to: '/admin', end: true },
@@ -37,7 +38,8 @@ const AdminLayout = () => {
     }
   }, [authUser, navigate]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     clearStoredAuthUser();
     navigate('/', { replace: true });
   };

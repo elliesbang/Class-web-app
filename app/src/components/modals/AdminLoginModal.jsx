@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { setStoredAuthUser } from '../../lib/authUser';
-import { supabase } from '../../lib/supabaseClient';
+import { login } from '@/lib/api/auth/login';
+import { getUserRole } from '@/lib/api/auth/getUserRole';
 
 const MODAL_ROOT_ID = 'modal-root';
 
@@ -75,24 +76,19 @@ function AdminLoginModal({ isOpen, onClose }) {
       setIsSubmitting(true);
 
       try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', email.trim())
-          .eq('password', password)
-          .eq('role', 'admin')
-          .single();
+        const user = await login(email.trim(), password);
+        const role = await getUserRole(user.id);
 
-        if (error || !data) {
-          throw new Error('LOGIN_FAILED');
+        if (role !== 'admin') {
+          throw new Error('NOT_ADMIN');
         }
 
         setStoredAuthUser({
-          user_id: String(data.id ?? data.user_id ?? ''),
-          role: data.role ?? 'admin',
-          name: data.name ?? '',
-          email: data.email ?? email,
-          token: data.token ?? String(data.id ?? data.email ?? Date.now()),
+          user_id: user.id,
+          role: 'admin',
+          name: (user.user_metadata && user.user_metadata.name) ? user.user_metadata.name : '',
+          email: user.email ?? email,
+          token: user.id,
          });
 
         handleClose();

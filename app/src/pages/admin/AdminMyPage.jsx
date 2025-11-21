@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthUser } from '../../hooks/useAuthUser';
 import { clearStoredAuthUser } from '../../lib/authUser';
+import { supabase } from '@/lib/supabaseClient';
 
 const ACTIONS = [
   {
@@ -69,7 +70,8 @@ const AdminMyPage = () => {
     [navigate],
   );
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    await supabase.auth.signOut();
     clearStoredAuthUser();
     navigate('/');
   }, [navigate]);

@@ -13,6 +13,7 @@ import AdminFeedbackManagement from './pages/admin/AdminFeedbackManagement';
 // import AdminSettings from './pages/admin/AdminSettings';
 import AdminStatistics from './pages/admin/AdminStatistics';
 import AdminMyPage from './pages/admin/AdminMyPage.jsx';
+import RequireAdmin from './components/RequireAdmin';
 import Home from './pages/home/Home';
 import VodList from '@/pages/Vod/VodList';
 import Classroom from './pages/Classroom';
@@ -52,7 +53,14 @@ function App() {
         <Route path="/internal" element={<Navigate to="/classroom" replace />} />
       </Route>
 
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route
+        path="/admin"
+        element={(
+          <RequireAdmin>
+            <AdminLayout />
+          </RequireAdmin>
+        )}
+      >
         <Route index element={<AdminDashboardHome />} />
         <Route path="class" element={<AdminClassManagement />} />
         <Route path="courses" element={<Navigate to="/admin/class" replace />} />
