@@ -41,7 +41,10 @@ const normaliseVideo = (record: Record<string, any> | null): ClassroomVideo | nu
     url,
     description: (record.description as string | undefined) ?? null,
     orderNum: Number(record.order_num ?? record.orderNum ?? 0) || 0,
-    createdAt: (record.created_at as string | undefined) ?? (record.createdAt as string | undefined) ?? new Date().toISOString(),
+    createdAt:
+      (record.created_at as string | undefined) ??
+      (record.createdAt as string | undefined) ??
+      new Date().toISOString(),
   };
 };
 
@@ -59,7 +62,10 @@ const normaliseMaterial = (record: Record<string, any> | null): ClassroomMateria
     fileUrl,
     fileName: (record.file_name as string | undefined) ?? (record.fileName as string | undefined) ?? null,
     fileType: (record.file_type as string | undefined) ?? (record.fileType as string | undefined) ?? null,
-    createdAt: (record.created_at as string | undefined) ?? (record.createdAt as string | undefined) ?? new Date().toISOString(),
+    createdAt:
+      (record.created_at as string | undefined) ??
+      (record.createdAt as string | undefined) ??
+      new Date().toISOString(),
   };
 };
 
@@ -76,7 +82,10 @@ const normaliseNotice = (record: Record<string, any> | null): ClassroomNotice | 
     title,
     content,
     isImportant: Boolean(record.is_important ?? record.isImportant ?? false),
-    createdAt: (record.created_at as string | undefined) ?? (record.createdAt as string | undefined) ?? new Date().toISOString(),
+    createdAt:
+      (record.created_at as string | undefined) ??
+      (record.createdAt as string | undefined) ??
+      new Date().toISOString(),
   };
 };
 
@@ -96,8 +105,12 @@ const resolveArrayData = (data: any): any[] => {
 
 const resolveSingleData = (data: any) => (data?.data ? data.data : data);
 
+/* ----------------------------------
+   📌 수정된 목록 API 경로 (list → get)
+---------------------------------- */
+
 export const getClassroomVideos = async (classroomId: number | string): Promise<ClassroomVideo[]> => {
-  const data = await fetchJson(`/api/classroomVideo/list?classroom_id=${encodeURIComponent(classroomId)}`);
+  const data = await fetchJson(`/api/classroomVideo/get?classroom_id=${encodeURIComponent(classroomId)}`);
   return resolveArrayData(data)
     .map((item) => normaliseVideo(item as Record<string, any>))
     .filter((item): item is ClassroomVideo => item != null);
@@ -141,8 +154,10 @@ export const deleteClassroomVideo = async (id: string | number): Promise<void> =
   });
 };
 
+/* --------- 자료(Material) --------- */
+
 export const getClassroomMaterials = async (classroomId: number | string): Promise<ClassroomMaterial[]> => {
-  const data = await fetchJson(`/api/material/list?classroom_id=${encodeURIComponent(classroomId)}`);
+  const data = await fetchJson(`/api/material/get?classroom_id=${encodeURIComponent(classroomId)}`);
   return resolveArrayData(data)
     .map((item) => normaliseMaterial(item as Record<string, any>))
     .filter((item): item is ClassroomMaterial => item != null);
@@ -188,8 +203,10 @@ export const deleteClassroomMaterial = async (id: string | number): Promise<void
   });
 };
 
+/* --------- 공지(Notice) --------- */
+
 export const getClassroomNotices = async (classroomId: number | string): Promise<ClassroomNotice[]> => {
-  const data = await fetchJson(`/api/classroomNotice/list?classroom_id=${encodeURIComponent(classroomId)}`);
+  const data = await fetchJson(`/api/classroomNotice/get?classroom_id=${encodeURIComponent(classroomId)}`);
   return resolveArrayData(data)
     .map((item) => normaliseNotice(item as Record<string, any>))
     .filter((item): item is ClassroomNotice => item != null);
@@ -232,6 +249,8 @@ export const deleteClassroomNotice = async (id: string | number): Promise<void> 
     method: 'DELETE',
   });
 };
+
+/* ---- Filter Helpers ---- */
 
 export const filterVideosByCourse = (videos: ClassroomVideo[], classroomId: string | number) =>
   videos.filter((video) => String(video.classroomId) === String(classroomId));
