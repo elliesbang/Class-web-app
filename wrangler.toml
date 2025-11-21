@@ -1,0 +1,4 @@
+name = "class-web-app"
+compatibility_date = "2025-11-21"
+pages_build_output_dir = "./dist"
+functions = "./functions"
