@@ -9,7 +9,8 @@ import AdminCourseDetail from './pages/admin/AdminCourseDetail';
 import AdminStudentManagement from './pages/admin/AdminStudentManagement';
 import AdminAssignmentsManagement from './pages/admin/AdminAssignmentsManagement';
 import AdminFeedbackManagement from './pages/admin/AdminFeedbackManagement';
-import AdminSettings from './pages/admin/AdminSettings';
+// 🔥 AdminSettings 완전 제거
+// import AdminSettings from './pages/admin/AdminSettings';
 import AdminStatistics from './pages/admin/AdminStatistics';
 import AdminMyPage from './pages/admin/AdminMyPage.jsx';
 import Home from './pages/home/Home';
@@ -65,7 +66,9 @@ function App() {
         <Route path="dashboard/content" element={<AdminContentManagement />} />
         <Route path="content" element={<AdminContentManagement />} />
         <Route path="statistics" element={<AdminStatistics />} />
-        <Route path="settings" element={<AdminSettings />} />
+
+        {/* 🔥 설정(Settings) 탭 완전 삭제 */}
+        {/* <Route path="settings" element={<AdminSettings />} /> */}
       </Route>
     </Routes>
   );
