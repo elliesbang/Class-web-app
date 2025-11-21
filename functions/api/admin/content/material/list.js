@@ -27,18 +27,17 @@ export const onRequest = async ({ request, env }) => {
     const supabase = getSupabaseClient(env)
 
     const { searchParams } = new URL(request.url)
-    const categoryId = searchParams.get('category_id')
+    const classroomId = searchParams.get('classroom_id')
 
-    if (!categoryId) {
-      return jsonResponse({ error: 'category_id is required' }, 400)
+    if (!classroomId) {
+      return jsonResponse({ error: 'classroom_id is required' }, 400)
     }
 
     const { data, error } = await supabase
-      .from('classroom_contents')
+      .from('classroom_materials')
       .select('*')
-      .eq('type', 'material')
-      .eq('category_id', categoryId)
-      .order('created_at', { ascending: false })
+      .eq('classroom_id', classroomId)
+      .order('order_num', { ascending: true })
 
     if (error) {
       throw error
