@@ -6,7 +6,6 @@ import AdminModal from '../../components/admin/AdminModal';
 import Toast, { type ToastVariant } from '../../components/admin/Toast';
 import { useAdminData, type Assignment, type Feedback } from './data/AdminDataContext';
 import type { ClassInfo } from '../../lib/api/class';
-import { createFeedback } from '../../lib/api/classroom';
 
 type ToastState = {
   message: string;
@@ -342,7 +341,12 @@ const AdminFeedbackManagement = () => {
     }
   };
 
-  const handleCreateFeedback = async (payload: { content: string; author: string; attachmentUrl?: string; classId: number | null }) => {
+  const handleCreateFeedback = async (payload: {
+    content: string;
+    author: string;
+    attachmentUrl?: string;
+    classId: number | null;
+  }) => {
     if (!formState?.assignment) {
       setToast({ message: '연결된 과제 정보가 필요합니다.', variant: 'error' });
       return;
@@ -359,13 +363,6 @@ const AdminFeedbackManagement = () => {
     }
 
     try {
-      const className = classOptions.find((classItem) => classItem.id === payload.classId)?.name ?? '선택한 클래스';
-      await createFeedback({
-        userName: payload.author || '관리자',
-        comment: payload.content,
-        classId: payload.classId,
-      });
-
       addFeedback({
         assignmentId: formState.assignment.id,
         content: payload.content,
@@ -373,7 +370,14 @@ const AdminFeedbackManagement = () => {
         attachmentUrl: payload.attachmentUrl,
         classId: payload.classId,
       });
-      setToast({ message: `선택한 클래스(${className})에 업로드되었습니다.`, variant: 'success' });
+
+      const className =
+        classOptions.find((classItem) => classItem.id === payload.classId)?.name ?? '선택한 클래스';
+
+      setToast({
+        message: `선택한 클래스(${className})에 업로드되었습니다.`,
+        variant: 'success',
+      });
       closeFormModal();
     } catch (error) {
       console.error('Failed to create feedback', error);
@@ -384,7 +388,12 @@ const AdminFeedbackManagement = () => {
     }
   };
 
-  const handleUpdateFeedback = async (payload: { content: string; author: string; attachmentUrl?: string; classId?: number | null }) => {
+  const handleUpdateFeedback = async (payload: {
+    content: string;
+    author: string;
+    attachmentUrl?: string;
+    classId?: number | null;
+  }) => {
     if (!formState?.targetFeedback) {
       return;
     }
@@ -395,6 +404,7 @@ const AdminFeedbackManagement = () => {
       attachmentUrl: payload.attachmentUrl,
       ...(payload.classId !== undefined ? { classId: payload.classId } : {}),
     });
+
     setToast({ message: '피드백이 수정되었습니다.', variant: 'success' });
     closeFormModal();
   };
