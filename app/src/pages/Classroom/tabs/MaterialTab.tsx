@@ -1,4 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+
+import { supabase } from '@/lib/supabaseClient';
 
 const parseMaterialLink = (material: any) => {
   if (!material || typeof material !== 'object') {
@@ -34,53 +36,77 @@ const formatDateTime = (value: any) => {
   }
 };
 
-const normaliseType = (value: any) => {
-  if (typeof value === 'string') {
-    return value.trim().toLowerCase();
-  }
-  if (value == null) {
-    return '';
-  }
-  return String(value).trim().toLowerCase();
-};
-
 const normaliseMaterials = (items: any) => {
   if (!Array.isArray(items)) {
     return [];
   }
 
-  return items
-    .filter((item) => {
-      const type = normaliseType(item?.type ?? item?.category ?? item?.contentType);
-      return type === 'material' || type === '자료' || type === 'file' || type === 'document';
-    })
-    .map((item, index) => {
-      const id = item?.id ?? item?.content_id ?? item?.contentId ?? `material-${index}`;
-      const titleCandidate =
-        item?.title ?? item?.name ?? item?.fileName ?? item?.content_title ?? `자료 ${index + 1}`;
-      const descriptionCandidate =
-        item?.description ?? item?.summary ?? item?.content ?? item?.text ?? '';
-      const createdAtCandidate = item?.created_at ?? item?.createdAt ?? item?.uploaded_at ?? item?.uploadedAt;
+  return items.map((item, index) => {
+    const id = item?.id ?? item?.content_id ?? item?.contentId ?? `material-${index}`;
+    const titleCandidate = item?.title ?? item?.name ?? item?.fileName ?? item?.content_title ?? `자료 ${index + 1}`;
+    const descriptionCandidate = item?.description ?? item?.summary ?? item?.content ?? item?.text ?? '';
+    const createdAtCandidate = item?.created_at ?? item?.createdAt ?? item?.uploaded_at ?? item?.uploadedAt;
 
-      return {
-        id,
-        title: typeof titleCandidate === 'string' ? titleCandidate : String(titleCandidate ?? ''),
-        description:
-          typeof descriptionCandidate === 'string'
-            ? descriptionCandidate
-            : descriptionCandidate != null
-            ? String(descriptionCandidate)
-            : '',
-        link: parseMaterialLink(item),
-        createdAt: createdAtCandidate ?? null,
-      };
-    });
+    return {
+      id,
+      title: typeof titleCandidate === 'string' ? titleCandidate : String(titleCandidate ?? ''),
+      description:
+        typeof descriptionCandidate === 'string'
+          ? descriptionCandidate
+          : descriptionCandidate != null
+          ? String(descriptionCandidate)
+          : '',
+      link: parseMaterialLink(item),
+      createdAt: createdAtCandidate ?? null,
+    };
+  });
 };
 
-function MaterialTab({ courseName, contents = [], isLoadingContents = false, contentError = null }: { [key: string]: any }) {
-  const materials = useMemo(() => normaliseMaterials(contents), [contents]);
-  const isLoading = isLoadingContents;
-  const error = contentError;
+function MaterialTab({ courseName, classId }: { [key: string]: any }) {
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!classId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadMaterials = async () => {
+      setIsLoading(true);
+      setError('');
+
+      try {
+        const { data, error } = await supabase
+          .from('classroom_materials')
+          .select('*')
+          .eq('classroom_id', classId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (isMounted) {
+          setMaterials(normaliseMaterials(data ?? []));
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || '자료를 불러오지 못했습니다.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadMaterials();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [classId]);
 
   const headerDescription = useMemo(() => {
     if (!courseName) {

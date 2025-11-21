@@ -1,4 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+
+import { supabase } from '@/lib/supabaseClient';
 
 const formatDateTime = (value: any) => {
   if (!value) {
@@ -23,57 +25,83 @@ const formatDateTime = (value: any) => {
   }
 };
 
-const normaliseType = (value: any) => {
-  if (typeof value === 'string') {
-    return value.trim().toLowerCase();
-  }
-  if (value == null) {
-    return '';
-  }
-  return String(value).trim().toLowerCase();
-};
-
 const normaliseNotices = (items: any) => {
   if (!Array.isArray(items)) {
     return [];
   }
 
-  return items
-    .filter((item) => {
-      const type = normaliseType(item?.type ?? item?.category ?? item?.contentType);
-      return type === 'notice' || type === '공지' || type === 'announcement';
-    })
-    .map((item, index) => {
-      const id = item?.id ?? item?.content_id ?? item?.contentId ?? `notice-${index}`;
-      const titleCandidate = item?.title ?? item?.name ?? item?.content_title ?? `공지 ${index + 1}`;
-      const contentCandidate = item?.description ?? item?.content ?? item?.text ?? '';
-      const authorCandidate = item?.author ?? item?.writer ?? item?.creator ?? '';
-      const createdAtCandidate = item?.created_at ?? item?.createdAt ?? item?.published_at ?? item?.publishedAt;
+  return items.map((item, index) => {
+    const id = item?.id ?? item?.content_id ?? item?.contentId ?? `notice-${index}`;
+    const titleCandidate = item?.title ?? item?.name ?? item?.content_title ?? `공지 ${index + 1}`;
+    const contentCandidate = item?.description ?? item?.content ?? item?.text ?? '';
+    const authorCandidate = item?.author ?? item?.writer ?? item?.creator ?? '';
+    const createdAtCandidate = item?.created_at ?? item?.createdAt ?? item?.published_at ?? item?.publishedAt;
 
-      return {
-        id,
-        title: typeof titleCandidate === 'string' ? titleCandidate : String(titleCandidate ?? ''),
-        content:
-          typeof contentCandidate === 'string'
-            ? contentCandidate
-            : contentCandidate != null
-            ? String(contentCandidate)
-            : '',
-        author:
-          typeof authorCandidate === 'string'
-            ? authorCandidate
-            : authorCandidate != null
-            ? String(authorCandidate)
-            : '',
-        createdAt: createdAtCandidate ?? null,
-      };
-    });
+    return {
+      id,
+      title: typeof titleCandidate === 'string' ? titleCandidate : String(titleCandidate ?? ''),
+      content:
+        typeof contentCandidate === 'string'
+          ? contentCandidate
+          : contentCandidate != null
+          ? String(contentCandidate)
+          : '',
+      author:
+        typeof authorCandidate === 'string'
+          ? authorCandidate
+          : authorCandidate != null
+          ? String(authorCandidate)
+          : '',
+      createdAt: createdAtCandidate ?? null,
+    };
+  });
 };
 
-function NoticeTab({ courseName, contents = [], isLoadingContents = false, contentError = null }: { [key: string]: any }) {
-  const notices = useMemo(() => normaliseNotices(contents), [contents]);
-  const isLoading = isLoadingContents;
-  const error = contentError;
+function NoticeTab({ courseName, classId }: { [key: string]: any }) {
+  const [notices, setNotices] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!classId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadNotices = async () => {
+      setIsLoading(true);
+      setError('');
+
+      try {
+        const { data, error } = await supabase
+          .from('classroom_notices')
+          .select('*')
+          .eq('classroom_id', classId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (isMounted) {
+          setNotices(normaliseNotices(data ?? []));
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || '공지를 불러오지 못했습니다.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadNotices();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [classId]);
 
   const headerDescription = useMemo(() => {
     if (!courseName) {
