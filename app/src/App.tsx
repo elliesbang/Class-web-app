@@ -1,8 +1,13 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-import AdminLayout from './admin/AdminLayout';
-import AdminHome from './admin/AdminHome';
+import AdminLayout from './admin/layout/AdminLayout';
+import DashboardHome from './admin/pages/DashboardHome';
+import ClassCreatePage from './admin/pages/Classes/ClassCreatePage';
+import ClassDetailPage from './admin/pages/Classes/ClassDetailPage';
+import ClassListPage from './admin/pages/Classes/ClassListPage';
+import AssignmentFeedbackPage from './admin/pages/AssignmentFeedback/AssignmentFeedbackPage';
+import StudentsPage from './admin/pages/Students/StudentsPage';
 import ContentListPage from './admin/content/ContentListPage';
 import MainLayout from './layouts/MainLayout';
 import Home from './pages/home/Home';
@@ -45,7 +50,13 @@ function App() {
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminHome />} />
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardHome />} />
+        <Route path="classes" element={<ClassListPage />} />
+        <Route path="classes/create" element={<ClassCreatePage />} />
+        <Route path="classes/:id" element={<ClassDetailPage />} />
+        <Route path="students" element={<StudentsPage />} />
+        <Route path="assignments" element={<AssignmentFeedbackPage />} />
         <Route path="content" element={<ContentListPage />} />
       </Route>
     </Routes>
