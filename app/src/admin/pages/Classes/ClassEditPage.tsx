@@ -26,6 +26,8 @@ const ClassEditPage = () => {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [code, setCode] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [categories, setCategories] = useState<ClassCategory[]>([]);
   const [rule, setRule] = useState<AssignmentRule>(initialRule);
   const [loading, setLoading] = useState(true);
@@ -55,6 +57,8 @@ const ClassEditPage = () => {
         setDescription(data.description ?? '');
         setCategoryId(data.category_id ? String(data.category_id) : '');
         setCode(data.code ?? '');
+        setStartDate(data.start_date ?? '');
+        setEndDate(data.end_date ?? '');
         setRule({
           assignment_rule_type: data.assignment_rule_type ?? 'always_open',
           assignment_days: data.assignment_days ?? [],
@@ -94,6 +98,8 @@ const ClassEditPage = () => {
       assignment_days: rule.assignment_days ?? [],
       assignment_start_time: rule.assignment_start_time ?? null,
       assignment_end_time: rule.assignment_end_time ?? null,
+      start_date: startDate || null,
+      end_date: endDate || null,
     };
 
     const { error: submitError } = await updateClass(id, payload);
@@ -168,6 +174,27 @@ const ClassEditPage = () => {
                 </option>
               ))}
             </select>
+          </label>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-[#3f3a37]">시작일</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full rounded-xl border border-[#f1e4c2] bg-white px-3 py-2 text-sm shadow-inner"
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-[#3f3a37]">종료일</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full rounded-xl border border-[#f1e4c2] bg-white px-3 py-2 text-sm shadow-inner"
+            />
           </label>
         </div>
 

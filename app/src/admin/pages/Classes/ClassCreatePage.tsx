@@ -24,6 +24,8 @@ const ClassCreatePage = () => {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [code, setCode] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [categories, setCategories] = useState<ClassCategory[]>([]);
   const [rule, setRule] = useState<AssignmentRule>(initialRule);
   const [saving, setSaving] = useState(false);
@@ -72,6 +74,8 @@ const ClassCreatePage = () => {
       assignment_days: rule.assignment_days ?? [],
       assignment_start_time: rule.assignment_start_time ?? null,
       assignment_end_time: rule.assignment_end_time ?? null,
+      start_date: startDate || null,
+      end_date: endDate || null,
     };
 
     const { error: submitError } = await createClass(payload);
@@ -142,6 +146,27 @@ const ClassCreatePage = () => {
                 </option>
               ))}
             </select>
+          </label>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-[#3f3a37]">시작일</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full rounded-xl border border-[#f1e4c2] bg-white px-3 py-2 text-sm shadow-inner"
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-[#3f3a37]">종료일</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full rounded-xl border border-[#f1e4c2] bg-white px-3 py-2 text-sm shadow-inner"
+            />
           </label>
         </div>
 
