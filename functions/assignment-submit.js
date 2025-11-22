@@ -7,87 +7,70 @@ export async function onRequest({ request, env }) {
     }
 
     const body = await request.json();
-    let { classroom_id, student_id, session_no, image_base64, link_url } = body;
+    const { classroom_id, session_no, image_base64, link_url } = body;
 
-    // -----------------------------
-    // 🔥 필수값 체크
-    // -----------------------------
-    if (!classroom_id || !student_id || !session_no) {
-      return new Response("Missing required fields", { status: 400 });
+    if (!classroom_id || !session_no) {
+      return new Response("Missing fields", { status: 400 });
     }
 
-    // Cloudflare Request에서는 session_no가 string이라 integer로 변환해야 Supabase 오류 안 남
-    session_no = Number(session_no);
+    const supabase = createClient(
+      env.SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY
+    );
 
-    // -----------------------------
-    // 🔥 Supabase client
-    // -----------------------------
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-      global: { fetch: fetch }
-    });
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return new Response("Unauthenticated", { status: 401 });
+    }
 
     let uploadedImageUrl = null;
 
-    // -----------------------------
-    // 🔥 Base64 이미지 → File 업로드 (Cloudflare 호환)
-    // -----------------------------
     if (image_base64) {
-      const base64String = image_base64.split(",")[1];
+      const base64Data = image_base64.split(",")[1];
+      const buffer = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
 
-      const binaryString = atob(base64String);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      const file = new File([bytes], `assignment_${Date.now()}.png`, {
-        type: "image/png",
-      });
-
-      const filePath = `assignments/${classroom_id}/${student_id}/${file.name}`;
+      const filePath = `assignments/${classroom_id}/${user.id}/${Date.now()}.png`;
 
       const { error: uploadError } = await supabase.storage
         .from("assignments")
-        .upload(filePath, file, {
-          upsert: false,
+        .upload(filePath, buffer, {
+          contentType: "image/png",
         });
 
       if (uploadError) {
-        console.error("uploadError:", uploadError);
-        return new Response("Image upload failed", { status: 500 });
+        return new Response(JSON.stringify({ error: "Upload failed" }), {
+          status: 500,
+        });
       }
 
-      const { data } = supabase.storage
+      uploadedImageUrl = supabase.storage
         .from("assignments")
-        .getPublicUrl(filePath);
-
-      uploadedImageUrl = data.publicUrl;
+        .getPublicUrl(filePath).data.publicUrl;
     }
 
-    // -----------------------------
-    // 🔥 DB INSERT
-    // -----------------------------
-    const { error: dbError } = await supabase.from("assignments").insert({
+    // DB insert
+    const { error } = await supabase.from("assignments").insert({
       classroom_id,
-      student_id,
+      student_id: user.id,
       session_no,
       image_url: uploadedImageUrl,
-      link_url: link_url || null,
+      link_url,
     });
 
-    if (dbError) {
-      console.error("dbError:", dbError);
-      return new Response("DB insert failed", { status: 500 });
+    if (error) {
+      return new Response(JSON.stringify({ error: "Insert failed" }), {
+        status: 500,
+      });
     }
 
-    return new Response(
-      JSON.stringify({ success: true }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
-
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (err) {
-    console.error("Internal Error:", err);
-    return new Response("Internal Server Error", { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+    });
   }
 }
