@@ -1,55 +1,62 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-const getSupabaseClient = (env) => {
-  const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
-  const key =
-    env.SUPABASE_SERVICE_ROLE_KEY ??
-    env.SUPABASE_KEY ??
-    env.SUPABASE_ANON_KEY ??
-    env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
-    env.VITE_SUPABASE_ANON_KEY
-
-  return createClient(url, key)
-}
-
-const jsonResponse = (body, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-export const onRequest = async ({ request, env }) => {
+export async function onRequest({ request, env }) {
   try {
-    if (request.method !== 'POST') {
-      return jsonResponse({ error: 'Method not allowed' }, 405)
+    if (request.method !== "POST") {
+      return new Response(
+        JSON.stringify({ error: "Method Not Allowed" }),
+        { status: 405 }
+      );
     }
 
-    const { title, content, is_visible } = await request.json()
+    const body = await request.json();
+    const { title, content, isVisible } = body;
 
     if (!title || !content) {
-      return jsonResponse({ error: 'title and content are required' }, 400)
+      return new Response(
+        JSON.stringify({ error: "title and content are required" }),
+        { status: 400 }
+      );
     }
 
-    const supabase = getSupabaseClient(env)
+    // Cloudflare Pages 전용 Supabase Client
+    const supabase = createClient(
+      env.SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: { persistSession: false },
+        global: { fetch: fetch }
+      }
+    );
 
+    // DB Insert
     const { data, error } = await supabase
-      .from('classroom_content')
+      .from("global_notices")
       .insert({
-        type: 'global_notice',
         title,
         content,
-        is_visible: typeof is_visible === 'boolean' ? is_visible : true,
-        created_at: new Date().toISOString()
+        is_visible: typeof isVisible === "boolean" ? isVisible : true,
       })
       .select()
-      .single()
+      .single();
 
     if (error) {
-      throw error
+      console.error("[global_notice/save] DB Error:", error);
+      return new Response(
+        JSON.stringify({ error: "DB insert failed", detail: error.message }),
+        { status: 500 }
+      );
     }
 
-    return jsonResponse(data)
-  } catch (error) {
-    return jsonResponse({ error: error.message }, 500)
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+
+  } catch (err) {
+    console.error("[global_notice/save] Internal Error:", err);
+    return new Response(JSON.stringify({ error: "Internal Error" }), {
+      status: 500
+    });
   }
 }
