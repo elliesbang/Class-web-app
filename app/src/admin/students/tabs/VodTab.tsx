@@ -3,16 +3,16 @@ import { useEffect, useState } from 'react';
 import Table from '../../components/Table';
 import { supabase } from '../../../lib/supabase';
 
-interface VodMember {
-  id: number;
-  vod_id?: number;
-  user_id?: string;
-  email?: string;
-  created_at?: string;
+interface ProfileUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: 'admin' | 'student' | 'vod';
+  created_at: string;
 }
 
 const VodTab = () => {
-  const [members, setMembers] = useState<VodMember[]>([]);
+  const [members, setMembers] = useState<ProfileUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,11 +20,13 @@ const VodTab = () => {
     const fetchVodMembers = async () => {
       setLoading(true);
       const { data, error: fetchError } = await supabase
-        .from('vod_members')
-        .select('*')
+        .from('profiles')
+        .select('id, email, name, role, created_at')
+        .eq('role', 'vod')
         .order('created_at', { ascending: false });
 
       if (fetchError) {
+        setMembers([]);
         setError(fetchError.message);
       } else {
         setMembers(data ?? []);
@@ -37,7 +39,11 @@ const VodTab = () => {
   }, []);
 
   return (
-    <Table title="VOD" description={loading ? '불러오는 중입니다...' : `총 ${members.length}명`} headers={['ID', 'VOD ID', '이메일', '생성일']}>
+    <Table
+      title="VOD"
+      description={loading ? '불러오는 중입니다...' : `총 ${members.length}명`}
+      headers={['ID', 'VOD ID', '이메일', '생성일']}
+    >
       {loading ? (
         <tr>
           <td colSpan={4} className="px-4 py-6 text-center text-sm text-[#6a5c50]">
@@ -54,9 +60,9 @@ const VodTab = () => {
         members.map((vod) => (
           <tr key={vod.id} className="hover:bg-[#fffaf0]">
             <td className="px-4 py-3 text-sm font-semibold">{vod.id}</td>
-            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.vod_id ?? '-'}</td>
-            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.email ?? vod.user_id}</td>
-            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.created_at?.slice(0, 10)}</td>
+            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.name ?? '-'}</td>
+            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.email ?? '-'}</td>
+            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.created_at ? vod.created_at.slice(0, 10) : '-'}</td>
           </tr>
         ))
       )}
