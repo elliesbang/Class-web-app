@@ -1,3 +1,5 @@
+import { supabase } from '../supabaseClient';
+
 export type ClassroomVideo = {
   id: number | string;
   classroomId: number | string;
@@ -104,6 +106,17 @@ const resolveArrayData = (data: any): any[] => {
 };
 
 const resolveSingleData = (data: any) => (data?.data ? data.data : data);
+
+/* --------- Classroom 기본 정보 --------- */
+
+export const getClassrooms = async () =>
+  supabase.from('classroom').select('*').order('created_at', { ascending: false });
+
+export const deleteClassroom = async (id: string | number) => supabase.from('classroom').delete().eq('id', id);
+
+export async function getClassCategories() {
+  return supabase.from('classroom_category').select('*').order('order_num', { ascending: true });
+}
 
 /* ----------------------------------
    📌 수정된 목록 API 경로 (list → get)
