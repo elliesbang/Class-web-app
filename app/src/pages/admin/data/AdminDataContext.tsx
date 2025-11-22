@@ -1,14 +1,4 @@
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-import { type AssignmentListItem } from '../../../contexts/SheetsDataContext';
-import { useSheetsData } from '../../../contexts/SheetsDataContext';
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 
 export type AssignmentStatus = '미제출' | '제출됨' | '피드백 완료';
 export type AssignmentFileType = 'image' | 'pdf' | 'link' | 'other';
@@ -65,46 +55,9 @@ const initialFeedbacks: Feedback[] = [];
 
 const AdminDataContext = createContext<AdminDataContextValue | undefined>(undefined);
 
-const normaliseAssignment = (assignment: AssignmentListItem): Assignment => {
-  const allowedStatuses: AssignmentStatus[] = ['미제출', '제출됨', '피드백 완료'];
-  const allowedFileTypes: AssignmentFileType[] = ['image', 'pdf', 'link', 'other'];
-
-  const status: AssignmentStatus = allowedStatuses.includes(assignment.status)
-    ? assignment.status
-    : '제출됨';
-
-  const fileType: AssignmentFileType = allowedFileTypes.includes(assignment.fileType)
-    ? assignment.fileType
-    : assignment.link
-      ? 'link'
-      : 'other';
-
-  return {
-    id: assignment.id,
-    title: assignment.title,
-    course: assignment.className ?? '미지정 클래스',
-    student: {
-      name: assignment.studentName || '이름 미입력',
-      email: assignment.studentEmail ?? '-',
-    },
-    submittedAt: assignment.submittedAt || null,
-    status,
-    fileType,
-    classId: typeof assignment.classId === 'number' ? assignment.classId : null,
-    fileUrl: assignment.fileUrl ?? undefined,
-    link: assignment.link ?? null,
-  };
-};
-
 export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
-  const { assignments: sheetAssignments } = useSheetsData();
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>(initialFeedbacks);
-
-  useEffect(() => {
-    const normalised = sheetAssignments.map(normaliseAssignment);
-    setAssignments(normalised);
-  }, [sheetAssignments]);
 
   const addFeedback: AdminDataContextValue['addFeedback'] = useCallback(
     ({ assignmentId, content, author, attachmentUrl, classId = null }) => {

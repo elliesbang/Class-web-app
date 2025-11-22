@@ -1,45 +1,92 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
-  filterMaterialsByCourse,
-  filterNoticesByCourse,
-  filterVideosByCourse,
-  findCourseSummary,
+  type ClassroomMaterial,
+  type ClassroomNotice,
+  type ClassroomVideo,
+  getClassroomMaterials,
+  getClassroomNotices,
+  getClassroomVideos,
 } from '../../lib/api/classroom';
-import { useSheetsData } from '../../contexts/SheetsDataContext';
+import { supabase } from '@/lib/supabaseClient';
 
-const tabs = [
+type TabKey = 'materials' | 'video' | 'notice' | 'assignment' | 'feedback';
+
+type CourseMeta = {
+  courseName: string;
+  courseDescription?: string | null;
+  categoryName?: string | null;
+};
+
+const tabs: { key: TabKey; label: string }[] = [
   { key: 'materials', label: '자료' },
   { key: 'video', label: '강의실 영상' },
   { key: 'notice', label: '강의실 공지' },
   { key: 'assignment', label: '과제' },
   { key: 'feedback', label: '피드백' },
-] as const;
-
-type TabKey = (typeof tabs)[number]['key'];
+];
 
 function ClassDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { contentCollections, lectureCourses, loading } = useSheetsData();
   const [activeTab, setActiveTab] = useState<TabKey>('materials');
+  const [courseMeta, setCourseMeta] = useState<CourseMeta | null>(null);
+  const [courseVideos, setCourseVideos] = useState<ClassroomVideo[]>([]);
+  const [courseMaterials, setCourseMaterials] = useState<ClassroomMaterial[]>([]);
+  const [courseNotices, setCourseNotices] = useState<ClassroomNotice[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const courseMeta = useMemo(() => (id ? findCourseSummary(lectureCourses, id) : null), [id, lectureCourses]);
-  const courseTitle = courseMeta?.courseName ?? '과정 상세 정보';
-  const courseVideos = useMemo(
-    () => (id ? filterVideosByCourse(contentCollections.classroomVideos, id) : []),
-    [contentCollections.classroomVideos, id],
-  );
-  const courseMaterials = useMemo(
-    () => (id ? filterMaterialsByCourse(contentCollections.classroomMaterials, id) : []),
-    [contentCollections.classroomMaterials, id],
-  );
-  const courseNotices = useMemo(
-    () => (id ? filterNoticesByCourse(contentCollections.classroomNotices, id) : []),
-    [contentCollections.classroomNotices, id],
-  );
-  const isLoading = loading;
+  useEffect(() => {
+    if (!id) return;
+
+    let isMounted = true;
+
+    const loadContent = async () => {
+      setIsLoading(true);
+
+      try {
+        const [videos, materials, notices, classResult] = await Promise.all([
+          getClassroomVideos(id),
+          getClassroomMaterials(id),
+          getClassroomNotices(id),
+          supabase.from('classes').select('name, category, description').eq('id', id).maybeSingle(),
+        ]);
+
+        if (!isMounted) return;
+
+        setCourseVideos(videos);
+        setCourseMaterials(materials);
+        setCourseNotices(notices);
+
+        if (!classResult.error && classResult.data) {
+          setCourseMeta({
+            courseName: classResult.data.name ?? '과정 상세 정보',
+            courseDescription: (classResult.data.description as string | null | undefined) ?? null,
+            categoryName: (classResult.data.category as string | null | undefined) ?? null,
+          });
+        } else {
+          setCourseMeta(null);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('[ClassDetailPage] failed to load classroom content', error);
+        setCourseVideos([]);
+        setCourseMaterials([]);
+        setCourseNotices([]);
+        setCourseMeta(null);
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
+      }
+    };
+
+    void loadContent();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   const renderVideoTab = () => (
     <section className="space-y-4">
@@ -50,8 +97,8 @@ function ClassDetailPage() {
           <div className="space-y-4">
             <div className="aspect-video w-full overflow-hidden rounded-2xl bg-ellieGray/10">
               <iframe
-                src={courseVideos[0].videoUrl}
-                title={`${courseTitle} 영상`}
+                src={courseVideos[0].url}
+                title={`${courseMeta?.courseName ?? '강의실'} 영상`}
                 className="h-full w-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -121,7 +168,10 @@ function ClassDetailPage() {
         ) : (
           <ul className="mt-4 space-y-3 text-sm text-ellieGray/80">
             {courseMaterials.map((material) => (
-              <li key={material.id} className="flex flex-col gap-3 rounded-2xl bg-[#fffaf0] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <li
+                key={material.id}
+                className="flex flex-col gap-3 rounded-2xl bg-[#fffaf0] p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div>
                   <p className="text-sm font-semibold text-ellieGray">{material.title}</p>
                   {material.description ? (
@@ -192,7 +242,7 @@ function ClassDetailPage() {
         >
           ← 목록으로 돌아가기
         </button>
-        <h2 className="text-lg font-semibold text-ellieGray">{courseTitle}</h2>
+        <h2 className="text-lg font-semibold text-ellieGray">{courseMeta?.courseName ?? '과정 상세 정보'}</h2>
         {courseMeta?.courseDescription ? (
           <p className="mt-2 text-sm text-ellieGray/70">{courseMeta.courseDescription}</p>
         ) : null}
