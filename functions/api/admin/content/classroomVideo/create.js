@@ -1,57 +1,63 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-const getSupabaseClient = (env) => {
-  const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
-  const key =
-    env.SUPABASE_SERVICE_ROLE_KEY ??
-    env.SUPABASE_KEY ??
-    env.SUPABASE_ANON_KEY ??
-    env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
-    env.VITE_SUPABASE_ANON_KEY
-
-  return createClient(url, key)
-}
-
-const jsonResponse = (body, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-export const onRequest = async ({ request, env }) => {
+export async function onRequest({ request, env }) {
   try {
-    if (request.method !== 'POST') {
-      return jsonResponse({ error: 'Method not allowed' }, 405)
+    if (request.method !== "POST") {
+      return new Response(
+        JSON.stringify({ error: "Method Not Allowed" }),
+        { status: 405 }
+      );
     }
 
-    const { classroom_id, title, video_url, description, display_order } = await request.json()
+    const body = await request.json();
+    const { classroom_id, title, video_url, description, display_order } = body;
 
     if (!classroom_id || !title || !video_url) {
-      return jsonResponse({ error: 'classroom_id, title, and video_url are required' }, 400)
+      return new Response(
+        JSON.stringify({ error: "classroom_id, title, and video_url are required" }),
+        { status: 400 }
+      );
     }
 
-    const supabase = getSupabaseClient(env)
+    // Cloudflare Pages 전용 Supabase Client
+    const supabase = createClient(
+      env.SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: { persistSession: false },
+        global: { fetch: fetch }
+      }
+    );
 
     const { data, error } = await supabase
-      .from('classroom_content')
+      .from("classroom_videos")
       .insert({
-        type: 'video',
-        class_id: classroom_id,
+        classroom_id: Number(classroom_id),
         title,
         url: video_url,
-        description: description ?? null,
-        display_order: display_order ?? null,
-        created_at: new Date().toISOString()
+        description: description || null,
+        order_num: display_order ? Number(display_order) : null
       })
       .select()
-      .single()
+      .single();
 
     if (error) {
-      throw error
+      console.error("[classroom_videos/save] DB Error:", error);
+      return new Response(
+        JSON.stringify({ error: "DB insert failed", detail: error.message }),
+        { status: 500 }
+      );
     }
 
-    return jsonResponse(data)
-  } catch (error) {
-    return jsonResponse({ error: error.message }, 500)
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+
+  } catch (err) {
+    console.error("[classroom_videos/save] Internal Error:", err);
+    return new Response(JSON.stringify({ error: "Internal Error" }), {
+      status: 500
+    });
   }
 }
