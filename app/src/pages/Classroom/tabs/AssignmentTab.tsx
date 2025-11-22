@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getStoredAuthUser } from '@/lib/authUser';
@@ -46,7 +47,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
   const [classInfo, setClassInfo] = useState<any>(null);
   const [classInfoError, setClassInfoError] = useState('');
 
-  /** 1) classroom info 불러오기 */
+  // 1) 수업 정보
   useEffect(() => {
     const loadInfo = async () => {
       try {
@@ -68,17 +69,18 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     loadInfo();
   }, [classId]);
 
-  /** 2) session 불러오기 */
+  // 2) 회차 목록 (classroom_sessions)
   useEffect(() => {
     const loadSessions = async () => {
       try {
         const { data, error } = await supabase
           .from('classroom_sessions')
-          .select('*')
+          .select('session_no')
           .eq('classroom_id', classId)
-          .order('session_no');
+          .order('session_no', { ascending: true });
 
         if (error) throw error;
+
         setSessions(data ?? []);
         if (data?.length) setSessionNo(String(data[0].session_no));
       } catch (err) {
@@ -88,7 +90,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     loadSessions();
   }, [classId]);
 
-  /** 제출 기간 확인 */
+  // 제출 기간
   const allowSubmission = useMemo(() => {
     if (!classInfo?.start_date || !classInfo?.end_date) return true;
 
@@ -101,8 +103,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     return today >= s && today <= e;
   }, [classInfo]);
 
-
-  /** 3) 과제 리스트 */
+  // 3) 과제 목록
   const loadAssignments = useCallback(async () => {
     if (!authUser?.user_id) return;
 
@@ -132,7 +133,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     loadAssignments();
   }, [loadAssignments]);
 
-  /** 4) 제출 */
+  // 제출
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
@@ -174,7 +175,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     }
   };
 
-  /** 이미지 업로드 */
+  // 이미지 업로드
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -192,7 +193,6 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       {/* 제출 폼 */}
       <form onSubmit={handleSubmit} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft space-y-4">
 
-        {/* 제목 */}
         <div>
           <h3 className="font-semibold text-ellieGray">과제 제출</h3>
           <p className="text-sm text-ellieGray/70">이미지 또는 링크로 제출하세요.</p>
@@ -245,7 +245,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
         </button>
       </form>
 
-      {/* 제출된 과제 목록 */}
+      {/* 과제 목록 */}
       <section className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
         <h3 className="font-semibold mb-3">제출된 과제</h3>
 
@@ -276,3 +276,4 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 }
 
 export default AssignmentTab;
+
