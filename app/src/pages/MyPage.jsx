@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthUser } from '../hooks/useAuthUser';
-import AdminMyPage from './admin/AdminMyPage.jsx';
+import AdminMyPage from './admin/my/AdminMyPage';
 import StudentMyPage from './Student/MyPage.jsx';
 import VodMyPage from './Vod/MyPage.jsx';
 
