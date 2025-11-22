@@ -3,12 +3,15 @@ import { useEffect, useState } from 'react';
 import Table from '../../components/Table';
 import { supabase } from '../../../lib/supabase';
 
-interface ProfileUser {
-  id: string;
-  name: string | null;
-  email: string | null;
-  role: 'admin' | 'student' | 'vod';
-  created_at: string;
+interface VodMember {
+  id: number;
+  vod_id?: number;
+  user_id?: string;
+  created_at?: string;
+  profiles?: {
+    name?: string;
+    email?: string;
+  };
 }
 
 const VodTab = () => {
@@ -20,9 +23,17 @@ const VodTab = () => {
     const fetchVodMembers = async () => {
       setLoading(true);
       const { data, error: fetchError } = await supabase
-        .from('profiles')
-        .select('id, email, name, role, created_at')
-        .eq('role', 'vod')
+        .from('vod_purchases')
+        .select(`
+          id,
+          vod_id,
+          user_id,
+          created_at,
+          profiles (
+            name,
+            email
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (fetchError) {
@@ -60,9 +71,9 @@ const VodTab = () => {
         members.map((vod) => (
           <tr key={vod.id} className="hover:bg-[#fffaf0]">
             <td className="px-4 py-3 text-sm font-semibold">{vod.id}</td>
-            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.name ?? '-'}</td>
-            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.email ?? '-'}</td>
-            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.created_at ? vod.created_at.slice(0, 10) : '-'}</td>
+            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.vod_id ?? '-'}</td>
+            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.profiles?.email ?? vod.user_id}</td>
+            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.created_at?.slice(0, 10)}</td>
           </tr>
         ))
       )}
