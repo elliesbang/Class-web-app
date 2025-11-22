@@ -1,22 +1,14 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import App from './App'
+import './index.css'
+import './lib/setupAuthFetch'
 
-import App from './App';
-
-// 🔥 Supabase 기반으로 다시 만든 Context
-import { SheetsDataProvider } from './contexts/SheetsDataContext';
-
-import './index.css';
-import './lib/setupAuthFetch';
-
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      {/* 🔥 전역 데이터 (VOD, 공지 등) 이제 Supabase에서 불러옴 */}
-      <SheetsDataProvider>
-        <App />
-      </SheetsDataProvider>
+      <App />
     </BrowserRouter>
   </React.StrictMode>
-);
+)
