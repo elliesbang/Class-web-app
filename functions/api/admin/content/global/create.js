@@ -25,13 +25,13 @@ export async function onRequest({ request, env }) {
       env.SUPABASE_SERVICE_ROLE_KEY,
       {
         auth: { persistSession: false },
-        global: { fetch: fetch }
+        global: { fetch }
       }
     );
 
-    // DB Insert
+    // 전체 공지 저장
     const { data, error } = await supabase
-      .from("global_notices")
+      .from("notifications")
       .insert({
         title,
         content,
@@ -41,7 +41,7 @@ export async function onRequest({ request, env }) {
       .single();
 
     if (error) {
-      console.error("[global_notice/save] DB Error:", error);
+      console.error("[notifications/save] DB Error:", error);
       return new Response(
         JSON.stringify({ error: "DB insert failed", detail: error.message }),
         { status: 500 }
@@ -54,7 +54,7 @@ export async function onRequest({ request, env }) {
     });
 
   } catch (err) {
-    console.error("[global_notice/save] Internal Error:", err);
+    console.error("[notifications/save] Internal Error:", err);
     return new Response(JSON.stringify({ error: "Internal Error" }), {
       status: 500
     });
