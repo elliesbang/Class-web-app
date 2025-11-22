@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AdminLayout from './admin/layout/AdminLayout';
 import DashboardHome from './admin/pages/DashboardHome';
 import ClassCreatePage from './admin/pages/Classes/ClassCreatePage';
+import ClassEditPage from './admin/pages/Classes/ClassEditPage';
 import ClassDetailPage from './admin/pages/Classes/ClassDetailPage';
 import ClassListPage from './admin/pages/Classes/ClassListPage';
 import AssignmentFeedbackPage from './admin/pages/AssignmentFeedback/AssignmentFeedbackPage';
@@ -54,6 +55,7 @@ function App() {
         <Route path="dashboard" element={<DashboardHome />} />
         <Route path="classes" element={<ClassListPage />} />
         <Route path="classes/create" element={<ClassCreatePage />} />
+        <Route path="classes/:id/edit" element={<ClassEditPage />} />
         <Route path="classes/:id" element={<ClassDetailPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="assignments" element={<AssignmentFeedbackPage />} />
