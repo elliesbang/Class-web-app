@@ -110,9 +110,9 @@ const resolveSingleData = (data: any) => (data?.data ? data.data : data);
 /* --------- Classroom 기본 정보 --------- */
 
 export const getClassrooms = async () =>
-  supabase.from('classroom').select('*').order('created_at', { ascending: false });
+  supabase.from('classes').select('*').order('created_at', { ascending: false });
 
-export const deleteClassroom = async (id: string | number) => supabase.from('classroom').delete().eq('id', id);
+export const deleteClassroom = async (id: string | number) => supabase.from('classes').delete().eq('id', id);
 
 export async function getClassCategories() {
   return supabase.from('classroom_category').select('*').order('order_num', { ascending: true });
