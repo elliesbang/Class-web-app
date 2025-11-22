@@ -15,7 +15,6 @@ export function AssignmentTabRoute() {
       setState((prev) => ({ ...prev, loading: true }));
 
       try {
-        // 1) 수업 정보 로드
         const { data: classroom, error: classErr } = await supabase
           .from('classroom')
           .select('*')
@@ -24,14 +23,12 @@ export function AssignmentTabRoute() {
 
         if (classErr) throw classErr;
 
-        // 2) 세션 정보 로드
         const { data: sessions } = await supabase
           .from('classroom_sessions')
           .select('*')
           .eq('classroom_id', classId)
           .order('session_no', { ascending: true });
 
-        // 3) 과제 목록 로드
         const {
           data: { user }
         } = await supabase.auth.getUser();
@@ -82,6 +79,5 @@ export {
   VideoTabRoute,
   MaterialTabRoute,
   NoticeTabRoute,
-  AssignmentTabRoute,
   FeedbackTabRoute,
 };
