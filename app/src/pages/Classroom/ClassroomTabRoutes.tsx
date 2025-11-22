@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -28,7 +29,7 @@ export function FeedbackTabRoute() {
 }
 
 // -----------------------------
-// 과제 탭 라우트 (AssignmentTab은 자기 안에서 Supabase 호출)
+// 과제 탭 라우트 — classId만 전달
 // -----------------------------
 
 export function AssignmentTabRoute() {
@@ -36,3 +37,4 @@ export function AssignmentTabRoute() {
   if (!classId) return null;
   return <AssignmentTab classId={classId} />;
 }
+
