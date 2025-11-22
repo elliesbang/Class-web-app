@@ -1,9 +1,11 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 
-import ClassroomContentTab from './ClassroomContentTab';
+import ClassroomContentTab from './tabs/ClassroomContentTab';
 import { VideoTab, MaterialTab, NoticeTab, FeedbackTab } from './tabs';
 import AssignmentTab from './tabs/AssignmentTab';
+
+import { supabase } from '@/lib/supabaseClient';
 
 // -----------------------------
 // 강의실 콘텐츠 탭 라우트
@@ -28,7 +30,7 @@ export function FeedbackTabRoute() {
 }
 
 // -----------------------------
-// 과제 탭 라우트 (수정된 AssignmentTabRoute)
+// 과제 탭 라우트
 // -----------------------------
 
 export function AssignmentTabRoute() {
@@ -109,8 +111,3 @@ export function AssignmentTabRoute() {
     />
   );
 }
-
-// -----------------------------
-// 최종 export (중복 없이)
-// -----------------------------
-
