@@ -114,10 +114,3 @@ export function AssignmentTabRoute() {
 // 최종 export (중복 없이)
 // -----------------------------
 
-export {
-  VideoTabRoute,
-  MaterialTabRoute,
-  NoticeTabRoute,
-  FeedbackTabRoute,
-  AssignmentTabRoute,
-};
