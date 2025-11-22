@@ -67,16 +67,16 @@ const normaliseVodVideo = (record: Record<string, any> | null): VodVideo | null 
  * --------------------------*/
 export const getVodCategories = async (): Promise<VodCategory[]> => {
   const { data, error } = await supabase
-    .from('vod_class_category')
+    .from('vod_category')
     .select('*')
-    .order('order_num', { ascending: true });
+    .order('order', { ascending: true });
 
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((item) => ({
     id: item.id,
     name: item.name,
-    order: item.order_num,
+    order: item.order,
   }));
 };
 
