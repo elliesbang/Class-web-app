@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 
-import ClassroomContentTab from './tabs/ClassroomContentTab';
+import ClassroomContentTab from './ClassroomContentTab';
 import { VideoTab, MaterialTab, NoticeTab, FeedbackTab } from './tabs';
 import AssignmentTab from './tabs/AssignmentTab';
 
