@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import Form from '../../components/Form';
 import RuleSelector, { type AssignmentRule } from '../../components/RuleSelector';
 import { createClass } from '../../api/classes';
+import { getClassCategories } from '../../../lib/api/classroom';
+
+interface ClassCategory {
+  id: number | string;
+  name: string;
+}
 
 const initialRule: AssignmentRule = {
   assignment_rule_type: 'always_open',
@@ -16,21 +22,51 @@ const ClassCreatePage = () => {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [code, setCode] = useState('');
+  const [categories, setCategories] = useState<ClassCategory[]>([]);
   const [rule, setRule] = useState<AssignmentRule>(initialRule);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data, error: fetchError } = await getClassCategories();
+      if (fetchError) {
+        setError(fetchError.message);
+      } else {
+        setCategories(data ?? []);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const generateRandomCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let r = '';
+    for (let i = 0; i < 6; i++) r += chars[Math.floor(Math.random() * chars.length)];
+    setCode(`CL-${r}`);
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
     setError(null);
 
+    if (!categoryId) {
+      setError('카테고리를 선택해주세요.');
+      setSaving(false);
+      return;
+    }
+
+    const selectedCategory = categories.find((item) => String(item.id) === String(categoryId));
+
     const payload = {
       name,
       description,
-      category,
+      category: selectedCategory?.name ?? '',
+      category_id: categoryId,
       code,
       assignment_rule_type: rule.assignment_rule_type,
       assignment_days: rule.assignment_days ?? [],
@@ -92,13 +128,20 @@ const ClassCreatePage = () => {
           </label>
           <label className="space-y-2">
             <span className="text-sm font-semibold text-[#3f3a37]">카테고리</span>
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+            <select
+              name="categoryId"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               required
               className="w-full rounded-xl border border-[#f1e4c2] bg-white px-3 py-2 text-sm shadow-inner"
-              placeholder="예) 마케팅"
-            />
+            >
+              <option value="">카테고리를 선택하세요</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 
@@ -115,13 +158,22 @@ const ClassCreatePage = () => {
 
         <label className="space-y-2">
           <span className="text-sm font-semibold text-[#3f3a37]">수업 코드</span>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            required
-            className="w-full rounded-xl border border-[#f1e4c2] bg-white px-3 py-2 text-sm shadow-inner"
-            placeholder="예) CLASS-001"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+              className="w-full rounded-xl border border-[#f1e4c2] bg-white px-3 py-2 text-sm shadow-inner"
+              placeholder="예) CL-XXXXXX"
+            />
+            <button
+              type="button"
+              onClick={generateRandomCode}
+              className="whitespace-nowrap rounded-full bg-[#fff7d6] px-3 py-2 text-xs font-semibold text-[#3f3a37] shadow-inner hover:bg-[#ffe8a3]"
+            >
+              랜덤 생성
+            </button>
+          </div>
         </label>
 
         <div className="space-y-2">

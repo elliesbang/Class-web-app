@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import Table from '../../components/Table';
-import { getClasses } from '../../api/classes';
+import { deleteClassroom, getClassrooms } from '../../../lib/api/classroom';
 
 interface ClassRow {
   id: number;
   name: string;
-  category: string;
+  category?: string;
   code: string;
   assignment_rule_type?: string;
   assignment_days?: string[] | null;
@@ -35,11 +35,12 @@ const ClassListPage = () => {
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const { data, error: fetchError } = await getClasses();
+      const { data, error: fetchError } = await getClassrooms();
       if (fetchError) {
         setError(fetchError.message);
       } else {
@@ -51,6 +52,26 @@ const ClassListPage = () => {
 
     fetchData();
   }, []);
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('정말로 삭제하시겠습니까?')) return;
+    setDeletingId(id);
+    const { error: deleteError } = await deleteClassroom(id);
+    if (deleteError) {
+      setError(deleteError.message);
+      setDeletingId(null);
+      return;
+    }
+
+    const { data, error: fetchError } = await getClassrooms();
+    if (fetchError) {
+      setError(fetchError.message);
+    } else {
+      setClasses(data ?? []);
+      setError(null);
+    }
+    setDeletingId(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -93,16 +114,24 @@ const ClassListPage = () => {
             <tr key={item.id} className="hover:bg-[#fffaf0]">
               <td className="px-4 py-3 font-semibold">{item.name}</td>
               <td className="px-4 py-3 text-[#5c5246]">{item.code}</td>
-              <td className="px-4 py-3 text-[#5c5246]">{item.category}</td>
+              <td className="px-4 py-3 text-[#5c5246]">{item.category ?? '-'}</td>
               <td className="px-4 py-3 text-[#5c5246]">{formatRule(item)}</td>
               <td className="px-4 py-3 text-[#5c5246]">{item.created_at?.slice(0, 10)}</td>
-              <td className="px-4 py-3 text-right">
+              <td className="px-4 py-3 text-right space-x-2">
                 <Link
                   to={`/admin/classes/${item.id}`}
                   className="inline-flex items-center rounded-full bg-[#fff7d6] px-3 py-1 text-xs font-semibold text-[#3f3a37] shadow-inner hover:bg-[#ffe8a3]"
                 >
-                  상세 보기
+                  수정
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(item.id)}
+                  disabled={deletingId === item.id}
+                  className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 shadow-inner transition hover:bg-red-200 disabled:opacity-60"
+                >
+                  {deletingId === item.id ? '삭제 중...' : '삭제'}
+                </button>
               </td>
             </tr>
           ))

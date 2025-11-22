@@ -1,10 +1,12 @@
 import { NavLink } from 'react-router-dom';
+import { FolderKanban } from 'lucide-react';
 
 const MENU_ITEMS = [
   { label: '대시보드 홈', to: '/admin/dashboard' },
   { label: '수업 관리', to: '/admin/classes' },
   { label: '수강생 관리', to: '/admin/students' },
   { label: '과제·피드백 관리', to: '/admin/assignments' },
+  { label: '콘텐츠 관리', to: '/admin/content', icon: FolderKanban },
 ];
 
 interface AdminSidebarProps {
@@ -46,7 +48,10 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
             }
             onClick={onClose}
           >
-            <span>{item.label}</span>
+            <span className="flex items-center gap-2">
+              {item.icon ? <item.icon className="h-4 w-4" /> : null}
+              {item.label}
+            </span>
             <span className="text-sm">›</span>
           </NavLink>
         ))}

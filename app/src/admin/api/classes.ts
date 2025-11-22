@@ -6,6 +6,7 @@ export interface ClassPayload extends AssignmentRule {
   description: string;
   category: string;
   code: string;
+  category_id?: string | number;
 }
 
 export async function getClasses() {
