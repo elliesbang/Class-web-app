@@ -1,11 +1,4 @@
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from 'react'
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 
 export type AssignmentStatus = '미제출' | '제출됨' | '피드백 완료'
 export type AssignmentFileType = 'image' | 'pdf' | 'link' | 'other'
@@ -44,26 +37,27 @@ type AdminDataContextValue = {
   assignments: Assignment[]
   feedbacks: Feedback[]
   addFeedback: (payload: {
-    assignmentId: number
-    content: string
-    author: string
-    attachmentUrl?: string
-    classId?: number | null
-  }) => void
-  updateFeedback: (feedbackId: number, updates: Partial<Omit<Feedback, 'id' | 'assignmentId' | 'course' | 'student'>>) => void
-  deleteFeedback: (feedbackId: number) => void
-  deleteAssignment: (assignmentId: number) => void
-  batchResetCourse: (course: string) => void
-}
+    assignmentId: number;
+    content: string;
+    author: string;
+    attachmentUrl?: string;
+    classId?: number | null;
+  }) => void;
+  updateFeedback: (feedbackId: number, updates: Partial<Omit<Feedback, 'id' | 'assignmentId' | 'course' | 'student'>>) => void;
+  deleteFeedback: (feedbackId: number) => void;
+  deleteAssignment: (assignmentId: number) => void;
+  batchResetCourse: (course: string) => void;
+};
 
-const initialAssignments: Assignment[] = []
-const initialFeedbacks: Feedback[] = []
+const initialAssignments: Assignment[] = [];
 
-const AdminDataContext = createContext<AdminDataContextValue | undefined>(undefined)
+const initialFeedbacks: Feedback[] = [];
 
-const useAdminState = (): AdminDataContextValue => {
-  const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments)
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>(initialFeedbacks)
+const AdminDataContext = createContext<AdminDataContextValue | undefined>(undefined);
+
+export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
+  const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>(initialFeedbacks);
 
   const addFeedback: AdminDataContextValue['addFeedback'] = useCallback(
     ({ assignmentId, content, author, attachmentUrl, classId = null }) => {

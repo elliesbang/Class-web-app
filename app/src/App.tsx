@@ -1,19 +1,10 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+
+import AdminLayout from './admin/AdminLayout';
+import AdminHome from './admin/AdminHome';
+import ContentListPage from './admin/content/ContentListPage';
 import MainLayout from './layouts/MainLayout';
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminClassManagement from './pages/admin/AdminClassManagement';
-import AdminDashboardHome from './pages/admin/AdminDashboardHome';
-import AdminContentManagement from './pages/admin/AdminContentManagement';
-import AdminCourseDetail from './pages/admin/AdminCourseDetail';
-import AdminStudentManagement from './pages/admin/AdminStudentManagement';
-import AdminAssignmentsManagement from './pages/admin/AdminAssignmentsManagement';
-import AdminFeedbackManagement from './pages/admin/AdminFeedbackManagement';
-// 🔥 AdminSettings 완전 제거
-// import AdminSettings from './pages/admin/AdminSettings';
-import AdminStatistics from './pages/admin/AdminStatistics';
-import AdminMyPage from './pages/admin/AdminMyPage.jsx';
-import RequireAdmin from './components/RequireAdmin';
 import Home from './pages/home/Home';
 import VodList from '@/pages/Vod/VodList';
 import Classroom from './pages/Classroom';
@@ -46,37 +37,16 @@ function App() {
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
         <Route path="/mypage" element={<MyPage />} />
-        <Route path="/admin/my" element={<AdminMyPage />} />
+        <Route path="/admin/my" element={<MyPage />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/login" element={<AdminLogin />} />
         <Route path="/vod" element={<VodList />} />
         <Route path="/internal" element={<Navigate to="/classroom" replace />} />
       </Route>
 
-      <Route
-        path="/admin"
-        element={(
-          <RequireAdmin>
-            <AdminLayout />
-          </RequireAdmin>
-        )}
-      >
-        <Route index element={<AdminDashboardHome />} />
-        <Route path="class" element={<AdminClassManagement />} />
-        <Route path="courses" element={<Navigate to="/admin/class" replace />} />
-        <Route path="courses/:id" element={<AdminCourseDetail />} />
-        <Route path="students" element={<AdminStudentManagement />} />
-        <Route path="assignments" element={<AdminAssignmentsManagement />} />
-        <Route path="assignments/:id" element={<AdminAssignmentsManagement />} />
-        <Route path="feedback" element={<AdminFeedbackManagement />} />
-        <Route path="feedback/new" element={<AdminFeedbackManagement />} />
-        <Route path="feedback/edit/:id" element={<AdminFeedbackManagement />} />
-        <Route path="dashboard/content" element={<AdminContentManagement />} />
-        <Route path="content" element={<AdminContentManagement />} />
-        <Route path="statistics" element={<AdminStatistics />} />
-
-        {/* 🔥 설정(Settings) 탭 완전 삭제 */}
-        {/* <Route path="settings" element={<AdminSettings />} /> */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<AdminHome />} />
+        <Route path="content" element={<ContentListPage />} />
       </Route>
     </Routes>
   );
