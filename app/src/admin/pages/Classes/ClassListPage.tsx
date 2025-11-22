@@ -119,7 +119,7 @@ const ClassListPage = () => {
               <td className="px-4 py-3 text-[#5c5246]">{item.created_at?.slice(0, 10)}</td>
               <td className="px-4 py-3 text-right space-x-2">
                 <Link
-                  to={`/admin/classes/${item.id}`}
+                  to={`/admin/classes/${item.id}/edit`}
                   className="inline-flex items-center rounded-full bg-[#fff7d6] px-3 py-1 text-xs font-semibold text-[#3f3a37] shadow-inner hover:bg-[#ffe8a3]"
                 >
                   수정
