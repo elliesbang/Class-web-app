@@ -4,7 +4,7 @@ export type CategoryRecord = { id: number; name: string; parent_id: number | nul
 
 export const getCategories = async (): Promise<CategoryRecord[]> => {
   const { data, error } = await supabase
-    .from('class_categories')
+    .from('classroom_category')
     .select('*')
     .order('order_num', { ascending: true });
   if (error) throw new Error(error.message);
