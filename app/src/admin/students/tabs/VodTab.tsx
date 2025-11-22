@@ -7,8 +7,11 @@ interface VodMember {
   id: number;
   vod_id?: number;
   user_id?: string;
-  email?: string;
   created_at?: string;
+  profiles?: {
+    name?: string;
+    email?: string;
+  };
 }
 
 const VodTab = () => {
@@ -20,8 +23,17 @@ const VodTab = () => {
     const fetchVodMembers = async () => {
       setLoading(true);
       const { data, error: fetchError } = await supabase
-        .from('vod_members')
-        .select('*')
+        .from('vod_purchases')
+        .select(`
+          id,
+          vod_id,
+          user_id,
+          created_at,
+          profiles (
+            name,
+            email
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (fetchError) {
@@ -55,7 +67,7 @@ const VodTab = () => {
           <tr key={vod.id} className="hover:bg-[#fffaf0]">
             <td className="px-4 py-3 text-sm font-semibold">{vod.id}</td>
             <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.vod_id ?? '-'}</td>
-            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.email ?? vod.user_id}</td>
+            <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.profiles?.email ?? vod.user_id}</td>
             <td className="px-4 py-3 text-sm text-[#5c5246]">{vod.created_at?.slice(0, 10)}</td>
           </tr>
         ))
