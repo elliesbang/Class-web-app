@@ -1,21 +1,27 @@
 import { createClient } from "@supabase/supabase-js";
 
-export async function onRequest(context) {
+export async function onRequest({ request, env }) {
   try {
-    const { request, env } = context;
-
     if (request.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405 });
     }
 
     const body = await request.json();
-    const { classroom_id, student_id, session_no, image_base64, link_url } = body;
+    let { classroom_id, student_id, session_no, image_base64, link_url } = body;
 
+    // -----------------------------
+    // 🔥 필수값 체크
+    // -----------------------------
     if (!classroom_id || !student_id || !session_no) {
       return new Response("Missing required fields", { status: 400 });
     }
 
-    // 🔥 MUST for Cloudflare Worker
+    // Cloudflare Request에서는 session_no가 string이라 integer로 변환해야 Supabase 오류 안 남
+    session_no = Number(session_no);
+
+    // -----------------------------
+    // 🔥 Supabase client
+    // -----------------------------
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
       global: { fetch: fetch }
@@ -23,29 +29,28 @@ export async function onRequest(context) {
 
     let uploadedImageUrl = null;
 
-    // -------------------------
-    // 🔥 Base64 업로드 처리
-    // -------------------------
+    // -----------------------------
+    // 🔥 Base64 이미지 → File 업로드 (Cloudflare 호환)
+    // -----------------------------
     if (image_base64) {
       const base64String = image_base64.split(",")[1];
 
-      // Cloudflare-safe base64 → binary 변환
       const binaryString = atob(base64String);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
 
-      const filePath = `assignments/${classroom_id}/${student_id}/${Date.now()}.png`;
+      const file = new File([bytes], `assignment_${Date.now()}.png`, {
+        type: "image/png",
+      });
 
-      // Blob으로 업로드 (Cloudflare 호환)
-      const blob = new Blob([bytes], { type: "image/png" });
+      const filePath = `assignments/${classroom_id}/${student_id}/${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from("assignments")
-        .upload(filePath, blob, {
-          cacheControl: "3600",
-          upsert: false
+        .upload(filePath, file, {
+          upsert: false,
         });
 
       if (uploadError) {
@@ -60,15 +65,15 @@ export async function onRequest(context) {
       uploadedImageUrl = data.publicUrl;
     }
 
-    // -------------------------
-    // 🔥 DB insert
-    // -------------------------
+    // -----------------------------
+    // 🔥 DB INSERT
+    // -----------------------------
     const { error: dbError } = await supabase.from("assignments").insert({
       classroom_id,
       student_id,
       session_no,
       image_url: uploadedImageUrl,
-      link_url: link_url || null
+      link_url: link_url || null,
     });
 
     if (dbError) {
@@ -80,6 +85,7 @@ export async function onRequest(context) {
       JSON.stringify({ success: true }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
+
   } catch (err) {
     console.error("Internal Error:", err);
     return new Response("Internal Server Error", { status: 500 });
