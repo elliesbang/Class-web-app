@@ -23,6 +23,10 @@ const NavbarBottom = () => {
       return baseItems;
     }
 
+    if (authUser.role === 'admin') {
+      return [...baseItems, { label: 'My', to: '/admin/my', Icon: User }];
+    }
+
     return [...baseItems, { label: 'My', to: '/my', Icon: User }];
   }, [authUser]);
 

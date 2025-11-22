@@ -1,15 +1,6 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-import AdminLayout from './admin/layout/AdminLayout';
-import DashboardHome from './admin/pages/DashboardHome';
-import ClassCreatePage from './admin/pages/Classes/ClassCreatePage';
-import ClassEditPage from './admin/pages/Classes/ClassEditPage';
-import ClassDetailPage from './admin/pages/Classes/ClassDetailPage';
-import ClassListPage from './admin/pages/Classes/ClassListPage';
-import AssignmentFeedbackPage from './admin/pages/AssignmentFeedback/AssignmentFeedbackPage';
-import StudentsPage from './admin/pages/Students/StudentsPage';
-import ContentListPage from './admin/content/ContentListPage';
 import MainLayout from './layouts/MainLayout';
 import Home from './pages/home/Home';
 import VodList from '@/pages/Vod/VodList';
@@ -25,6 +16,16 @@ import {
   NoticeTabRoute,
   VideoTabRoute,
 } from './pages/Classroom/ClassroomTabRoutes';
+import AdminLayout from './admin/layout/AdminLayout';
+import DashboardHome from './admin/pages/DashboardHome';
+import ClassCreatePage from './admin/pages/Classes/ClassCreatePage';
+import ClassEditPage from './admin/pages/Classes/ClassEditPage';
+import ClassDetailPage from './admin/pages/Classes/ClassDetailPage';
+import ClassListPage from './admin/pages/Classes/ClassListPage';
+import AssignmentFeedbackPage from './admin/pages/AssignmentFeedback/AssignmentFeedbackPage';
+import StudentsPage from './admin/pages/Students/StudentsPage';
+import ContentListPage from './admin/content/ContentListPage';
+import AdminRoutes from './routes/AdminRoutes';
 
 function App() {
   return (
@@ -43,7 +44,7 @@ function App() {
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
         <Route path="/mypage" element={<MyPage />} />
-        <Route path="/admin/my" element={<MyPage />} />
+        {AdminRoutes()}
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/login" element={<AdminLogin />} />
         <Route path="/vod" element={<VodList />} />
