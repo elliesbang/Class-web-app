@@ -1,13 +1,12 @@
-import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import {
   filterMaterialsByCourse,
   filterNoticesByCourse,
   filterVideosByCourse,
   findCourseSummary,
-} from '../../lib/api/classroom';
-import { useSheetsData } from '../../contexts/SheetsDataContext';
+} from '../../lib/api/classroom'
 
 const tabs = [
   { key: 'materials', label: '자료' },
@@ -15,31 +14,36 @@ const tabs = [
   { key: 'notice', label: '강의실 공지' },
   { key: 'assignment', label: '과제' },
   { key: 'feedback', label: '피드백' },
-] as const;
+] as const
 
-type TabKey = (typeof tabs)[number]['key'];
+type TabKey = (typeof tabs)[number]['key']
 
 function ClassDetailPage() {
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const { contentCollections, lectureCourses, loading } = useSheetsData();
-  const [activeTab, setActiveTab] = useState<TabKey>('materials');
+  const navigate = useNavigate()
+  const { id } = useParams()
+  const contentCollections = useMemo(
+    () => ({ classroomVideos: [], classroomMaterials: [], classroomNotices: [] as any[] }),
+    [],
+  )
+  const lectureCourses: any[] = []
+  const loading = false
+  const [activeTab, setActiveTab] = useState<TabKey>('materials')
 
-  const courseMeta = useMemo(() => (id ? findCourseSummary(lectureCourses, id) : null), [id, lectureCourses]);
-  const courseTitle = courseMeta?.courseName ?? '과정 상세 정보';
+  const courseMeta = useMemo(() => (id ? findCourseSummary(lectureCourses, id) : null), [id, lectureCourses])
+  const courseTitle = courseMeta?.courseName ?? '과정 상세 정보'
   const courseVideos = useMemo(
     () => (id ? filterVideosByCourse(contentCollections.classroomVideos, id) : []),
     [contentCollections.classroomVideos, id],
-  );
+  )
   const courseMaterials = useMemo(
     () => (id ? filterMaterialsByCourse(contentCollections.classroomMaterials, id) : []),
     [contentCollections.classroomMaterials, id],
-  );
+  )
   const courseNotices = useMemo(
     () => (id ? filterNoticesByCourse(contentCollections.classroomNotices, id) : []),
     [contentCollections.classroomNotices, id],
-  );
-  const isLoading = loading;
+  )
+  const isLoading = loading
 
   const renderVideoTab = () => (
     <section className="space-y-4">
@@ -76,7 +80,7 @@ function ClassDetailPage() {
         )}
       </div>
     </section>
-  );
+  )
 
   const renderNoticeTab = () => (
     <section className="space-y-4">
@@ -108,7 +112,7 @@ function ClassDetailPage() {
         )}
       </div>
     </section>
-  );
+  )
 
   const renderMaterialsTab = () => (
     <section className="space-y-4">
@@ -146,7 +150,7 @@ function ClassDetailPage() {
         )}
       </div>
     </section>
-  );
+  )
 
   const renderFeedbackTab = () => (
     <section className="space-y-4">
@@ -158,7 +162,7 @@ function ClassDetailPage() {
         )}
       </div>
     </section>
-  );
+  )
 
   const renderAssignmentTab = () => (
     <section className="space-y-5">
@@ -180,7 +184,7 @@ function ClassDetailPage() {
         )}
       </div>
     </section>
-  );
+  )
 
   return (
     <section className="space-y-5">
@@ -199,36 +203,32 @@ function ClassDetailPage() {
         {courseMeta?.categoryName ? (
           <p className="mt-1 text-xs text-ellieGray/60">카테고리: {courseMeta.categoryName}</p>
         ) : null}
-        {!courseMeta && !isLoading ? (
-          <p className="mt-3 text-sm text-ellieGray/70">강좌 정보를 찾을 수 없습니다.</p>
-        ) : null}
       </div>
 
-      <nav className="sticky top-0 z-10 flex gap-2 rounded-3xl bg-white/90 p-2 shadow-soft backdrop-blur">
-        {tabs.map((tab) => {
-          const isActive = tab.key === activeTab;
-          return (
+      <div className="rounded-3xl bg-white p-2 shadow-soft">
+        <div className="flex gap-2 overflow-x-auto px-4 py-2 text-sm font-semibold text-ellieGray">
+          {tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd331]/60 ${
-                isActive ? 'bg-[#ffd331] text-ellieGray' : 'bg-[#fffdf6] text-ellieGray/70'
+              className={`rounded-full px-4 py-2 transition ${
+                activeTab === tab.key ? 'bg-[#ffd331] text-ellieGray' : 'bg-[#f5eee9] text-ellieGray/70'
               }`}
+              onClick={() => setActiveTab(tab.key)}
             >
               {tab.label}
             </button>
-          );
-        })}
-      </nav>
+          ))}
+        </div>
+      </div>
 
-      {activeTab === 'materials' && renderMaterialsTab()}
-      {activeTab === 'video' && renderVideoTab()}
-      {activeTab === 'notice' && renderNoticeTab()}
-      {activeTab === 'assignment' && renderAssignmentTab()}
-      {activeTab === 'feedback' && renderFeedbackTab()}
+      {activeTab === 'video' ? renderVideoTab() : null}
+      {activeTab === 'notice' ? renderNoticeTab() : null}
+      {activeTab === 'materials' ? renderMaterialsTab() : null}
+      {activeTab === 'assignment' ? renderAssignmentTab() : null}
+      {activeTab === 'feedback' ? renderFeedbackTab() : null}
     </section>
-  );
+  )
 }
 
-export default ClassDetailPage;
+export default ClassDetailPage
