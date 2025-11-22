@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getStoredAuthUser } from '@/lib/authUser';
+import { supabase } from '@/lib/supabaseClient';
 
 type AssignmentRecord = {
   id: string;
@@ -43,6 +44,54 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
   const [listError, setListError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [classInfo, setClassInfo] = useState<{ start_date: string | null; end_date: string | null } | null>(null);
+  const [classInfoError, setClassInfoError] = useState('');
+
+  useEffect(() => {
+    const fetchClassInfo = async () => {
+      if (!classId) {
+        setClassInfo(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('classes')
+          .select('start_date, end_date')
+          .eq('id', classId)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setClassInfo(data ?? { start_date: null, end_date: null });
+        setClassInfoError('');
+      } catch (error) {
+        console.error('[AssignmentTab] Failed to load class info', error);
+        setClassInfo({ start_date: null, end_date: null });
+        setClassInfoError('수업 정보를 불러오지 못했습니다. 제출 가능 기간을 확인할 수 없습니다.');
+      }
+    };
+
+    void fetchClassInfo();
+  }, [classId]);
+
+  const allowSubmission = useMemo(() => {
+    if (!classInfo?.start_date || !classInfo?.end_date) {
+      return true;
+    }
+
+    const today = new Date();
+    const startDate = new Date(classInfo.start_date);
+    const endDate = new Date(classInfo.end_date);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return true;
+    }
+
+    return today >= startDate && today <= endDate;
+  }, [classInfo]);
 
   const loadAssignments = useCallback(async () => {
     if (!classId) {
@@ -135,6 +184,11 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       return;
     }
 
+    if (!allowSubmission) {
+      setSubmitError('과제 제출 기간이 아닙니다.');
+      return;
+    }
+
     const trimmedLink = linkUrl.trim();
     if (!imageBase64 && !trimmedLink) {
       setSubmitError('이미지 또는 링크 중 하나 이상을 제출해주세요.');
@@ -187,6 +241,10 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
         <div>
           <h3 className="text-base font-semibold text-ellieGray">과제 제출</h3>
           <p className="mt-1 text-sm text-ellieGray/70">이미지 또는 링크로 과제를 제출하세요.</p>
+          {classInfoError ? <p className="mt-2 text-sm text-red-500">{classInfoError}</p> : null}
+          {!allowSubmission ? (
+            <p className="mt-2 text-sm text-red-500">과제 제출 기간이 아닙니다.</p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -217,6 +275,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
             accept="image/*"
             onChange={handleFileChange}
             className="w-full rounded-xl border border-[#f1e6c7] px-3 py-2 text-sm text-ellieGray"
+            disabled={!allowSubmission}
           />
           {imageName ? <p className="text-xs text-ellieGray/70">선택된 파일: {imageName}</p> : null}
         </div>
@@ -232,6 +291,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
             onChange={(event) => setLinkUrl(event.target.value)}
             placeholder="제출 링크를 입력하세요"
             className="w-full rounded-xl border border-[#f1e6c7] px-3 py-2 text-sm text-ellieGray"
+            disabled={!allowSubmission}
           />
         </div>
 
@@ -240,7 +300,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !allowSubmission}
           className="w-full rounded-2xl bg-[#ffd331] px-4 py-2 text-sm font-semibold text-ellieGray shadow-soft disabled:opacity-50"
         >
           {isSubmitting ? '제출 중...' : '제출하기'}
