@@ -15,7 +15,7 @@ interface VodMember {
 }
 
 const VodTab = () => {
-  const [members, setMembers] = useState<VodMember[]>([]);
+  const [members, setMembers] = useState<ProfileUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +37,7 @@ const VodTab = () => {
         .order('created_at', { ascending: false });
 
       if (fetchError) {
+        setMembers([]);
         setError(fetchError.message);
       } else {
         setMembers(data ?? []);
@@ -49,7 +50,11 @@ const VodTab = () => {
   }, []);
 
   return (
-    <Table title="VOD" description={loading ? '불러오는 중입니다...' : `총 ${members.length}명`} headers={['ID', 'VOD ID', '이메일', '생성일']}>
+    <Table
+      title="VOD"
+      description={loading ? '불러오는 중입니다...' : `총 ${members.length}명`}
+      headers={['ID', 'VOD ID', '이메일', '생성일']}
+    >
       {loading ? (
         <tr>
           <td colSpan={4} className="px-4 py-6 text-center text-sm text-[#6a5c50]">
