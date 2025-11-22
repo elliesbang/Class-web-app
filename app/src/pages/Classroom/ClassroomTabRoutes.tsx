@@ -77,3 +77,11 @@ export function AssignmentTabRoute() {
     />
   );
 }
+
+export {
+  VideoTabRoute,
+  MaterialTabRoute,
+  NoticeTabRoute,
+  AssignmentTabRoute,
+  FeedbackTabRoute,
+};
