@@ -17,8 +17,6 @@ type AssignmentTabProps = {
   classId: string;
 };
 
-const SESSION_OPTIONS = Array.from({ length: 15 }, (_, index) => String(index + 1));
-
 const formatDateTime = (value?: string) => {
   if (!value) return '';
   const date = new Date(value);
@@ -34,7 +32,8 @@ const formatDateTime = (value?: string) => {
 
 function AssignmentTab({ classId }: AssignmentTabProps) {
   const authUser = useMemo(() => getStoredAuthUser(), []);
-  const [sessionNo, setSessionNo] = useState<string>(SESSION_OPTIONS[0]);
+  const [sessionNo, setSessionNo] = useState('1');
+  const [sessions, setSessions] = useState<any[]>([]);
   const [linkUrl, setLinkUrl] = useState('');
   const [imageBase64, setImageBase64] = useState('');
   const [imageName, setImageName] = useState('');
@@ -44,312 +43,233 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
   const [listError, setListError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
-  const [classInfo, setClassInfo] = useState<{ start_date: string | null; end_date: string | null } | null>(null);
+  const [classInfo, setClassInfo] = useState<any>(null);
   const [classInfoError, setClassInfoError] = useState('');
 
+  /** 1) classroom info 불러오기 */
   useEffect(() => {
-    const fetchClassInfo = async () => {
-      if (!classId) {
-        setClassInfo(null);
-        return;
-      }
-
+    const loadInfo = async () => {
       try {
         const { data, error } = await supabase
-          .from('classes')
+          .from('classroom')
           .select('start_date, end_date')
           .eq('id', classId)
           .single();
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
-        setClassInfo(data ?? { start_date: null, end_date: null });
+        setClassInfo(data);
         setClassInfoError('');
-      } catch (error) {
-        console.error('[AssignmentTab] Failed to load class info', error);
-        setClassInfo({ start_date: null, end_date: null });
-        setClassInfoError('수업 정보를 불러오지 못했습니다. 제출 가능 기간을 확인할 수 없습니다.');
+      } catch (err) {
+        setClassInfoError('수업 정보를 불러오지 못했습니다. 제출 기간 확인 불가.');
+        setClassInfo(null);
       }
     };
-
-    void fetchClassInfo();
+    loadInfo();
   }, [classId]);
 
+  /** 2) session 불러오기 */
+  useEffect(() => {
+    const loadSessions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('classroom_sessions')
+          .select('*')
+          .eq('classroom_id', classId)
+          .order('session_no');
+
+        if (error) throw error;
+        setSessions(data ?? []);
+        if (data?.length) setSessionNo(String(data[0].session_no));
+      } catch (err) {
+        setSessions([]);
+      }
+    };
+    loadSessions();
+  }, [classId]);
+
+  /** 제출 기간 확인 */
   const allowSubmission = useMemo(() => {
-    if (!classInfo?.start_date || !classInfo?.end_date) {
-      return true;
-    }
+    if (!classInfo?.start_date || !classInfo?.end_date) return true;
 
     const today = new Date();
-    const startDate = new Date(classInfo.start_date);
-    const endDate = new Date(classInfo.end_date);
+    const s = new Date(classInfo.start_date);
+    const e = new Date(classInfo.end_date);
 
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return true;
-    }
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return true;
 
-    return today >= startDate && today <= endDate;
+    return today >= s && today <= e;
   }, [classInfo]);
 
+
+  /** 3) 과제 리스트 */
   const loadAssignments = useCallback(async () => {
-    if (!classId) {
-      setAssignments([]);
-      return;
-    }
+    if (!authUser?.user_id) return;
 
     setLoadingList(true);
     setListError('');
 
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (authUser?.token) {
-        headers.Authorization = `Bearer ${authUser.token}`;
-      }
+      const { data, error } = await supabase
+        .from('assignments')
+        .select('*')
+        .eq('classroom_id', classId)
+        .eq('student_id', authUser.user_id)
+        .order('created_at', { ascending: false });
 
-      // ⭐ 수정됨 — Cloudflare Pages Functions 라우트 규칙 적용
-      const response = await fetch(`/api/assignment-list?class_id=${classId}`, {
-        headers,
-      });
+      if (error) throw error;
 
-      if (!response.ok) {
-        throw new Error(`Failed to load assignments. status=${response.status}`);
-      }
-
-      const payload = await response.json();
-      setAssignments(Array.isArray(payload) ? payload : []);
-    } catch (error: any) {
-      console.error('[AssignmentTab] Failed to fetch assignments', error);
-      setListError('과제 목록을 불러오는 중 문제가 발생했습니다.');
+      setAssignments(data ?? []);
+    } catch (err) {
+      setListError('과제 목록을 불러오는 중 오류가 발생했습니다.');
       setAssignments([]);
     } finally {
       setLoadingList(false);
     }
-  }, [authUser?.token, classId]);
+  }, [authUser?.user_id, classId]);
 
   useEffect(() => {
-    void loadAssignments();
+    loadAssignments();
   }, [loadAssignments]);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      setImageBase64('');
-      setImageName('');
-      return;
-    }
-
+  /** 4) 제출 */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setSubmitError('');
     setStatusMessage('');
-    setImageName(file.name);
-
-    try {
-      const fileBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            resolve(reader.result);
-          } else {
-            reject(new Error('이미지 데이터를 불러오지 못했습니다.'));
-          }
-        };
-
-        reader.onerror = () => reject(new Error('이미지 파일을 불러오지 못했습니다.'));
-        reader.readAsDataURL(file);
-      });
-
-      setImageBase64(fileBase64);
-    } catch (error: any) {
-      console.error('[AssignmentTab] Failed to read image file', error);
-      setImageBase64('');
-      setImageName('');
-      setSubmitError('이미지를 불러오지 못했습니다. 다른 파일을 선택하거나 링크로 제출해주세요.');
-    }
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSubmitError('');
-    setStatusMessage('');
-
-    if (!authUser) {
-      setSubmitError('로그인이 필요합니다.');
-      return;
-    }
-
-    if (!classId) {
-      setSubmitError('유효한 강의실 정보가 없습니다.');
-      return;
-    }
 
     if (!allowSubmission) {
-      setSubmitError('과제 제출 기간이 아닙니다.');
+      setSubmitError('제출 기간이 아닙니다.');
       return;
     }
 
-    const trimmedLink = linkUrl.trim();
-    if (!imageBase64 && !trimmedLink) {
-      setSubmitError('이미지 또는 링크 중 하나 이상을 제출해주세요.');
-      return;
-    }
+    const payload: any = {
+      classroom_id: classId,
+      student_id: authUser.user_id,
+      session_no: Number(sessionNo),
+      link_url: linkUrl.trim() || null,
+      image_base64: imageBase64 || null,
+    };
 
     setIsSubmitting(true);
 
     try {
-      const payload: Record<string, any> = {
-        classroom_id: classId,
-        student_id: authUser.user_id,
-        session_no: Number(sessionNo),
-        image_base64: imageBase64 || undefined,
-        link_url: trimmedLink || undefined,
-      };
-
-      // ⭐ 수정됨 — Cloudflare Pages Functions 라우트 규칙 적용
-      const response = await fetch(`/api/assignment-submit`, {
+      const response = await fetch('/api/assignment-submit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authUser.token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authUser.token}` },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const errorMessage = await response.text();
-        throw new Error(errorMessage || '과제 제출에 실패했습니다.');
-      }
+      if (!response.ok) throw new Error('제출 실패');
 
       setLinkUrl('');
-      setImageBase64('');
       setImageName('');
-      setSessionNo(SESSION_OPTIONS[0]);
+      setImageBase64('');
       setStatusMessage('제출되었습니다.');
       await loadAssignments();
-    } catch (error: any) {
-      console.error('[AssignmentTab] Failed to submit assignment', error);
-      setSubmitError(error?.message || '과제 제출에 실패했습니다.');
+    } catch (err) {
+      setSubmitError('과제 제출 실패');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  /** 이미지 업로드 */
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageBase64(reader.result as string);
+      setImageName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
+      {/* 제출 폼 */}
+      <form onSubmit={handleSubmit} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft space-y-4">
+
+        {/* 제목 */}
         <div>
-          <h3 className="text-base font-semibold text-ellieGray">과제 제출</h3>
-          <p className="mt-1 text-sm text-ellieGray/70">이미지 또는 링크로 과제를 제출하세요.</p>
-          {classInfoError ? <p className="mt-2 text-sm text-red-500">{classInfoError}</p> : null}
-          {!allowSubmission ? (
-            <p className="mt-2 text-sm text-red-500">과제 제출 기간이 아닙니다.</p>
-          ) : null}
+          <h3 className="font-semibold text-ellieGray">과제 제출</h3>
+          <p className="text-sm text-ellieGray/70">이미지 또는 링크로 제출하세요.</p>
+          {classInfoError && <p className="text-red-500 text-sm">{classInfoError}</p>}
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="text-sm font-semibold text-ellieGray" htmlFor="session-select">
-            회차 선택
-          </label>
+        {/* 회차 선택 */}
+        <div className="flex gap-2 items-center">
+          <label className="text-sm font-semibold">회차 선택</label>
           <select
-            id="session-select"
-            className="rounded-xl border border-[#f1e6c7] px-3 py-2 text-sm text-ellieGray"
+            className="border rounded-xl px-3 py-2"
             value={sessionNo}
-            onChange={(event) => setSessionNo(event.target.value)}
+            onChange={(e) => setSessionNo(e.target.value)}
           >
-            {SESSION_OPTIONS.map((value) => (
-              <option key={value} value={value}>
-                {value}회차
+            {sessions.map((s) => (
+              <option key={s.session_no} value={s.session_no}>
+                {s.session_no}회차
               </option>
             ))}
           </select>
         </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-ellieGray" htmlFor="assignment-image">
-            이미지 업로드
-          </label>
-          <input
-            id="assignment-image"
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="w-full rounded-xl border border-[#f1e6c7] px-3 py-2 text-sm text-ellieGray"
-            disabled={!allowSubmission}
-          />
-          {imageName ? <p className="text-xs text-ellieGray/70">선택된 파일: {imageName}</p> : null}
+        {/* 이미지 */}
+        <div>
+          <label className="text-sm font-semibold">이미지 업로드</label>
+          <input type="file" accept="image/*" onChange={handleFileChange} />
+          {imageName && <p className="text-xs">{imageName}</p>}
         </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-ellieGray" htmlFor="assignment-link">
-            링크 제출
-          </label>
+        {/* 링크 */}
+        <div>
+          <label className="text-sm font-semibold">링크 제출</label>
           <input
-            id="assignment-link"
+            className="border rounded-xl px-3 py-2 w-full"
             type="url"
             value={linkUrl}
-            onChange={(event) => setLinkUrl(event.target.value)}
-            placeholder="제출 링크를 입력하세요"
-            className="w-full rounded-xl border border-[#f1e6c7] px-3 py-2 text-sm text-ellieGray"
-            disabled={!allowSubmission}
+            onChange={(e) => setLinkUrl(e.target.value)}
           />
         </div>
 
-        {submitError ? <p className="text-sm text-red-500">{submitError}</p> : null}
-        {statusMessage ? <p className="text-sm text-ellieGray/70">{statusMessage}</p> : null}
+        {submitError && <p className="text-red-500 text-sm">{submitError}</p>}
+        {statusMessage && <p className="text-sm">{statusMessage}</p>}
 
         <button
           type="submit"
           disabled={isSubmitting || !allowSubmission}
-          className="w-full rounded-2xl bg-[#ffd331] px-4 py-2 text-sm font-semibold text-ellieGray shadow-soft disabled:opacity-50"
+          className="bg-[#ffd331] rounded-2xl px-4 py-2 font-semibold text-ellieGray shadow-soft w-full"
         >
           {isSubmitting ? '제출 중...' : '제출하기'}
         </button>
       </form>
 
-      <section className="space-y-3 rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
-        <div className="flex flex-col gap-1">
-          <h3 className="text-base font-semibold text-ellieGray">제출된 과제</h3>
-          <p className="text-sm text-ellieGray/70">최근 제출 순으로 정렬됩니다.</p>
-        </div>
+      {/* 제출된 과제 목록 */}
+      <section className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
+        <h3 className="font-semibold mb-3">제출된 과제</h3>
 
-        {loadingList ? (
-          <p className="text-sm text-ellieGray/70">과제 목록을 불러오는 중입니다...</p>
-        ) : listError ? (
-          <p className="text-sm text-red-500">{listError}</p>
-        ) : assignments.length === 0 ? (
-          <p className="text-sm text-ellieGray/70">제출된 과제가 없습니다.</p>
-        ) : (
-          <ul className="space-y-3">
-            {assignments.map((item) => (
-              <li key={item.id} className="rounded-2xl bg-ivory/80 px-4 py-3">
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-ellieGray/70">
-                    {item.session_no ? <span className="font-semibold">{item.session_no}회차</span> : null}
-                    {item.created_at ? <span>{formatDateTime(item.created_at)}</span> : null}
-                  </div>
-                  {item.link_url ? (
-                    <a
-                      href={item.link_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm font-semibold text-[#d98200] underline"
-                    >
-                      제출 링크 열기
-                    </a>
-                  ) : null}
-                  {item.image_url ? (
-                    <img
-                      src={item.image_url}
-                      alt="제출 이미지"
-                      className="max-h-64 w-full rounded-xl object-contain"
-                    />
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        {loadingList && <p className="text-sm">불러오는 중...</p>}
+        {listError && <p className="text-red-500">{listError}</p>}
+        {!loadingList && assignments.length === 0 && <p className="text-sm">제출된 과제가 없습니다.</p>}
+
+        <ul className="space-y-3">
+          {assignments.map((item) => (
+            <li key={item.id} className="bg-ivory/80 rounded-xl p-4">
+              <div className="flex flex-col gap-2 text-xs">
+                <span>{item.session_no}회차</span>
+                <span>{formatDateTime(item.created_at)}</span>
+
+                {item.link_url && (
+                  <a href={item.link_url} target="_blank" className="text-[#d98200] underline text-sm font-semibold">
+                    제출 링크
+                  </a>
+                )}
+                {item.image_url && <img src={item.image_url} className="rounded-xl max-h-64 object-contain" />}
+              </div>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   );
