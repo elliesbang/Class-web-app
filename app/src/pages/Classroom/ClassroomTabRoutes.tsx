@@ -1,6 +1,39 @@
+import React from 'react';
+import { useParams } from 'react-router-dom';
+
+import ClassroomContentTab from './ClassroomContentTab';
+import { VideoTab, MaterialTab, NoticeTab, FeedbackTab } from './tabs';
+import AssignmentTab from './tabs/AssignmentTab';
+
+// -----------------------------
+// 강의실 콘텐츠 탭 라우트
+// -----------------------------
+
+export function VideoTabRoute() {
+  return <ClassroomContentTab tab="video" Component={VideoTab} />;
+}
+
+export function MaterialTabRoute() {
+  return <ClassroomContentTab tab="material" Component={MaterialTab} />;
+}
+
+export function NoticeTabRoute() {
+  return <ClassroomContentTab tab="notice" Component={NoticeTab} />;
+}
+
+export function FeedbackTabRoute() {
+  const { classId } = useParams();
+  if (!classId) return null;
+  return <FeedbackTab courseId={classId} classId={classId} />;
+}
+
+// -----------------------------
+// 과제 탭 라우트 (수정된 AssignmentTabRoute)
+// -----------------------------
+
 export function AssignmentTabRoute() {
   const { classId } = useParams();
-  const [state, setState] = useState({
+  const [state, setState] = React.useState({
     classroom: null,
     sessions: [],
     assignments: [],
@@ -8,31 +41,33 @@ export function AssignmentTabRoute() {
     error: '',
   });
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!classId) return;
 
     const load = async () => {
       setState((prev) => ({ ...prev, loading: true }));
 
       try {
-        const { data: classroom, error: classErr } = await supabase
+        // 수업 정보 로드
+        const { data: classroom } = await supabase
           .from('classroom')
           .select('*')
           .eq('id', classId)
           .single();
 
-        if (classErr) throw classErr;
-
+        // 세션 정보 로드
         const { data: sessions } = await supabase
           .from('classroom_sessions')
           .select('*')
           .eq('classroom_id', classId)
           .order('session_no', { ascending: true });
 
+        // 현재 로그인한 유저 정보
         const {
-          data: { user }
+          data: { user },
         } = await supabase.auth.getUser();
 
+        // 유저의 과제 로드
         const { data: assignments } = await supabase
           .from('assignments')
           .select('*')
@@ -75,9 +110,14 @@ export function AssignmentTabRoute() {
   );
 }
 
+// -----------------------------
+// 최종 export (중복 없이)
+// -----------------------------
+
 export {
   VideoTabRoute,
   MaterialTabRoute,
   NoticeTabRoute,
   FeedbackTabRoute,
+  AssignmentTabRoute,
 };
