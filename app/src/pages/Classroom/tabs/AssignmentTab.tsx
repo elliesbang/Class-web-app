@@ -57,7 +57,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     const loadClass = async () => {
       try {
         const { data, error } = await supabase
-          .from('classroom')
+          .from('classes')
           .select('start_date, end_date')
           .eq('id', classId)
           .single();
