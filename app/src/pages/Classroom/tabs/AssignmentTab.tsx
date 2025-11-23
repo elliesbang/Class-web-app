@@ -1,17 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getStoredAuthUser } from '@/lib/authUser';
+import { fetchAssignments, submitAssignment } from '@/lib/api/assignments';
 import { supabase } from '@/lib/supabaseClient';
-
-type AssignmentRecord = {
-  id: string;
-  classroom_id?: string;
-  student_id?: string;
-  session_no?: number;
-  image_url?: string | null;
-  link_url?: string | null;
-  created_at?: string;
-};
+import type { Assignment } from '@/types/db';
 
 type AssignmentTabProps = {
   classId: string;
@@ -40,7 +32,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
   const [imageBase64, setImageBase64] = useState('');
   const [imageName, setImageName] = useState('');
 
-  const [assignments, setAssignments] = useState<AssignmentRecord[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loadingList, setLoadingList] = useState(false);
 
   const [submitError, setSubmitError] = useState('');
@@ -48,6 +40,8 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+
+  const canSubmit = useMemo(() => !!linkUrl.trim() || !!imageBase64, [imageBase64, linkUrl]);
 
   const [classInfo, setClassInfo] = useState<any>(null);
   const [classInfoError, setClassInfoError] = useState('');
@@ -128,15 +122,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     setListError('');
 
     try {
-      const { data, error } = await supabase
-        .from('assignments')
-        .select('*')
-        .eq('classroom_id', classId)
-        .eq('student_id', authUser.user_id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
+      const data = await fetchAssignments({ classroom_id: classId, student_id: authUser.user_id });
       setAssignments(data ?? []);
     } catch (err) {
       setListError('과제 목록을 불러오는 중 오류가 발생했습니다.');
@@ -162,9 +148,19 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       return;
     }
 
+    if (!authUser?.user_id) {
+      setSubmitError('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!linkUrl.trim() && !imageBase64) {
+      setSubmitError('이미지 또는 링크를 입력해주세요.');
+      return;
+    }
+
     const payload = {
-      classroom_id: classId,
-      student_id: authUser.user_id,
+      classroom_id: Number(classId),
+      student_id: authUser?.user_id,
       session_no: Number(sessionNo),
       link_url: linkUrl.trim() || null,
       image_base64: imageBase64 || null,
@@ -173,21 +169,11 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/assignment-submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authUser.token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) throw new Error('failed');
-
+      await submitAssignment(payload);
       setLinkUrl('');
       setImageBase64('');
       setImageName('');
-      setStatusMessage('제출되었습니다.');
+      setStatusMessage('성공적으로 제출되었습니다.');
       await loadAssignments();
     } catch (err) {
       setSubmitError('과제 제출 실패');
@@ -253,7 +239,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 
         <button
           type="submit"
-          disabled={isSubmitting || !allowSubmission}
+          disabled={isSubmitting || !allowSubmission || !canSubmit}
           className="bg-[#ffd331] rounded-2xl px-4 py-2 font-semibold text-ellieGray shadow-soft w-full"
         >
           {isSubmitting ? '제출 중...' : '제출하기'}
@@ -272,7 +258,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
           {assignments.map((item) => (
             <li key={item.id} className="bg-ivory/80 rounded-xl p-4">
               <div className="flex flex-col gap-2 text-xs">
-                <span>{item.session_no}회차</span>
+                <span className="font-semibold text-sm">{item.session_no}회차 · {item.status === 'success' ? '성공' : '미제출'}</span>
                 <span>{formatDateTime(item.created_at)}</span>
 
                 {item.link_url && (
@@ -281,6 +267,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
                   </a>
                 )}
                 {item.image_url && <img src={item.image_url} className="rounded-xl max-h-64 object-contain" />}
+                {!item.image_url && !item.link_url && <span className="text-ellieGray/60 text-sm">제출 내용이 없습니다.</span>}
               </div>
             </li>
           ))}
