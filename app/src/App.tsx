@@ -22,7 +22,7 @@ import ClassCreatePage from './admin/pages/Classes/ClassCreatePage';
 import ClassEditPage from './admin/pages/Classes/ClassEditPage';
 import ClassDetailPage from './admin/pages/Classes/ClassDetailPage';
 import ClassListPage from './admin/pages/Classes/ClassListPage';
-import AssignmentFeedbackPage from './admin/pages/AssignmentFeedback/AssignmentFeedbackPage';
+import AssignmentAdminTab from './pages/admin/tabs/AssignmentAdminTab';
 import StudentsPage from './admin/pages/Students/StudentsPage';
 import ContentListPage from './admin/content/ContentListPage';
 import AdminRoutes from './routes/AdminRoutes';
@@ -59,7 +59,7 @@ function App() {
         <Route path="classes/:id/edit" element={<ClassEditPage />} />
         <Route path="classes/:id" element={<ClassDetailPage />} />
         <Route path="students" element={<StudentsPage />} />
-        <Route path="assignments" element={<AssignmentFeedbackPage />} />
+        <Route path="assignments" element={<AssignmentAdminTab />} />
         <Route path="content" element={<ContentListPage />} />
       </Route>
     </Routes>
