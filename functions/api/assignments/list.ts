@@ -25,31 +25,49 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
 
   try {
     const { searchParams } = new URL(request.url);
-    const classroomId = searchParams.get('classroom_id');
-    const studentId = searchParams.get('student_id');
-    const sessionNo = searchParams.get('session_no');
+
+    // text 컬럼이므로 string 그대로 사용
+    const classroomId = searchParams.get('classroom_id') || null;
+    const studentId = searchParams.get('student_id') || null;
+    const sessionNo = searchParams.get('session_no') || null;
 
     const supabase = getSupabaseClient(env);
-    let query = supabase.from('assignments').select('*').order('created_at', { ascending: false });
 
+    // created_at 최신순
+    let query = supabase
+      .from('assignments')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // 문자열로 비교 (절대 Number() 금지)
     if (classroomId) {
-      query = query.eq('classroom_id', Number(classroomId));
+      query = query.eq('classroom_id', classroomId);
     }
     if (studentId) {
       query = query.eq('student_id', studentId);
     }
     if (sessionNo) {
-      query = query.eq('session_no', Number(sessionNo));
+      query = query.eq('session_no', sessionNo);
     }
 
     const { data: assignments, error } = await query;
 
     if (error) {
-      return jsonResponse({ error: 'Failed to load assignments', details: error.message }, 500);
+      return jsonResponse(
+        { error: 'Failed to load assignments', details: error.message },
+        500
+      );
     }
 
-    const assignmentIds = (assignments ?? []).map((item) => item.id).filter(Boolean);
-    const studentIds = Array.from(new Set((assignments ?? []).map((item) => item.student_id).filter(Boolean)));
+    // assignment IDs
+    const assignmentIds = (assignments ?? [])
+      .map((a) => a.id)
+      .filter(Boolean);
+
+    // student IDs (프로필 매핑)
+    const studentIds = Array.from(
+      new Set((assignments ?? []).map((a) => a.student_id).filter(Boolean))
+    );
 
     const [{ data: feedbacks }, { data: profiles }] = await Promise.all([
       assignmentIds.length
@@ -57,36 +75,39 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
             .from('assignment_feedbacks')
             .select('id, assignment_id, content, created_at, admin_id')
             .in('assignment_id', assignmentIds)
-        : Promise.resolve({ data: [], error: null }),
+        : Promise.resolve({ data: [] }),
+
       studentIds.length
-        ? supabase.from('profiles').select('id, name, email').in('id', studentIds)
-        : Promise.resolve({ data: [], error: null }),
+        ? supabase
+            .from('profiles')
+            .select('id, name, email')
+            .in('id', studentIds)
+        : Promise.resolve({ data: [] }),
     ]);
 
-    const profileMap = new Map<string, { id?: string; name?: string | null; email?: string | null }>();
-    (profiles ?? []).forEach((profile) => {
-      if (profile.id) {
-        profileMap.set(profile.id, profile as { id?: string; name?: string | null; email?: string | null });
-      }
+    // 맵핑 처리
+    const profileMap = new Map();
+    (profiles ?? []).forEach((p) => {
+      if (p.id) profileMap.set(p.id, p);
     });
 
-    const feedbackMap = new Map<number, { id: number; content?: string | null; created_at?: string | null; admin_id?: string | null }[]>();
-    (feedbacks ?? []).forEach((item) => {
-      if (!item.assignment_id) return;
-      const list = feedbackMap.get(item.assignment_id) ?? [];
-      list.push(item);
-      feedbackMap.set(item.assignment_id, list);
+    const feedbackMap = new Map();
+    (feedbacks ?? []).forEach((fb) => {
+      const existing = feedbackMap.get(fb.assignment_id) ?? [];
+      existing.push(fb);
+      feedbackMap.set(fb.assignment_id, existing);
     });
 
+    // enrichment
     const enriched = (assignments ?? []).map((assignment) => ({
       ...assignment,
-      profiles: profileMap.get(assignment.student_id),
+      profiles: profileMap.get(assignment.student_id) ?? null,
       assignment_feedbacks: feedbackMap.get(assignment.id) ?? [],
     }));
 
     return jsonResponse({ assignments: enriched });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
     return jsonResponse({ error: message }, 500);
   }
 };
