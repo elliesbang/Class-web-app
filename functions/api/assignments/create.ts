@@ -24,16 +24,28 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
   }
 
   try {
+    const supabase = getSupabaseClient(env);
     const body = await request.json();
+
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? undefined;
 
-    const { classroom_id, student_id, session_no, image_base64, link_url } = body as {
-      classroom_id?: number | string;
+    let {
+      classroom_id,
+      student_id,
+      session_no,
+      image_base64,
+      link_url
+    } = body as {
+      classroom_id?: string | number;
       student_id?: string;
-      session_no?: number | string;
+      session_no?: string | number;
       image_base64?: string | null;
       link_url?: string | null;
     };
+
+    // 강제 문자열 변환 (DB가 text이므로)
+    classroom_id = String(classroom_id);
+    session_no = String(session_no);
 
     if (!classroom_id || !session_no) {
       return jsonResponse({ error: 'classroom_id and session_no are required' }, 400);
@@ -43,7 +55,7 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
       return jsonResponse({ error: 'No submission provided' }, 400);
     }
 
-    const supabase = getSupabaseClient(env);
+    // student_id 결정
     const userResult = token ? await supabase.auth.getUser(token) : null;
     const resolvedStudentId = userResult?.data.user?.id ?? student_id;
 
@@ -51,19 +63,22 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
       return jsonResponse({ error: 'Missing student identifier' }, 400);
     }
 
+    // 이미지 업로드 처리
     let uploadedImageUrl: string | null = null;
 
     if (image_base64) {
       const base64Match = image_base64.match(/^data:(.+);base64,(.*)$/);
       const base64Data = base64Match?.[2] ?? image_base64.split(',').pop();
       const mimeType = base64Match?.[1] ?? 'image/png';
+
       if (!base64Data) {
         return jsonResponse({ error: 'Invalid image payload' }, 400);
       }
 
-      const buffer = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
-      const ext = mimeType.split('/')[1] || 'png';
-      const filePath = `assignments/${classroom_id}/${resolvedStudentId}/${Date.now()}.${ext}`;
+      const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+      const extension = mimeType.split('/')[1] || 'png';
+
+      const filePath = `assignments/${classroom_id}/${resolvedStudentId}/${Date.now()}.${extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from('assignments')
@@ -73,20 +88,22 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
         return jsonResponse({ error: 'Upload failed', details: uploadError.message }, 500);
       }
 
-      uploadedImageUrl = supabase.storage.from('assignments').getPublicUrl(filePath).data.publicUrl;
+      uploadedImageUrl =
+        supabase.storage.from('assignments').getPublicUrl(filePath).data.publicUrl;
     }
 
-    const linkValue = (link_url as string | null | undefined)?.trim() || null;
+    const cleanedLink = link_url?.trim() || null;
+
+    // INSERT (status 제거, 모든 값 text 맞춤)
     const { data, error } = await supabase
       .from('assignments')
       .insert({
-        classroom_id: Number(classroom_id),
+        classroom_id,
         student_id: resolvedStudentId,
-        session_no: Number(session_no),
+        session_no,
         image_url: uploadedImageUrl,
-        link_url: linkValue,
-        status: 'success',
-        created_at: new Date().toISOString(),
+        link_url: cleanedLink,
+        created_at: new Date().toISOString()
       })
       .select()
       .single();
@@ -96,8 +113,8 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
     }
 
     return jsonResponse({ assignment: data }, 200);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
     return jsonResponse({ error: message }, 500);
   }
 };
