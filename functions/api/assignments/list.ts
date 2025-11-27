@@ -18,7 +18,13 @@ const jsonResponse = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
-export const onRequest = async ({ request, env }: { request: Request; env: Record<string, string | undefined> }) => {
+export const onRequest = async ({
+  request,
+  env,
+}: {
+  request: Request;
+  env: Record<string, string | undefined>;
+}) => {
   if (request.method !== 'GET') {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
@@ -26,26 +32,31 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
   try {
     const { searchParams } = new URL(request.url);
 
-    // text 컬럼이므로 string 그대로 사용
-    const classroomId = searchParams.get('classroom_id') || null;
+    // -------------------------
+    // ✔ 프론트와 동일한 파라미터 이름(class_id)
+    // -------------------------
+    const classId = searchParams.get('class_id') || null;
     const studentId = searchParams.get('student_id') || null;
     const sessionNo = searchParams.get('session_no') || null;
 
     const supabase = getSupabaseClient(env);
 
-    // created_at 최신순
+    // -------------------------
+    // ✔ assignments 기본 쿼리 (created_at desc)
+    // -------------------------
     let query = supabase
       .from('assignments')
       .select('*')
       .order('created_at', { ascending: false });
 
-    // 문자열로 비교 (절대 Number() 금지)
-    if (classroomId) {
-      query = query.eq('classroom_id', classroomId);
+    if (classId) {
+      query = query.eq('class_id', classId);
     }
+
     if (studentId) {
       query = query.eq('student_id', studentId);
     }
+
     if (sessionNo) {
       query = query.eq('session_no', sessionNo);
     }
@@ -59,12 +70,16 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
       );
     }
 
-    // assignment IDs
+    //--------------------------
+    // ✔ assignment_id 목록
+    //--------------------------
     const assignmentIds = (assignments ?? [])
       .map((a) => a.id)
       .filter(Boolean);
 
-    // student IDs (프로필 매핑)
+    //--------------------------
+    // ✔ student_id 목록 (profiles 매핑)
+    //--------------------------
     const studentIds = Array.from(
       new Set((assignments ?? []).map((a) => a.student_id).filter(Boolean))
     );
@@ -73,7 +88,9 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
       assignmentIds.length
         ? supabase
             .from('assignment_feedbacks')
-            .select('id, assignment_id, content, created_at, admin_id')
+            .select(
+              'id, assignment_id, content, created_at, admin_id'
+            )
             .in('assignment_id', assignmentIds)
         : Promise.resolve({ data: [] }),
 
@@ -85,7 +102,9 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
         : Promise.resolve({ data: [] }),
     ]);
 
-    // 맵핑 처리
+    //--------------------------
+    // ✔ Map 기반으로 매핑
+    //--------------------------
     const profileMap = new Map();
     (profiles ?? []).forEach((p) => {
       if (p.id) profileMap.set(p.id, p);
@@ -93,12 +112,14 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
 
     const feedbackMap = new Map();
     (feedbacks ?? []).forEach((fb) => {
-      const existing = feedbackMap.get(fb.assignment_id) ?? [];
-      existing.push(fb);
-      feedbackMap.set(fb.assignment_id, existing);
+      const arr = feedbackMap.get(fb.assignment_id) ?? [];
+      arr.push(fb);
+      feedbackMap.set(fb.assignment_id, arr);
     });
 
-    // enrichment
+    //--------------------------
+    // ✔ enrich (AssignmentTab에서 필요함)
+    //--------------------------
     const enriched = (assignments ?? []).map((assignment) => ({
       ...assignment,
       profiles: profileMap.get(assignment.student_id) ?? null,
@@ -107,7 +128,12 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
 
     return jsonResponse({ assignments: enriched });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse(
+      {
+        error:
+          err instanceof Error ? err.message : 'Unknown error',
+      },
+      500
+    );
   }
 };
