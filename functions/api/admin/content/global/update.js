@@ -1,15 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
 const getSupabaseClient = (env) => {
-  const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
-  const key =
-    env.SUPABASE_SERVICE_ROLE_KEY ??
-    env.SUPABASE_KEY ??
-    env.SUPABASE_ANON_KEY ??
-    env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
-    env.VITE_SUPABASE_ANON_KEY
-
-  return createClient(url, key)
+  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+    global: { fetch }
+  })
 }
 
 const jsonResponse = (body, status = 200) =>
@@ -24,40 +19,36 @@ export const onRequest = async ({ request, env }) => {
       return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
-    const { pathname } = new URL(request.url)
-    const segments = pathname.split('/').filter(Boolean)
-    const id = segments.pop()
+    // ★ Query string에서 id 가져오기
+    const url = new URL(request.url)
+    const id = url.searchParams.get('id')
 
-    if (!id) {
-      return jsonResponse({ error: 'ID is required' }, 400)
-    }
+    if (!id) return jsonResponse({ error: 'ID is required' }, 400)
 
     const { title, content, is_visible } = await request.json()
-
     if (!title || !content) {
       return jsonResponse({ error: 'title and content are required' }, 400)
     }
 
     const supabase = getSupabaseClient(env)
 
+    // ★ 올바른 테이블 이름으로 수정
     const { data, error } = await supabase
-      .from('classroom_content')
+      .from('content_global_notices') // ← 여기가 핵심
       .update({
         title,
         content,
-        is_visible: typeof is_visible === 'boolean' ? is_visible : undefined
+        is_visible: is_visible ?? true
       })
       .eq('id', id)
-      .eq('type', 'global_notice')
       .select()
       .single()
 
-    if (error) {
-      throw error
-    }
+    if (error) throw error
 
     return jsonResponse(data)
   } catch (error) {
+    console.error('[global/update] ERROR:', error.message)
     return jsonResponse({ error: error.message }, 500)
   }
 }
