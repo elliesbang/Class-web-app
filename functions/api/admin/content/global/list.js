@@ -26,10 +26,10 @@ export const onRequest = async ({ request, env }) => {
 
     const supabase = getSupabaseClient(env)
 
+    // 🔥 올바른 전체 공지 테이블로 수정됨
     const { data, error } = await supabase
-      .from('classroom_content')
+      .from('notifications')
       .select('*')
-      .eq('type', 'global_notice')
       .order('created_at', { ascending: false })
 
     if (error) throw error
