@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
 
 export type TabKey =
   | 'globalNotice'
@@ -16,18 +15,20 @@ const TAB_ITEMS = [
   { key: 'vodVideo', label: 'VOD 영상' }
 ]
 
-const TABLE_MAP = {
-  globalNotice: 'notifications',
-  classroomVideo: 'classroom_videos',
-  classroomMaterial: 'classroom_materials',
-  classroomNotice: 'classroom_notices',
-  vodVideo: 'vod_videos'
+// Cloudflare Functions 라우팅에 맞춘 정답 매핑
+const API_MAP = {
+  globalNotice: '/api/admin/content/global/list',
+  classroomVideo: '/api/admin/content/classroomVideo/list',
+  classroomMaterial: '/api/admin/content/material/list',
+  classroomNotice: '/api/admin/content/classroomNotice/list',
+  vodVideo: '/api/admin/content/vod/list'
 }
 
-const ContentManager = ({ categories, selectedCategoryId, onSelectCategory }) => {
+const ContentManager = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('globalNotice')
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -35,29 +36,46 @@ const ContentManager = ({ categories, selectedCategoryId, onSelectCategory }) =>
 
   const loadData = async () => {
     setLoading(true)
-    const table = TABLE_MAP[activeTab]
-    const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false })
-    setItems(data || [])
+    setError(null)
+
+    const endpoint = API_MAP[activeTab]
+
+    try {
+      const res = await fetch(endpoint)
+      if (!res.ok) {
+        throw new Error('API 요청 실패')
+      }
+      const json = await res.json()
+
+      setItems(json?.data || [])
+    } catch (err) {
+      console.error(err)
+      setError('콘텐츠 목록을 불러오지 못했습니다.')
+    }
+
     setLoading(false)
   }
 
   return (
     <div>
+      {/* Tabs */}
       <div className="tab-row">
         {TAB_ITEMS.map((tab) => (
           <button
             key={tab.key}
-            className={activeTab === tab.key ? 'tab-active' : ''}
             onClick={() => setActiveTab(tab.key)}
+            className={activeTab === tab.key ? 'tab-active' : ''}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {loading ? (
-        <p>불러오는 중...</p>
-      ) : (
+      {/* Content */}
+      {loading && <p>불러오는 중...</p>}
+      {error && <p>{error}</p>}
+
+      {!loading && !error && (
         <div className="item-list">
           {items.map((item) => (
             <div key={item.id} className="item-card">
