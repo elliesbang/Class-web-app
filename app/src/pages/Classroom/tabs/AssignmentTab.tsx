@@ -23,7 +23,15 @@ const formatDateTime = (value?: string) => {
 };
 
 function AssignmentTab({ classId }: AssignmentTabProps) {
-  const authUser = useMemo(() => getStoredAuthUser(), []);
+  // -------------------------
+  // ✔ authUser 최신 방식(profile_id 사용)
+  // -------------------------
+  const authUser = useMemo(() => {
+    const stored = getStoredAuthUser();
+    return stored?.profile_id ? stored : null;
+  }, []);
+
+  const studentId = authUser?.profile_id ?? null;
 
   const [sessionNo, setSessionNo] = useState('1');
   const [sessions, setSessions] = useState<any[]>([]);
@@ -46,14 +54,16 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
   const [classInfo, setClassInfo] = useState<any>(null);
   const [classInfoError, setClassInfoError] = useState('');
 
-  // ⬇ 1) 수업 정보 로드 (start_date, end_date)
+  // -------------------------
+  // ✔ 1) 수업 날짜 불러오기
+  // -------------------------
   useEffect(() => {
     const loadClass = async () => {
       try {
         const { data, error } = await supabase
           .from('classes')
           .select('start_date, end_date')
-          .eq('id', classId)
+          .eq('id', Number(classId))
           .single();
 
         if (error) throw error;
@@ -64,18 +74,21 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
         setClassInfo(null);
       }
     };
+
     loadClass();
   }, [classId]);
 
-  // ⬇ 2) 세션 로드 (fallback 포함)
+  // -------------------------
+  // ✔ 2) 세션 목록 로드
+  // -------------------------
   useEffect(() => {
     const loadSessions = async () => {
       try {
         const { data, error } = await supabase
           .from('classroom_sessions')
           .select('*')
-          .eq('classroom_id', classId)
-          .order('session_no', { ascending: true });
+          .eq('classroom_id', Number(classId))
+          .order('session_no');
 
         if (error) throw error;
 
@@ -89,7 +102,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
           setSessions(fallback);
           setSessionNo('1');
         }
-      } catch (err) {
+      } catch {
         const fallback = Array.from({ length: 15 }).map((_, i) => ({
           session_no: i + 1,
         }));
@@ -101,7 +114,9 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     loadSessions();
   }, [classId]);
 
-  // ⬇ 제출 가능 여부
+  // -------------------------
+  // ✔ 3) 제출 기간 체크
+  // -------------------------
   const allowSubmission = useMemo(() => {
     if (!classInfo?.start_date || !classInfo?.end_date) return true;
 
@@ -114,29 +129,37 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     return now >= s && now <= e;
   }, [classInfo]);
 
-  // ⬇ 3) 과제 목록 로드
+  // -------------------------
+  // ✔ 4) 과제 목록 로드 (class_id + profiles 기반 student_id)
+  // -------------------------
   const loadAssignments = useCallback(async () => {
-    if (!authUser?.user_id) return;
+    if (!studentId) return;
 
     setLoadingList(true);
     setListError('');
 
     try {
-      const data = await fetchAssignments({ classroom_id: classId, student_id: authUser.user_id });
-      setAssignments(data ?? []);
-    } catch (err) {
+      const list = await fetchAssignments({
+        class_id: Number(classId),
+        student_id: studentId,
+      });
+
+      setAssignments(list ?? []);
+    } catch {
       setListError('과제 목록을 불러오는 중 오류가 발생했습니다.');
       setAssignments([]);
     } finally {
       setLoadingList(false);
     }
-  }, [authUser?.user_id, classId]);
+  }, [studentId, classId]);
 
   useEffect(() => {
     loadAssignments();
   }, [loadAssignments]);
 
-  // ⬇ 4) 제출
+  // -------------------------
+  // ✔ 5) 과제 제출
+  // -------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -148,7 +171,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       return;
     }
 
-    if (!authUser?.user_id) {
+    if (!studentId) {
       setSubmitError('로그인이 필요합니다.');
       return;
     }
@@ -159,8 +182,8 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     }
 
     const payload = {
-      classroom_id: Number(classId),
-      student_id: authUser?.user_id,
+      class_id: Number(classId),
+      student_id: studentId,
       session_no: Number(sessionNo),
       link_url: linkUrl.trim() || null,
       image_base64: imageBase64 || null,
@@ -174,6 +197,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       setImageBase64('');
       setImageName('');
       setStatusMessage('성공적으로 제출되었습니다.');
+
       await loadAssignments();
     } catch (err) {
       setSubmitError('과제 제출 실패');
@@ -182,6 +206,9 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     }
   };
 
+  // -------------------------
+  // ✔ 6) 이미지 → Base64 변환
+  // -------------------------
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -194,9 +221,11 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     reader.readAsDataURL(file);
   };
 
+  // -------------------------
+  // UI
+  // -------------------------
   return (
     <div className="space-y-6">
-      {/* 제출 폼 */}
       <form onSubmit={handleSubmit} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft space-y-4">
         <div>
           <h3 className="font-semibold text-ellieGray">과제 제출</h3>
@@ -204,7 +233,6 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
           {classInfoError && <p className="text-red-500 text-sm">{classInfoError}</p>}
         </div>
 
-        {/* 회차 선택 */}
         <div className="flex gap-2 items-center">
           <label className="text-sm font-semibold">회차 선택</label>
           <select className="border rounded-xl px-3 py-2" value={sessionNo} onChange={(e) => setSessionNo(e.target.value)}>
@@ -216,14 +244,12 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
           </select>
         </div>
 
-        {/* 이미지 업로드 */}
         <div>
           <label className="text-sm font-semibold">이미지 업로드</label>
           <input type="file" accept="image/*" onChange={handleFileChange} />
           {imageName && <p className="text-xs">{imageName}</p>}
         </div>
 
-        {/* 링크 제출 */}
         <div>
           <label className="text-sm font-semibold">링크 제출</label>
           <input
@@ -246,7 +272,6 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
         </button>
       </form>
 
-      {/* 제출된 과제 */}
       <section className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
         <h3 className="font-semibold mb-3">제출된 과제</h3>
 
@@ -258,7 +283,9 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
           {assignments.map((item) => (
             <li key={item.id} className="bg-ivory/80 rounded-xl p-4">
               <div className="flex flex-col gap-2 text-xs">
-                <span className="font-semibold text-sm">{item.session_no}회차 · {item.status === 'success' ? '성공' : '미제출'}</span>
+                <span className="font-semibold text-sm">
+                  {item.session_no}회차 · {item.status === 'success' ? '성공' : '미제출'}
+                </span>
                 <span>{formatDateTime(item.created_at)}</span>
 
                 {item.link_url && (
@@ -266,8 +293,14 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
                     제출 링크
                   </a>
                 )}
-                {item.image_url && <img src={item.image_url} className="rounded-xl max-h-64 object-contain" />}
-                {!item.image_url && !item.link_url && <span className="text-ellieGray/60 text-sm">제출 내용이 없습니다.</span>}
+
+                {item.image_url && (
+                  <img src={item.image_url} className="rounded-xl max-h-64 object-contain" />
+                )}
+
+                {!item.image_url && !item.link_url && (
+                  <span className="text-ellieGray/60 text-sm">제출 내용이 없습니다.</span>
+                )}
               </div>
             </li>
           ))}
