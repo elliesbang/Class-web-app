@@ -38,16 +38,16 @@ export const onRequest = async ({
       undefined;
 
     // -----------------------------
-    // ✔ 프론트에서 보내는 정확한 payload 이름
+    // ✔ 프론트에서 보내는 정확한 payload
     // -----------------------------
     let {
-      class_id,
+      classroom_id,
       student_id,
       session_no,
       image_base64,
       link_url,
     } = body as {
-      class_id?: string | number;
+      classroom_id?: string | number;
       student_id?: string;
       session_no?: string | number;
       image_base64?: string | null;
@@ -57,20 +57,19 @@ export const onRequest = async ({
     // -----------------------------
     // ✔ 필드 기본 검증
     // -----------------------------
-    if (!class_id || !session_no) {
-      return jsonResponse({ error: 'class_id and session_no are required' }, 400);
+    if (!classroom_id || !session_no) {
+      return jsonResponse(
+        { error: 'classroom_id and session_no are required' },
+        400
+      );
     }
 
-    // text 컬럼 통일
-    class_id = String(class_id);
+    classroom_id = String(classroom_id);
     session_no = String(session_no);
 
     // -----------------------------
-    // ✔ 학생 ID 결정 (profiles 기반)
+    // ✔ 학생 ID(resolve from profiles)
     // -----------------------------
-    const userResult = token ? await supabase.auth.getUser(token) : null;
-
-    // auth.users.id 대신 profiles.id를 쓰기 위해 body 값을 우선 사용
     const resolvedStudentId = student_id ?? null;
 
     if (!resolvedStudentId) {
@@ -81,7 +80,7 @@ export const onRequest = async ({
     }
 
     // -----------------------------
-    // ✔ 이미지 업로드
+    // ✔ 이미지 업로드 처리
     // -----------------------------
     let uploadedImageUrl: string | null = null;
 
@@ -99,7 +98,7 @@ export const onRequest = async ({
       );
       const extension = mimeType.split('/')[1] || 'png';
 
-      const filePath = `assignments/${class_id}/${resolvedStudentId}/${Date.now()}.${extension}`;
+      const filePath = `assignments/${classroom_id}/${resolvedStudentId}/${Date.now()}.${extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from('assignments')
@@ -117,16 +116,15 @@ export const onRequest = async ({
         .getPublicUrl(filePath).data.publicUrl;
     }
 
-    // 링크 클린
     const cleanedLink = link_url?.trim() || null;
 
     // -----------------------------
-    // ✔ INSERT (class_id 기준)
+    // ✔ INSERT (정확한 컬럼명)
     // -----------------------------
     const { data, error } = await supabase
       .from('assignments')
       .insert({
-        class_id,
+        classroom_id,
         student_id: resolvedStudentId,
         session_no,
         image_url: uploadedImageUrl,
