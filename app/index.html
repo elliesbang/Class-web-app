@@ -4,18 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.webmanifest" />
-
-    <!-- 🔥 Cloudflare Pages v3 환경 변수 주입 코드 -->
-    <script>
-      window.__env = {
-        VITE_SUPABASE_URL: "{{ VITE_SUPABASE_URL }}",
-        VITE_SUPABASE_ANON_KEY: "{{ VITE_SUPABASE_ANON_KEY }}"
-      };
-    </script>
-    <!-- 🔥 여기까지 -->
-
     <title>엘리의방 클래스</title>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
     <link
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
       rel="stylesheet"
@@ -23,6 +17,15 @@
   </head>
   <body class="h-full bg-ivory font-sans text-ellieGray">
     <div id="root" class="h-full"></div>
+
+    <!-- ✅ Cloudflare Pages v3 env injection (안전한 위치) -->
+    <script>
+      window.__env = {
+        VITE_SUPABASE_URL: "{{ VITE_SUPABASE_URL }}",
+        VITE_SUPABASE_ANON_KEY: "{{ VITE_SUPABASE_ANON_KEY }}"
+      };
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
