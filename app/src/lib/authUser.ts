@@ -55,6 +55,7 @@ export const setAuthUser = (user: AuthUser | null) => {
       localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
     }
 
+    // 구독자들에게 변경 알림
     window.dispatchEvent(new Event(AUTH_USER_EVENT));
   } catch (err) {
     console.error('[authUser] Failed to persist auth user.', err);
@@ -73,10 +74,10 @@ export const subscribeAuthUser = (
 
   const handler = () => listener(getAuthUser());
 
-  // ❌ storage 이벤트 제거
+  // storage 이벤트는 같은 탭에서는 실행되지 않으므로 제거
   // window.addEventListener('storage', handler);
 
-  // ✅ 커스텀 이벤트만 사용 (모든 탭에서 정상 작동)
+  // 커스텀 이벤트만 사용
   window.addEventListener(AUTH_USER_EVENT, handler);
 
   return () => {
@@ -85,7 +86,7 @@ export const subscribeAuthUser = (
 };
 
 // =======================================================
-// 🔥 Supabase 세션을 localStorage에 동기화
+// 🔥 Supabase 세션을 localStorage + Supabase client에 완전 동기화
 // =======================================================
 supabase.auth.onAuthStateChange(async (_event, session) => {
   if (!session?.user) {
@@ -93,7 +94,18 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
     return;
   }
 
-  // profile(role, name) 가져오기
+  // ---------------------------------------------------
+  // 🔥 (가장 중요) Supabase 클라이언트 내부 세션 동기화
+  // ---------------------------------------------------
+  // 이게 없으면 supabase.from(...)에서 RLS 때문에 데이터 못 가져옴
+  await supabase.auth.setSession({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+  });
+
+  // ---------------------------------------------------
+  // 🔥 프로필(role, name) 가져오기
+  // ---------------------------------------------------
   const { data: profile } = await supabase
     .from('profiles')
     .select('name, role')
@@ -113,5 +125,6 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
     token: session.access_token,
   };
 
+  // localStorage 저장 + 이벤트 dispatch
   setAuthUser(newUser);
 });
