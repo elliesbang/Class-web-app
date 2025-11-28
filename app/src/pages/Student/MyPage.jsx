@@ -1,109 +1,104 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useAuthUser } from '../../hooks/useAuthUser';
-import NotificationSettings from '../MyPage/NotificationSettings';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 function fetchJSON(url) {
-  return fetch(url).then((response) => {
-    if (!response.ok) {
-      throw new Error(`요청에 실패했습니다: ${url}`);
-    }
-    return response.json();
+  return fetch(url).then((res) => {
+    if (!res.ok) throw new Error(url + ' 요청 실패');
+    return res.json();
   });
 }
 
 export default function StudentMyPage() {
   const authUser = useAuthUser();
+
+  // 로그인 ID (profiles.id)
+  const studentId = useMemo(() => {
+    if (!authUser || authUser.role !== 'student') return null;
+    return authUser.user_id;
+  }, [authUser]);
+
   const [classrooms, setClassrooms] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  const studentIdentifier = useMemo(() => {
-    if (!authUser || authUser.role !== 'student') {
-      return null;
-    }
-    return authUser.user_id || authUser.email || null;
-  }, [authUser]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // ------------------------------
+  // 📌 Cloudflare Functions API 주소
+  // ------------------------------
+  const API_CLASSROOM = `/api/student/classrooms?student=${studentId}`;
+  const API_ASSIGNMENT = `/api/student/assignments?student=${studentId}`;
+  const API_FEEDBACK = `/api/student/feedback?student=${studentId}`;
+  const API_COURSE = `/api/student/courses`;
 
   useEffect(() => {
-    if (!studentIdentifier) {
+    if (!studentId) {
       setLoading(false);
       return;
     }
 
-    let isMounted = true;
+    let cancel = false;
     setLoading(true);
     setError(null);
 
-    const classroomUrl = `/.netlify/functions/classroom?student=${encodeURIComponent(studentIdentifier)}`;
-    const assignmentUrl = `/.netlify/functions/assignment-submit?student=${encodeURIComponent(studentIdentifier)}`;
-    const feedbackUrl = `/.netlify/functions/feedback?student=${encodeURIComponent(studentIdentifier)}`;
-
     Promise.all([
-      fetchJSON(classroomUrl),
-      fetchJSON(assignmentUrl),
-      fetchJSON(feedbackUrl),
-      fetchJSON('/.netlify/functions/course'),
+      fetchJSON(API_CLASSROOM),
+      fetchJSON(API_ASSIGNMENT),
+      fetchJSON(API_FEEDBACK),
+      fetchJSON(API_COURSE),
     ])
-      .then(([classroomData, assignmentData, feedbackData, courseData]) => {
-        if (!isMounted) return;
-        setClassrooms(classroomData?.items ?? []);
-        setAssignments(assignmentData?.items ?? []);
-        setFeedbacks(feedbackData?.items ?? []);
-        setCourses(courseData?.items ?? []);
+      .then(([classroomRes, assignmentRes, feedbackRes, courseRes]) => {
+        if (cancel) return;
+
+        setClassrooms(classroomRes?.items ?? []);
+        setAssignments(assignmentRes?.items ?? []);
+        setFeedbacks(feedbackRes?.items ?? []);
+        setCourses(courseRes?.items ?? []);
       })
-      .catch((caught) => {
-        if (!isMounted) return;
-        console.error('[StudentMyPage] failed to load data', caught);
-        setError(caught);
+      .catch((err) => {
+        if (cancel) return;
+        console.error('MyPage Load Failed:', err);
+        setError(err);
       })
       .finally(() => {
-        if (!isMounted) return;
+        if (cancel) return;
         setLoading(false);
       });
 
-    return () => {
-      isMounted = false;
-    };
-  }, [studentIdentifier]);
+    return () => (cancel = true);
+  }, [studentId]);
 
+  // ------------------------------
+  // 📌 가까운 주차(week) 정렬
+  // ------------------------------
   const upcomingLessons = useMemo(() => {
     if (courses.length === 0) return [];
-
-    const sorted = [...courses].sort((a, b) => {
-      const aWeek = Number.parseInt(a.week, 10);
-      const bWeek = Number.parseInt(b.week, 10);
-      if (Number.isNaN(aWeek) || Number.isNaN(bWeek)) {
-        return (a.createdTime || '').localeCompare(b.createdTime || '');
-      }
-      return aWeek - bWeek;
-    });
-
+    const sorted = [...courses].sort((a, b) => a.week - b.week);
     return sorted.slice(0, 3);
   }, [courses]);
 
+  // ------------------------------
+  // 📌 feedback : assignment.id → feedback 연결
+  // ------------------------------
   const feedbackMap = useMemo(() => {
     const map = new Map();
-    feedbacks.forEach((feedback) => {
-      const assignmentIds = Array.isArray(feedback.assignment)
-        ? feedback.assignment
-        : feedback.properties?.Assignment;
-      if (Array.isArray(assignmentIds)) {
-        assignmentIds.forEach((id) => {
-          map.set(typeof id === 'string' ? id : id?.id, feedback);
-        });
+    feedbacks.forEach((fb) => {
+      if (fb.assignment_id) {
+        map.set(fb.assignment_id, fb);
       }
     });
     return map;
   }, [feedbacks]);
 
   const handleUpload = () => {
-    if (typeof window === 'undefined') return;
     window.location.href = '/classroom/assignments/upload';
   };
 
+  // ------------------------------
+  // 🔥 UI 렌더링 시작
+  // ------------------------------
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
       <header className="rounded-3xl bg-white px-6 py-5 shadow-soft">
@@ -113,53 +108,48 @@ export default function StudentMyPage() {
         </p>
       </header>
 
-      {error ? (
+      {error && (
         <div className="rounded-3xl bg-red-50 p-5 text-sm text-red-600 shadow-soft">
           데이터를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.
         </div>
-      ) : null}
+      )}
 
+      {/* ---------------- 등록 수업 ---------------- */}
       <section className="grid gap-4 md:grid-cols-2">
         <article className="rounded-3xl bg-white p-6 shadow-soft">
-          <header className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-ellieGray">등록된 수업</h2>
-              <p className="text-xs text-ellieGray/60">실시간 노션 데이터 기반</p>
-            </div>
-          </header>
+          <h2 className="text-lg font-semibold text-ellieGray">등록된 수업</h2>
+          <p className="text-xs text-ellieGray/60">내가 등록한 클래스 목록</p>
+
           <div className="mt-4 space-y-3">
             {loading ? (
-              <p className="text-sm text-ellieGray/60">데이터를 불러오는 중입니다...</p>
+              <p className="text-sm text-ellieGray/60">불러오는 중...</p>
             ) : classrooms.length === 0 ? (
               <p className="text-sm text-ellieGray/60">등록된 수업이 없습니다.</p>
             ) : (
               classrooms.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-ellieGray/10 p-4">
-                  <p className="text-sm font-semibold text-ellieGray">{item.name || '수업'}</p>
-                  <p className="mt-1 text-xs text-ellieGray/60">상태: {item.status || '확인 필요'}</p>
+                <div key={item.id} className="rounded-xl border border-gray-200 p-4">
+                  <p className="font-semibold">{item.classes?.name}</p>
                 </div>
               ))
             )}
           </div>
         </article>
 
+        {/* ---------------- 이번 주 수업 ---------------- */}
         <article className="rounded-3xl bg-white p-6 shadow-soft">
-          <header className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-ellieGray">이번 주 수업</h2>
-              <p className="text-xs text-ellieGray/60">다가오는 주차 수업을 확인하세요.</p>
-            </div>
-          </header>
+          <h2 className="text-lg font-semibold text-ellieGray">이번 주 수업</h2>
+          <p className="text-xs text-ellieGray/60">다가오는 주차 기준</p>
+
           <div className="mt-4 space-y-3">
             {loading ? (
-              <p className="text-sm text-ellieGray/60">데이터를 불러오는 중입니다...</p>
+              <p className="text-sm text-ellieGray/60">불러오는 중...</p>
             ) : upcomingLessons.length === 0 ? (
-              <p className="text-sm text-ellieGray/60">예정된 수업 정보가 없습니다.</p>
+              <p className="text-sm text-ellieGray/60">예정 수업이 없습니다.</p>
             ) : (
               upcomingLessons.map((lesson) => (
-                <div key={lesson.id} className="rounded-2xl border border-ellieGray/10 p-4">
-                  <p className="text-sm font-semibold text-ellieGray">{lesson.title || '수업'}</p>
-                  <p className="mt-1 text-xs text-ellieGray/60">주차: {lesson.week || '-'}</p>
+                <div key={lesson.id} className="rounded-xl border border-gray-200 p-4">
+                  <p className="font-semibold">{lesson.title}</p>
+                  <p className="text-xs text-ellieGray/60">주차: {lesson.week}</p>
                 </div>
               ))
             )}
@@ -167,61 +157,73 @@ export default function StudentMyPage() {
         </article>
       </section>
 
+      {/* ---------------- 과제 제출 현황 ---------------- */}
       <section className="grid gap-4 md:grid-cols-2">
         <article className="rounded-3xl bg-white p-6 shadow-soft">
           <header className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-ellieGray">나의 과제 제출 현황</h2>
-              <p className="text-xs text-ellieGray/60">최근 제출 순서로 정렬됩니다.</p>
+              <h2 className="text-lg font-semibold">나의 과제 제출 현황</h2>
+              <p className="text-xs text-ellieGray/60">최근 제출 순</p>
             </div>
+
             <button
               type="button"
               onClick={handleUpload}
-              className="rounded-full bg-ellieOrange px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:bg-ellieOrange/90"
+              className="rounded-full bg-ellieOrange px-4 py-2 text-xs font-semibold text-white shadow-soft"
             >
               과제 업로드
             </button>
           </header>
+
           <div className="mt-4 space-y-3">
             {loading ? (
-              <p className="text-sm text-ellieGray/60">데이터를 불러오는 중입니다...</p>
+              <p className="text-sm text-ellieGray/60">불러오는 중...</p>
             ) : assignments.length === 0 ? (
               <p className="text-sm text-ellieGray/60">제출한 과제가 없습니다.</p>
             ) : (
-              assignments.map((assignment) => (
-                <div key={assignment.id} className="rounded-2xl border border-ellieGray/10 p-4">
-                  <p className="text-sm font-semibold text-ellieGray">{assignment.week || '과제'}</p>
-                  <p className="mt-1 text-xs text-ellieGray/60">링크: {assignment.link || '제출 링크 없음'}</p>
-                  <p className="mt-1 text-xs text-ellieGray/60">상태: {assignment.status || '확인 중'}</p>
+              assignments.map((item) => (
+                <div key={item.id} className="rounded-xl border border-gray-200 p-4">
+                  <p className="font-semibold">{item.session_no}회차</p>
+
+                  {item.link_url && (
+                    <p className="text-xs text-ellieGray/70">
+                      링크: <a href={item.link_url} className="underline text-ellieOrange" target="_blank">바로가기</a>
+                    </p>
+                  )}
+
+                  {item.image_url && (
+                    <img
+                      src={item.image_url}
+                      className="mt-2 max-h-48 rounded-xl border object-contain"
+                    />
+                  )}
                 </div>
               ))
             )}
           </div>
         </article>
 
+        {/* ---------------- 피드백 ---------------- */}
         <article className="rounded-3xl bg-white p-6 shadow-soft">
-          <header className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-ellieGray">내 피드백 현황</h2>
-              <p className="text-xs text-ellieGray/60">과제별 담당자 피드백을 확인하세요.</p>
-            </div>
-          </header>
+          <h2 className="text-lg font-semibold text-ellieGray">내 피드백 현황</h2>
+          <p className="text-xs text-ellieGray/60">과제별 강사 피드백</p>
+
           <div className="mt-4 space-y-3">
             {loading ? (
-              <p className="text-sm text-ellieGray/60">데이터를 불러오는 중입니다...</p>
+              <p className="text-sm text-ellieGray/60">불러오는 중...</p>
             ) : assignments.length === 0 ? (
               <p className="text-sm text-ellieGray/60">피드백을 확인할 과제가 없습니다.</p>
             ) : (
-              assignments.map((assignment) => {
-                const feedback = feedbackMap.get(assignment.id);
+              assignments.map((item) => {
+                const fb = feedbackMap.get(item.id);
                 return (
-                  <div key={assignment.id} className="rounded-2xl border border-ellieGray/10 p-4">
-                    <p className="text-sm font-semibold text-ellieGray">{assignment.week || '과제'}</p>
-                    <p className="mt-1 text-xs text-ellieGray/60">
-                      담당자: {feedback?.admin || feedback?.properties?.Admin || '미배정'}
+                  <div key={item.id} className="rounded-xl border border-gray-200 p-4">
+                    <p className="font-semibold">{item.session_no}회차</p>
+                    <p className="text-xs text-ellieGray/70">
+                      담당자: {fb?.admin_name ?? '미배정'}
                     </p>
-                    <p className="mt-1 text-xs text-ellieGray/60">
-                      피드백: {feedback?.feedback || feedback?.properties?.Feedback || '대기 중'}
+                    <p className="text-xs text-ellieGray/70">
+                      피드백: {fb?.feedback ?? '대기 중'}
                     </p>
                   </div>
                 );
@@ -230,8 +232,6 @@ export default function StudentMyPage() {
           </div>
         </article>
       </section>
-
-      <NotificationSettings />
     </div>
   );
 }
