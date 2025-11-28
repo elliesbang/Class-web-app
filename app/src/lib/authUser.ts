@@ -1,7 +1,3 @@
-// =========================================
-// authUser.ts (전체 코드)
-// =========================================
-
 import { supabase } from './supabaseClient';
 
 // ------------------------------
@@ -59,7 +55,6 @@ export const setAuthUser = (user: AuthUser | null) => {
       localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
     }
 
-    // 모든 구독자에게 "값 바뀜" 알림
     window.dispatchEvent(new Event(AUTH_USER_EVENT));
   } catch (err) {
     console.error('[authUser] Failed to persist auth user.', err);
@@ -78,8 +73,8 @@ export const subscribeAuthUser = (
 
   const handler = () => listener(getAuthUser());
 
-  window.addEventListener('storage', handler);       // 다른 탭 변화 감지
-  window.addEventListener(AUTH_USER_EVENT, handler); // 현재 탭 변화 감지
+  window.addEventListener('storage', handler);
+  window.addEventListener(AUTH_USER_EVENT, handler);
 
   return () => {
     window.removeEventListener('storage', handler);
@@ -87,23 +82,16 @@ export const subscribeAuthUser = (
   };
 };
 
-// ------------------------------
-// ✔ 역할 체크
-// ------------------------------
-export const isRole = (user: AuthUser | null, role: AuthRole) =>
-  user?.role === role;
-
 // =======================================================
-// 🔥 🔥 🔥 Supabase 세션을 localStorage에 동기화 (중요 부분)
+// 🔥 Supabase 세션을 localStorage에 동기화
 // =======================================================
 supabase.auth.onAuthStateChange(async (_event, session) => {
   if (!session?.user) {
-    // 로그아웃 상태
     clearAuthUser();
     return;
   }
 
-  // Supabase profiles 테이블에서 role, name 가져오기
+  // profile(role, name) 가져오기
   const { data: profile } = await supabase
     .from('profiles')
     .select('name, role')
@@ -115,7 +103,6 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
     return;
   }
 
-  // AuthUser 모델 생성
   const newUser: AuthUser = {
     user_id: session.user.id,
     email: session.user.email ?? '',
@@ -124,6 +111,5 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
     token: session.access_token,
   };
 
-  // localStorage + 이벤트 전파
   setAuthUser(newUser);
 });
