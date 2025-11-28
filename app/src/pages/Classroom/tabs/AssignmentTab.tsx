@@ -178,13 +178,14 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       return;
     }
 
-    const payload = {
-      class_id: Number(classId),
-      student_id: studentId,
-      session_no: Number(sessionNo),
-      link_url: linkUrl.trim() || null,
-      image_base64: imageBase64 || null,
-    };
+   const payload = {
+  classroom_id: Number(classId),
+  student_id: studentId,
+  session_no: Number(sessionNo),
+  link_url: linkUrl.trim() || null,
+  image_base64: imageBase64 || null,
+};
+
 
     setIsSubmitting(true);
 
