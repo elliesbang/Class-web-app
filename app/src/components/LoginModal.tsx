@@ -354,12 +354,16 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
    * ------------------------ */
   return (
     <motion.div
-      className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={closeModal}
-    >
+  className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  exit={{ opacity: 0 }}
+  onClick={(e) => {
+    // 배경 클릭만 닫기, 모바일 터치 흔들림 방지
+    if (e.target === e.currentTarget) closeModal();
+  }}
+>
+      
       <motion.div
         className="bg-white rounded-2xl shadow-xl p-6 w-[400px]"
         variants={modalVariants}
