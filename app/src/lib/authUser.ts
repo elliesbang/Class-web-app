@@ -1,3 +1,12 @@
+// =========================================
+// authUser.ts (전체 코드)
+// =========================================
+
+import { supabase } from './supabaseClient';
+
+// ------------------------------
+// ✔ 타입 정의
+// ------------------------------
 export type AuthRole = 'student' | 'vod' | 'admin';
 
 export type AuthUser = {
@@ -15,7 +24,7 @@ const isBrowser = () =>
   typeof window !== 'undefined' && typeof localStorage !== 'undefined';
 
 // ------------------------------
-// ✔ 저장된 로그인 정보 가져오기
+// ✔ localStorage에서 로그인 정보 가져오기
 // ------------------------------
 export const getAuthUser = (): AuthUser | null => {
   if (!isBrowser()) return null;
@@ -38,7 +47,7 @@ export const getAuthUser = (): AuthUser | null => {
 };
 
 // ------------------------------
-// ✔ 저장하기 (user_id 기준)
+// ✔ localStorage에 저장하기
 // ------------------------------
 export const setAuthUser = (user: AuthUser | null) => {
   if (!isBrowser()) return;
@@ -47,12 +56,10 @@ export const setAuthUser = (user: AuthUser | null) => {
     if (!user) {
       localStorage.removeItem(AUTH_USER_STORAGE_KEY);
     } else {
-      const payload: AuthUser = {
-        ...user,
-        role: user.role,
-      };
-      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(payload));
+      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
     }
+
+    // 모든 구독자에게 "값 바뀜" 알림
     window.dispatchEvent(new Event(AUTH_USER_EVENT));
   } catch (err) {
     console.error('[authUser] Failed to persist auth user.', err);
@@ -62,7 +69,7 @@ export const setAuthUser = (user: AuthUser | null) => {
 export const clearAuthUser = () => setAuthUser(null);
 
 // ------------------------------
-// ✔ 로그인 상태 변화를 구독
+// ✔ authUser 변경 구독
 // ------------------------------
 export const subscribeAuthUser = (
   listener: (user: AuthUser | null) => void,
@@ -71,8 +78,8 @@ export const subscribeAuthUser = (
 
   const handler = () => listener(getAuthUser());
 
-  window.addEventListener('storage', handler);
-  window.addEventListener(AUTH_USER_EVENT, handler);
+  window.addEventListener('storage', handler);       // 다른 탭 변화 감지
+  window.addEventListener(AUTH_USER_EVENT, handler); // 현재 탭 변화 감지
 
   return () => {
     window.removeEventListener('storage', handler);
@@ -85,3 +92,38 @@ export const subscribeAuthUser = (
 // ------------------------------
 export const isRole = (user: AuthUser | null, role: AuthRole) =>
   user?.role === role;
+
+// =======================================================
+// 🔥 🔥 🔥 Supabase 세션을 localStorage에 동기화 (중요 부분)
+// =======================================================
+supabase.auth.onAuthStateChange(async (_event, session) => {
+  if (!session?.user) {
+    // 로그아웃 상태
+    clearAuthUser();
+    return;
+  }
+
+  // Supabase profiles 테이블에서 role, name 가져오기
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name, role')
+    .eq('id', session.user.id)
+    .single();
+
+  if (!profile) {
+    clearAuthUser();
+    return;
+  }
+
+  // AuthUser 모델 생성
+  const newUser: AuthUser = {
+    user_id: session.user.id,
+    email: session.user.email ?? '',
+    name: profile.name ?? '',
+    role: profile.role,
+    token: session.access_token,
+  };
+
+  // localStorage + 이벤트 전파
+  setAuthUser(newUser);
+});
