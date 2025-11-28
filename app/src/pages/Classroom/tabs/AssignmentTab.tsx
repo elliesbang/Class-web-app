@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { getStoredAuthUser } from '@/lib/authUser';
+import { getAuthUser } from '@/lib/authUser';
 import { fetchAssignments, submitAssignment } from '@/lib/api/assignments';
 import { supabase } from '@/lib/supabaseClient';
 import type { Assignment } from '@/types/db';
@@ -24,14 +24,11 @@ const formatDateTime = (value?: string) => {
 
 function AssignmentTab({ classId }: AssignmentTabProps) {
   // -------------------------
-  // ✔ authUser 최신 방식(profile_id 사용)
+  // ✔ authUser 최신 방식(user_id 사용)
   // -------------------------
-  const authUser = useMemo(() => {
-    const stored = getStoredAuthUser();
-    return stored?.profile_id ? stored : null;
-  }, []);
+  const authUser = useMemo(() => getAuthUser(), []);
 
-  const studentId = authUser?.profile_id ?? null;
+  const studentId = authUser?.user_id ?? null;
 
   const [sessionNo, setSessionNo] = useState('1');
   const [sessions, setSessions] = useState<any[]>([]);

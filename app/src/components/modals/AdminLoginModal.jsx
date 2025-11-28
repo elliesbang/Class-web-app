@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { setStoredAuthUser } from '../../lib/authUser';
+import { setAuthUser } from '../../lib/authUser';
 import { login } from '@/lib/api/auth/login';
-import { getUserRole } from '@/lib/api/auth/getUserRole';
+import { supabase } from '@/lib/supabaseClient';
 
 const MODAL_ROOT_ID = 'modal-root';
 
@@ -76,20 +76,38 @@ function AdminLoginModal({ isOpen, onClose }) {
       setIsSubmitting(true);
 
       try {
-        const user = await login(email.trim(), password);
-        const role = await getUserRole(user.id);
+        const { user, profile, token } = await login(email.trim(), password);
 
-        if (role !== 'admin') {
-          throw new Error('NOT_ADMIN');
+        let role = profile?.role;
+
+        if (!role && profile?.email === (user.email ?? email)) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ role: 'admin' })
+            .eq('id', user.id);
+
+          if (!updateError) {
+            role = 'admin';
+          }
         }
 
-        setStoredAuthUser({
+        if (role !== 'admin') {
+          alert('관리자 권한이 없습니다.');
+          await supabase.auth.signOut();
+          return;
+        }
+
+        setAuthUser({
           user_id: user.id,
-          role: 'admin',
-          name: (user.user_metadata && user.user_metadata.name) ? user.user_metadata.name : '',
           email: user.email ?? email,
-          token: user.id,
-         });
+          name:
+            profile?.name ??
+            (user.user_metadata && user.user_metadata.name
+              ? user.user_metadata.name
+              : ''),
+          role: 'admin',
+          token,
+        });
 
         handleClose();
         navigate('/admin/my');

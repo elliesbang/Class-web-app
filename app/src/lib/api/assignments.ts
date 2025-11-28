@@ -1,4 +1,4 @@
-import { getStoredAuthUser } from '@/lib/authUser';
+import { getAuthUser } from '@/lib/authUser';
 import type { Assignment } from '@/types/db';
 
 export type AssignmentWithRelations = Assignment & {
@@ -30,7 +30,7 @@ type ListAssignmentsParams = {
 // 공통 fetch wrapper
 // -----------------------------
 const jsonFetch = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
-  const token = getStoredAuthUser()?.token;
+  const token = getAuthUser()?.token;
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
 

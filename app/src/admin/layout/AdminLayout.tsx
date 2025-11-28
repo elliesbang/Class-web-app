@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuthUser } from '@/hooks/useAuthUser';
-import { clearStoredAuthUser } from '@/lib/authUser';
+import { clearAuthUser } from '@/lib/authUser';
 import { supabase } from '@/lib/supabase';
 import AdminSidebar from './AdminSidebar';
 
@@ -40,7 +40,7 @@ const AdminLayout = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    clearStoredAuthUser();
+    clearAuthUser();
     navigate('/', { replace: true });
   };
 
