@@ -73,11 +73,13 @@ export const subscribeAuthUser = (
 
   const handler = () => listener(getAuthUser());
 
-  window.addEventListener('storage', handler);
+  // ❌ storage 이벤트 제거
+  // window.addEventListener('storage', handler);
+
+  // ✅ 커스텀 이벤트만 사용 (모든 탭에서 정상 작동)
   window.addEventListener(AUTH_USER_EVENT, handler);
 
   return () => {
-    window.removeEventListener('storage', handler);
     window.removeEventListener(AUTH_USER_EVENT, handler);
   };
 };
