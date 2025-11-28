@@ -3,14 +3,18 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  base: './',            // ⭐⭐⭐ 반드시 추가!!
+
   plugins: [react()],
+
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+
   build: {
-    outDir: 'dist', // Cloudflare Pages가 읽는 위치
+    outDir: 'dist',
     emptyOutDir: true,
 
     rollupOptions: {
