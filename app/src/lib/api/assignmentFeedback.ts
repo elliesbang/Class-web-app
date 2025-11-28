@@ -1,8 +1,8 @@
-import { getStoredAuthUser } from '@/lib/authUser';
+import { getAuthUser } from '@/lib/authUser';
 import type { AssignmentFeedback } from '@/types/db';
 
 const jsonFetch = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
-  const token = getStoredAuthUser()?.token;
+  const token = getAuthUser()?.token;
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
   if (!(options.body instanceof FormData)) {

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getStoredAuthUser, subscribeAuthUser, type StoredAuthUser } from '../lib/authUser';
+import { getAuthUser, subscribeAuthUser, type AuthUser } from '../lib/authUser';
 
 export const useAuthUser = () => {
-  const [authUser, setAuthUser] = useState<StoredAuthUser | null>(() => getStoredAuthUser());
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => getAuthUser());
 
   useEffect(() => {
     const unsubscribe = subscribeAuthUser(setAuthUser);

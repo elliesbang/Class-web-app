@@ -1,18 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { setStoredAuthUser } from '../lib/authUser';
+import { setAuthUser } from '../lib/authUser';
 import { login } from '@/lib/api/auth/login';
-import { getUserRole } from '@/lib/api/auth/getUserRole';
+import { supabase } from '@/lib/supabaseClient';
+import StudentLoginModal from './auth/StudentLoginModal';
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95 },
   visible: {
     opacity: 1,
     scale: 1,
-    transition: { type: "spring", stiffness: 260, damping: 20 }
+    transition: { type: 'spring', stiffness: 260, damping: 20 },
   },
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15 } }
+  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15 } },
 };
 
 const panelVariants = {
@@ -20,9 +21,9 @@ const panelVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.25, ease: "easeOut" }
+    transition: { duration: 0.25, ease: 'easeOut' },
   },
-  exit: { opacity: 0, y: 20, transition: { duration: 0.2, ease: "easeIn" } }
+  exit: { opacity: 0, y: 20, transition: { duration: 0.2, ease: 'easeIn' } },
 };
 
 type ActiveForm = 'buttons' | 'student' | 'admin' | 'vod';
@@ -32,20 +33,13 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
 
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
-
-  const [studentName, setStudentName] = useState('');
-  const [studentPassword, setStudentPassword] = useState('');
-  const [studentEmail, setStudentEmail] = useState('');
-  const [studentError, setStudentError] = useState('');
-  const [studentSubmitting, setStudentSubmitting] = useState(false);
+  const [adminSubmitting, setAdminSubmitting] = useState(false);
 
   const [vodName, setVodName] = useState('');
   const [vodPassword, setVodPassword] = useState('');
   const [vodEmail, setVodEmail] = useState('');
   const [vodError, setVodError] = useState('');
   const [vodSubmitting, setVodSubmitting] = useState(false);
-
-  const [adminSubmitting, setAdminSubmitting] = useState(false);
 
   const navigate = useNavigate();
 
@@ -57,19 +51,13 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     setActiveForm('buttons');
     setAdminEmail('');
     setAdminPassword('');
-    setStudentName('');
-    setStudentEmail('');
-    setStudentPassword('');
     setVodName('');
     setVodEmail('');
     setVodPassword('');
-    setStudentError('');
     setVodError('');
-    setStudentSubmitting(false);
     setVodSubmitting(false);
     setAdminSubmitting(false);
   }, [onClose]);
-
 
   /** ------------------------
    * 관리자 로그인
@@ -82,19 +70,33 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       try {
         setAdminSubmitting(true);
 
-        const user = await login(adminEmail.trim(), adminPassword);
-        const role = await getUserRole(user.id);
+        const { user, profile, token } = await login(adminEmail.trim(), adminPassword);
 
-        if (role !== 'admin') {
-          throw new Error('NOT_ADMIN');
+        let role = profile?.role;
+
+        if (!role && profile?.email === (user.email ?? adminEmail)) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ role: 'admin' })
+            .eq('id', user.id);
+
+          if (!updateError) {
+            role = 'admin';
+          }
         }
 
-        setStoredAuthUser({
+        if (role !== 'admin') {
+          alert('관리자 권한이 없습니다.');
+          await supabase.auth.signOut();
+          return;
+        }
+
+        setAuthUser({
           user_id: user.id,
           role: 'admin',
-          name: (user.user_metadata?.name as string | undefined) ?? '',
+          name: (user.user_metadata?.name as string | undefined) ?? profile?.name ?? '',
           email: user.email ?? adminEmail,
-          token: user.id,
+          token,
         });
         closeModal();
         navigate('/admin/my');
@@ -105,64 +107,34 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
         setAdminSubmitting(false);
       }
     },
-    [adminEmail, adminPassword, adminSubmitting, closeModal, navigate]
+    [adminEmail, adminPassword, adminSubmitting, closeModal, navigate],
   );
 
-
   /** ------------------------
-   * 공통 로그인 처리(student / vod)
+   * 공통 로그인 처리(VOD)
    * ------------------------ */
   const handleRoleLogin = useCallback(
-    async (payload: { name: string; email: string; password: string }, role: 'student' | 'vod') => {
-      const user = await login(payload.email, payload.password);
-      const userRole = await getUserRole(user.id);
+    async (payload: { name: string; email: string; password: string }, role: 'vod') => {
+      const { user, profile, token } = await login(payload.email, payload.password);
+      const userRole = profile?.role;
 
-      if (userRole !== role) throw new Error('LOGIN_FAILED');
+      if (userRole !== role) {
+        await supabase.auth.signOut();
+        throw new Error('LOGIN_FAILED');
+      }
 
-      setStoredAuthUser({
+      setAuthUser({
         user_id: user.id,
         role,
-        name: (user.user_metadata?.name as string | undefined) ?? payload.name,
+        name: profile?.name ?? (user.user_metadata?.name as string | undefined) ?? payload.name,
         email: user.email ?? payload.email,
-        token: user.id,
+        token,
       });
       closeModal();
-      navigate(role === 'vod' ? '/vod' : '/my');
+      navigate('/vod');
     },
-    [closeModal, navigate]
+    [closeModal, navigate],
   );
-
-
-  /** ------------------------
-   * 수강생 로그인
-   * ------------------------ */
-  const handleStudentSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      if (studentSubmitting) return;
-
-      setStudentError('');
-
-      const trimmedName = studentName.trim();
-      const trimmedEmail = studentEmail.trim();
-      const trimmedPassword = studentPassword.trim();
-
-      if (!trimmedName) return setStudentError('이름을 입력하세요.');
-      if (!trimmedPassword) return setStudentError('비밀번호를 입력하세요.');
-
-      setStudentSubmitting(true);
-      try {
-        await handleRoleLogin({ name: trimmedName, email: trimmedEmail, password: trimmedPassword }, 'student');
-      } catch (e) {
-        console.error(e);
-        setStudentError('로그인에 실패했습니다.');
-      } finally {
-        setStudentSubmitting(false);
-      }
-    },
-    [handleRoleLogin, studentEmail, studentName, studentPassword, studentSubmitting]
-  );
-
 
   /** ------------------------
    * VOD 로그인
@@ -191,19 +163,17 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
         setVodSubmitting(false);
       }
     },
-    [handleRoleLogin, vodEmail, vodName, vodPassword, vodSubmitting]
-  );   // ★★★ 오류 원인이었던 괄호 완전 수정됨
-
+    [handleRoleLogin, vodEmail, vodName, vodPassword, vodSubmitting],
+  ); // ★★★ 오류 원인이었던 괄호 완전 수정됨
 
   /** ESC 닫기 */
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeModal();
+      if (event.key === 'Escape') closeModal();
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [closeModal]);
-
 
   /** ------------------------
    * UI 블록 렌더링
@@ -245,7 +215,6 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     </motion.div>
   );
 
-
   const renderBackButton = () => (
     <button
       type="button"
@@ -254,13 +223,9 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
         setActiveForm('buttons');
         setAdminEmail('');
         setAdminPassword('');
-        setStudentName('');
-        setStudentEmail('');
-        setStudentPassword('');
         setVodName('');
         setVodEmail('');
         setVodPassword('');
-        setStudentError('');
         setVodError('');
         setAdminSubmitting(false);
       }}
@@ -268,7 +233,6 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       ← 뒤로가기
     </button>
   );
-
 
   const renderStudentForm = () => (
     <motion.div
@@ -280,46 +244,20 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       className="relative"
     >
       {renderBackButton()}
-      <form className="mt-6" onSubmit={handleStudentSubmit}>
-        <label className="block text-sm font-medium mb-1">이름</label>
-        <input
-          className="border rounded-md w-full p-2 mb-3"
-          value={studentName}
-          onChange={(e) => setStudentName(e.target.value)}
-          required
+      <div className="mt-6">
+        <StudentLoginModal
+          onLoginSuccess={() => {
+            closeModal();
+            navigate('/my');
+          }}
+          onSignupSuccess={() => {
+            closeModal();
+            navigate('/');
+          }}
         />
-
-        <label className="block text-sm font-medium mb-1">이메일</label>
-        <input
-          type="email"
-          className="border rounded-md w-full p-2 mb-3"
-          value={studentEmail}
-          onChange={(e) => setStudentEmail(e.target.value)}
-          required
-        />
-
-        <label className="block text-sm font-medium mb-1">비밀번호</label>
-        <input
-          type="password"
-          className="border rounded-md w-full p-2 mb-3"
-          value={studentPassword}
-          onChange={(e) => setStudentPassword(e.target.value)}
-          required
-        />
-
-        {studentError && <p className="text-sm text-red-500 mb-3">{studentError}</p>}
-
-        <button
-          type="submit"
-          className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
-          disabled={studentSubmitting}
-        >
-          {studentSubmitting ? '로그인 중...' : '로그인'}
-        </button>
-      </form>
+      </div>
     </motion.div>
   );
-
 
   const renderVodForm = () => (
     <motion.div
@@ -371,7 +309,6 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     </motion.div>
   );
 
-
   const renderAdminForm = () => (
     <motion.div
       key="admin-form"
@@ -411,7 +348,6 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       </form>
     </motion.div>
   );
-
 
   /** ------------------------
    * 전체 렌더

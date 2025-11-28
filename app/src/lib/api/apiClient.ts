@@ -1,4 +1,4 @@
-import { getStoredAuthUser } from '../authUser';
+import { getAuthUser } from '../authUser';
 
 const API_BASE_URL = '/.netlify/functions';
 
@@ -28,7 +28,7 @@ export type ApiFetchOptions = RequestInit & { skipJsonParse?: boolean };
 export const apiFetch = async <T = unknown>(url: string, options: ApiFetchOptions = {}): Promise<T> => {
   const { skipJsonParse, headers, body, ...rest } = options;
   const resolvedUrl = resolveUrl(url);
-  const token = getStoredAuthUser()?.token;
+  const token = getAuthUser()?.token;
   const mergedHeaders = new Headers(headers);
   mergedHeaders.set('Accept', 'application/json');
   if (!(body instanceof FormData)) {

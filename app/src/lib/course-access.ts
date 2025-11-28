@@ -1,4 +1,4 @@
-import { getStoredAuthUser } from './authUser';
+import { getAuthUser } from './authUser';
 
 export const COURSE_ACCESS_STORAGE_KEY = 'ellieCourseAccess';
 export const COURSE_ACCESS_CHANGE_EVENT = 'ellie-course-access-change';
@@ -96,7 +96,7 @@ export const hasCourseAccess = (courseId: string): boolean => {
     return true;
   }
 
-  const authUser = getStoredAuthUser();
+  const authUser = getAuthUser();
   if (authUser?.role === 'admin') {
     return true;
   }

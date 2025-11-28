@@ -1,4 +1,4 @@
-import { getStoredAuthUser } from './authUser';
+import { getAuthUser } from './authUser';
 
 declare global {
   interface Window {
@@ -30,7 +30,7 @@ const setup = () => {
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     try {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : input.toString();
-      const authUser = getStoredAuthUser();
+      const authUser = getAuthUser();
 
       if (!authUser || !authUser.token || !shouldAttachHeaders(url)) {
         return originalFetch(input, init);
