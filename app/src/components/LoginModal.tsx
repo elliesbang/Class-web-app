@@ -164,7 +164,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       }
     },
     [handleRoleLogin, vodEmail, vodName, vodPassword, vodSubmitting],
-  ); // ★★★ 오류 원인이었던 괄호 완전 수정됨
+  );
 
   /** ESC 닫기 */
   useEffect(() => {
@@ -176,7 +176,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
   }, [closeModal]);
 
   /** ------------------------
-   * UI 블록 렌더링
+   * 렌더링 UI
    * ------------------------ */
   const renderButtons = () => (
     <motion.div
@@ -278,7 +278,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           required
         />
 
-        <label className="block text-sm font-medium mb-1">이이메일</label>
+        <label className="block text-sm font-medium mb-1">이메일</label>
         <input
           type="email"
           className="border rounded-md w-full p-2 mb-3"
@@ -354,23 +354,45 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
    * ------------------------ */
   return (
     <motion.div
-  className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  exit={{ opacity: 0 }}
-  onClick={(e) => {
-    // 배경 클릭만 닫기, 모바일 터치 흔들림 방지
-    if (e.target === e.currentTarget) closeModal();
-  }}
->
-      
+      className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+
+      // 🔥 모바일 터치 안전 가드
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          (e.currentTarget as any).dataset.closing = 'true';
+        }
+      }}
+      onMouseUp={(e) => {
+        if ((e.currentTarget as any).dataset.closing === 'true') {
+          closeModal();
+        }
+        (e.currentTarget as any).dataset.closing = 'false';
+      }}
+      onTouchStart={(e) => {
+        if (e.target === e.currentTarget) {
+          (e.currentTarget as any).dataset.closing = 'true';
+        }
+      }}
+      onTouchEnd={(e) => {
+        if ((e.currentTarget as any).dataset.closing === 'true') {
+          closeModal();
+        }
+        (e.currentTarget as any).dataset.closing = 'false';
+      }}
+    >
       <motion.div
         className="bg-white rounded-2xl shadow-xl p-6 w-[400px]"
         variants={modalVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
-        onClick={(e) => e.stopPropagation()}
+
+        // 🔥 내부 클릭은 절대 배경 클릭으로 인식되지 않도록 차단
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-semibold">로그인</h2>
 
