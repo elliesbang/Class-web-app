@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Header from '../components/Header';
-import NavbarBottom from '../components/NavbarBottom';
+import BottomNav from '../components/Nav/BottomNav';
 
 const MainLayout = () => {
   return (
@@ -9,7 +9,7 @@ const MainLayout = () => {
       <main className="flex-1 px-4 pb-20 pt-20">
         <Outlet />
       </main>
-      <NavbarBottom />
+      <BottomNav />
     </div>
   );
 };

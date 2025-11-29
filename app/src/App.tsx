@@ -38,6 +38,7 @@ function App() {
       
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/classroom" element={<Classroom />} />
         <Route path="/classroom/:classId" element={<ClassroomDetailPage />}>
           <Route index element={<Navigate to="video" replace />} />

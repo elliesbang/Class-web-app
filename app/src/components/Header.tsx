@@ -1,26 +1,55 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import NotificationBell from './notifications/NotificationBell';
+import LoginTypeModal from './Auth/LoginTypeModal';
+import LoginMethodModal from './Auth/LoginMethodModal';
+import RegisterModal from './Auth/RegisterModal';
 import { useAuthUser } from '../hooks/useAuthUser';
-import { supabase } from '../lib/supabaseClient';
-import { clearAuthUser } from '../lib/authUser';
 
 const Header: React.FC = () => {
   const { user: authUser } = useAuthUser();
   const navigate = useNavigate();
+  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [showMethodModal, setShowMethodModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [selectedType, setSelectedType] = useState<'admin' | 'student' | 'vod' | null>(null);
 
   const goToAdminDashboard = () => {
     navigate('/admin');
   };
 
-  const handleLogin = () => {
-    navigate('/login');
+  const resetModals = () => {
+    setShowTypeModal(false);
+    setShowMethodModal(false);
+    setShowRegisterModal(false);
+    setSelectedType(null);
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    clearAuthUser();
-    navigate('/login');
+  const handleLoginClick = () => {
+    setSelectedType(null);
+    setShowRegisterModal(false);
+    setShowMethodModal(false);
+    setShowTypeModal(true);
+  };
+
+  const handleSelectType = (type: 'admin' | 'student' | 'vod') => {
+    setSelectedType(type);
+    setShowTypeModal(false);
+    setShowMethodModal(true);
+  };
+
+  const handleRegister = () => {
+    setSelectedType(null);
+    setShowTypeModal(false);
+    setShowMethodModal(false);
+    setShowRegisterModal(true);
+  };
+
+  const backToType = () => {
+    setShowMethodModal(false);
+    setShowRegisterModal(false);
+    setShowTypeModal(true);
   };
 
   return (
@@ -39,25 +68,27 @@ const Header: React.FC = () => {
               관리자 대시보드
             </button>
           ) : null}
-          {authUser ? (
+          {!authUser ? (
             <button
               type="button"
-              onClick={handleLogout}
-              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
-            >
-              로그아웃
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleLogin}
+              onClick={handleLoginClick}
               className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
             >
               로그인
             </button>
-          )}
+          ) : null}
         </div>
       </div>
+
+      {showTypeModal ? (
+        <LoginTypeModal onSelectType={handleSelectType} onRegister={handleRegister} onClose={resetModals} />
+      ) : null}
+
+      {showMethodModal && selectedType ? (
+        <LoginMethodModal userType={selectedType} onBack={backToType} onClose={resetModals} />
+      ) : null}
+
+      {showRegisterModal ? <RegisterModal onBack={backToType} onClose={resetModals} /> : null}
     </header>
   );
 };
