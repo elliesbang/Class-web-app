@@ -35,7 +35,7 @@ export const onRequest = async ({ request, env }) => {
     const supabase = getSupabaseClient(env)
 
     const { error } = await supabase
-      .from('class_contents')
+      .from('classroom_content')
       .delete()
       .eq('id', id)
 

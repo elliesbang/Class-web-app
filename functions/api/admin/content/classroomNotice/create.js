@@ -33,7 +33,7 @@ export const onRequest = async ({ request, env }) => {
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('class_contents')
+      .from('classroom_content')
       .insert({
         type: 'notice',
         class_id: classroom_id,

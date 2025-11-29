@@ -30,7 +30,7 @@ export const onRequest = async ({ request, env }) => {
     const categoryId = searchParams.get('vod_category_id')
 
     let query = supabase
-      .from('class_contents')
+      .from('classroom_content')
       .select('*')
       .eq('type', 'vod')
       .order('display_order', { ascending: true })

@@ -77,7 +77,7 @@ function NoticeTab({ courseName, classId }: { [key: string]: any }) {
 
       try {
         const { data, error } = await supabase
-          .from('class_notices')
+          .from('classroom_notices')
           .select('*, classes(*)')
           .eq('class_id', classId)
           .order('created_at', { ascending: false });

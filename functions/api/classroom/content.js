@@ -16,9 +16,9 @@ export const onRequest = async ({ request, env }) => {
     }
 
     const [videos, materials, notices] = await Promise.all([
-      supabase.from("class_videos").select("*").eq("class_id", classId),
-      supabase.from("class_materials").select("*").eq("class_id", classId),
-      supabase.from("class_notices").select("*").eq("class_id", classId),
+      supabase.from("classroom_videos").select("*").eq("class_id", classId),
+      supabase.from("classroom_materials").select("*").eq("class_id", classId),
+      supabase.from("classroom_notices").select("*").eq("class_id", classId),
     ]);
 
     return new Response(
