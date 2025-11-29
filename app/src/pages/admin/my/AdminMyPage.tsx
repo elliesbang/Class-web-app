@@ -7,7 +7,7 @@ const cardClassName =
   'block w-full rounded-2xl bg-white px-5 py-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg';
 
 export default function AdminMyPage() {
-  const authUser = useAuthUser();
+  const { user: authUser } = useAuthUser();
   const navigate = useNavigate();
 
   useEffect(() => {

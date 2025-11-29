@@ -8,7 +8,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onOpenLoginModal }) => {
-  const authUser = useAuthUser();
+  const { user: authUser } = useAuthUser();
   const navigate = useNavigate();
 
   const goToAdminDashboard = () => {

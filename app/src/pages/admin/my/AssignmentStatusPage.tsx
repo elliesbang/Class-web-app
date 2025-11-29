@@ -37,7 +37,7 @@ const isMichinaClass = (classItem: ClassRow | null) => {
 };
 
 const AssignmentStatusPage = () => {
-  const authUser = useAuthUser();
+  const { user: authUser } = useAuthUser();
   const navigate = useNavigate();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>('');

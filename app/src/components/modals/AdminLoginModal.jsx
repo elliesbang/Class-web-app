@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { setAuthUser } from '../../lib/authUser';
-import { login } from '@/lib/api/auth/login';
 import { supabase } from '@/lib/supabaseClient';
 
 const MODAL_ROOT_ID = 'modal-root';
@@ -76,44 +74,40 @@ function AdminLoginModal({ isOpen, onClose }) {
       setIsSubmitting(true);
 
       try {
-        const { user, profile, token } = await login(email.trim(), password);
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
 
-        let role = profile?.role;
-
-        if (!role && profile?.email === (user.email ?? email)) {
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ role: 'admin' })
-            .eq('id', user.id);
-
-          if (!updateError) {
-            role = 'admin';
-          }
+        if (error) {
+          throw error;
         }
 
-        if (role !== 'admin') {
+        const user = data.user;
+        if (!user) {
+          throw new Error('로그인 실패');
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        const role = profile?.role;
+
+        if (profileError || role !== 'admin') {
           alert('관리자 권한이 없습니다.');
           await supabase.auth.signOut();
           return;
         }
 
-        setAuthUser({
-          user_id: user.id,
-          email: user.email ?? email,
-          name:
-            profile?.name ??
-            (user.user_metadata && user.user_metadata.name
-              ? user.user_metadata.name
-              : ''),
-          role: 'admin',
-          token,
-        });
-
         handleClose();
         navigate('/admin/my');
       } catch (error) {
         console.error('[AdminLoginModal] login failed', error);
-        setErrorMessage('로그인 실패');
+        const message = error instanceof Error ? error.message : '로그인 실패';
+        setErrorMessage(message);
       } finally {
         setIsSubmitting(false);
       }

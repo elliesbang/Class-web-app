@@ -6,7 +6,7 @@ import AdminLoginModal from '../../components/modals/AdminLoginModal.jsx';
 const AdminLogin = () => {
   const [isModalOpen, setIsModalOpen] = useState(true);
   const navigate = useNavigate();
-  const authUser = useAuthUser();
+  const { user: authUser } = useAuthUser();
 
   useEffect(() => {
     if (authUser?.role === 'admin') {

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { clearAuthUser } from '@/lib/authUser';
 import { supabase } from '@/lib/supabaseClient';
 import AdminSidebar from './AdminSidebar';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard': '대시보드 홈',
@@ -16,27 +17,9 @@ const PAGE_TITLES: Record<string, string> = {
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isReady, setIsReady] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const authUser = useAuthUser();
-
-  useEffect(() => {
-    if (authUser?.role === 'admin') {
-      setIsReady(true);
-      return;
-    }
-
-    setIsReady(false);
-
-    if (authUser) {
-      alert('관리자 권한이 필요합니다.');
-      navigate('/my', { replace: true });
-    } else {
-      alert('관리자 로그인이 필요합니다.');
-      navigate('/login', { replace: true });
-    }
-  }, [authUser, navigate]);
+  const { user, loading } = useAuthUser();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -44,8 +27,15 @@ const AdminLayout = () => {
     navigate('/', { replace: true });
   };
 
-  if (!isReady) {
-    return null;
+  if (loading) return <LoadingSpinner text="로그인 중..." />;
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== 'admin') {
+    alert('관리자 권한이 필요합니다.');
+    return <Navigate to="/my" replace />;
   }
 
   const currentTitle = PAGE_TITLES[location.pathname] ?? '관리자 대시보드';

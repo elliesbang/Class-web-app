@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { setAuthUser } from '@/lib/authUser';
 
 type SignupFormProps = {
   onSuccess?: () => void;
@@ -32,9 +31,8 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         }
 
         const user = data?.user;
-        const token = data?.session?.access_token;
 
-        if (!user || !token) {
+        if (!user) {
           throw new Error('회원가입 후 세션 정보를 불러오지 못했습니다.');
         }
 
@@ -48,15 +46,6 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         if (profileError) {
           throw profileError;
         }
-
-        setAuthUser({
-          user_id: user.id,
-          email: user.email ?? email,
-          name: name.trim(),
-          role: 'student',
-          token,
-        });
-
         onSuccess?.();
       } catch (caught) {
         console.error('[SignupForm] signup failed', caught);

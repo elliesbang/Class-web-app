@@ -11,7 +11,7 @@ function CourseCard({ course, accentColor }: { [key: string]: any }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputCode, setInputCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const authUser = useAuthUser();
+  const { user: authUser } = useAuthUser();
   const isAdmin = authUser?.role === 'admin';
 
   const courseId = useMemo(() => {
