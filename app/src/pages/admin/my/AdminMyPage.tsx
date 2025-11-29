@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { LoginModalContext } from '@/context/LoginModalContext';
 
 const cardClassName =
   'block w-full rounded-2xl bg-white px-5 py-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg';
@@ -9,17 +10,21 @@ const cardClassName =
 export default function AdminMyPage() {
   const { user: authUser } = useAuthUser();
   const navigate = useNavigate();
+  const { open: openLoginModal } = useContext(LoginModalContext);
 
   useEffect(() => {
+    // 1) 비로그인 → 로그인 모달 열기 + 홈으로 이동
     if (!authUser) {
-      navigate('/login');
+      openLoginModal();
+      navigate('/my', { replace: true });
       return;
     }
 
+    // 2) 관리자 외의 사용자 → 일반 마이페이지로 이동
     if (authUser.role !== 'admin') {
-      navigate('/my');
+      navigate('/my', { replace: true });
     }
-  }, [authUser, navigate]);
+  }, [authUser, navigate, openLoginModal]);
 
   if (!authUser || authUser.role !== 'admin') {
     return null;
