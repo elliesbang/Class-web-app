@@ -29,7 +29,7 @@ import AssignmentAdminTab from './pages/admin/tabs/AssignmentAdminTab';
 import StudentsPage from './admin/pages/Students/StudentsPage';
 import ContentListPage from './admin/content/ContentListPage';
 import AdminRoutes from './routes/AdminRoutes';
-import LoginModal from './components/LoginModal/LoginModal';
+import LoginModal from './components/LoginModal';
 import LoginModalProvider from './context/LoginModalContext';
 
 function AppRoutes() {
