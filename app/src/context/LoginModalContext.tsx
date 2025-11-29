@@ -14,7 +14,17 @@ export default function LoginModalProvider({ children }) {
   const close = () => setIsOpen(false);
 
   return (
-    <LoginModalContext.Provider value={{ isOpen, open, close, step, setStep, userType, setUserType }}>
+    <LoginModalContext.Provider
+      value={{
+        isOpen,
+        open,
+        close,
+        step,
+        setStep,
+        userType,
+        setUserType,
+      }}
+    >
       {children}
     </LoginModalContext.Provider>
   );
