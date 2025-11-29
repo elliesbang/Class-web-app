@@ -1,3 +1,28 @@
+/** ------------------------
+ * 구글 로그인(수강생)
+ * ------------------------ */
+const handleGoogleStudentLogin = async () => {
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback/student`,
+    },
+  });
+};
+
+/** ------------------------
+ * 구글 로그인(VOD)
+ * ------------------------ */
+const handleGoogleVodLogin = async () => {
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback/vod`,
+    },
+  });
+};
+
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -400,7 +425,22 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           <AnimatePresence mode="wait">
             {activeForm === 'buttons' && renderButtons()}
             {activeForm === 'student' && renderStudentForm()}
+            <button
+  onClick={handleGoogleStudentLogin}
+  className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
+>
+  Google로 로그인
+</button>
+
             {activeForm === 'vod' && renderVodForm()}
+            <button
+  type="button"
+  onClick={handleGoogleVodLogin}
+  className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
+>
+  Google로 로그인
+</button>
+
             {activeForm === 'admin' && renderAdminForm()}
           </AnimatePresence>
         </div>
