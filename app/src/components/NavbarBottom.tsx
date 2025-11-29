@@ -16,17 +16,22 @@ const baseButtonClasses =
 const NavbarBottom = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const authUser = useAuthUser();
+
+  // ⬇⬇⬇ 수정 포인트: 구조분해로 authUser만 가져오기
+  const { authUser } = useAuthUser();
 
   const navItems = useMemo(() => {
+    // 로그인 X → My 탭 제거
     if (!authUser) {
       return baseItems;
     }
 
+    // 관리자
     if (authUser.role === 'admin') {
       return [...baseItems, { label: 'My', to: '/admin/my', Icon: User }];
     }
 
+    // 학생/VOD
     return [...baseItems, { label: 'My', to: '/my', Icon: User }];
   }, [authUser]);
 
@@ -40,9 +45,8 @@ const NavbarBottom = () => {
           const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
           const iconColor = isActive ? '#404040' : '#8e8e8e';
           const textColor = isActive ? 'text-[#404040]' : 'text-[#8e8e8e]';
-          const handleClick = () => {
-            navigate(to);
-          };
+
+          const handleClick = () => navigate(to);
 
           return (
             <button
