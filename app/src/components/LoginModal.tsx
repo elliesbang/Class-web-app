@@ -1,34 +1,12 @@
-/** ------------------------
- * 구글 로그인(수강생)
- * ------------------------ */
-const handleGoogleStudentLogin = async () => {
-  await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback/student`,
-    },
-  });
-};
-
-/** ------------------------
- * 구글 로그인(VOD)
- * ------------------------ */
-const handleGoogleVodLogin = async () => {
-  await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback/vod`,
-    },
-  });
-};
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { setAuthUser } from '../lib/authUser';
 import { login } from '@/lib/api/auth/login';
 import { supabase } from '@/lib/supabaseClient';
-import StudentLoginModal from './auth/StudentLoginModal';
+
+type ActiveForm = 'main' | 'admin';
+type UserRole = 'student' | 'vod';
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95 },
@@ -50,42 +28,33 @@ const panelVariants = {
   exit: { opacity: 0, y: 20, transition: { duration: 0.2, ease: 'easeIn' } },
 };
 
-type ActiveForm = 'buttons' | 'student' | 'admin' | 'vod';
-
 const LoginModal = ({ onClose }: { onClose: () => void }) => {
-  const [activeForm, setActiveForm] = useState<ActiveForm>('buttons');
+  const [activeForm, setActiveForm] = useState<ActiveForm>('main');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('student');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminSubmitting, setAdminSubmitting] = useState(false);
 
-  const [vodName, setVodName] = useState('');
-  const [vodPassword, setVodPassword] = useState('');
-  const [vodEmail, setVodEmail] = useState('');
-  const [vodError, setVodError] = useState('');
-  const [vodSubmitting, setVodSubmitting] = useState(false);
-
   const navigate = useNavigate();
 
-  /** ------------------------
-   * 공통 닫기
-   * ------------------------ */
   const closeModal = useCallback(() => {
     onClose();
-    setActiveForm('buttons');
+    setActiveForm('main');
+    setEmail('');
+    setPassword('');
+    setError('');
+    setIsSubmitting(false);
+    setSelectedRole('student');
     setAdminEmail('');
     setAdminPassword('');
-    setVodName('');
-    setVodEmail('');
-    setVodPassword('');
-    setVodError('');
-    setVodSubmitting(false);
     setAdminSubmitting(false);
   }, [onClose]);
 
-  /** ------------------------
-   * 관리자 로그인
-   * ------------------------ */
   const handleAdminSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -124,8 +93,8 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
         });
         closeModal();
         navigate('/admin/my');
-      } catch (error) {
-        console.error('[LoginModal] admin login failed', error);
+      } catch (caught) {
+        console.error('[LoginModal] admin login failed', caught);
         alert('관리자 권한이 없거나 로그인에 실패했습니다.');
       } finally {
         setAdminSubmitting(false);
@@ -134,66 +103,53 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     [adminEmail, adminPassword, adminSubmitting, closeModal, navigate],
   );
 
-  /** ------------------------
-   * 공통 로그인 처리(VOD)
-   * ------------------------ */
-  const handleRoleLogin = useCallback(
-    async (payload: { name: string; email: string; password: string }, role: 'vod') => {
-      const { user, profile, token } = await login(payload.email, payload.password);
-      const userRole = profile?.role;
-
-      if (userRole !== role) {
-        await supabase.auth.signOut();
-        throw new Error('LOGIN_FAILED');
-      }
-
-      setAuthUser({
-        user_id: user.id,
-        role,
-        name: profile?.name ?? (user.user_metadata?.name as string | undefined) ?? payload.name,
-        email: user.email ?? payload.email,
-        token,
-      });
-      closeModal();
-      navigate('/vod');
-    },
-    [closeModal, navigate],
-  );
-
-  /** ------------------------
-   * VOD 로그인
-   * ------------------------ */
-  const handleVodSubmit = useCallback(
+  const handleEmailSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (vodSubmitting) return;
+      if (isSubmitting) return;
 
-      setVodError('');
+      setError('');
+      setIsSubmitting(true);
 
-      const trimmedName = vodName.trim();
-      const trimmedEmail = vodEmail.trim();
-      const trimmedPassword = vodPassword.trim();
-
-      if (!trimmedName) return setVodError('이름을 입력하세요.');
-      if (!trimmedPassword) return setVodError('비밀번호를 입력하세요.');
-
-      setVodSubmitting(true);
       try {
-        await handleRoleLogin(
-          { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
-          'vod'
-        );
-      } catch (e) {
-        console.error(e);
-        setVodError('로그인에 실패했습니다.');
+        const { user, profile, token } = await login(email.trim(), password.trim());
+        const userRole = (profile?.role as UserRole | null) ?? null;
+
+        if (userRole !== selectedRole) {
+          await supabase.auth.signOut();
+          throw new Error('ROLE_MISMATCH');
+        }
+
+        setAuthUser({
+          user_id: user.id,
+          role: selectedRole,
+          name: profile?.name ?? (user.user_metadata?.name as string | undefined) ?? '',
+          email: user.email ?? email,
+          token,
+        });
+
+        closeModal();
+        navigate(selectedRole === 'vod' ? '/vod' : '/my');
+      } catch (caught) {
+        console.error('[LoginModal] login failed', caught);
+        setError('로그인에 실패했습니다.');
       } finally {
-        setVodSubmitting(false);
+        setIsSubmitting(false);
       }
     },
-    [handleRoleLogin, vodEmail, vodName, vodPassword, vodSubmitting],
+    [closeModal, email, isSubmitting, navigate, password, selectedRole],
   );
 
-  /** ESC 닫기 */
+  const handleGoogleLogin = useCallback(async () => {
+    localStorage.setItem('oauth_role', selectedRole);
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/google/callback`,
+      },
+    });
+  }, [selectedRole]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeModal();
@@ -202,159 +158,102 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [closeModal]);
 
-  /** ------------------------
-   * 렌더링 UI
-   * ------------------------ */
-  const renderButtons = () => (
-    <motion.div
-      key="login-options"
-      variants={panelVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      className="flex flex-col gap-3"
-    >
-      <button
-        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 mt-4 w-full"
-        onClick={() => setActiveForm('student')}
-      >
-        수강생
-      </button>
-
-      <button
-        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
-        onClick={() => setActiveForm('vod')}
-      >
-        VOD
-      </button>
-
-      <button
-        className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
-        onClick={() => {
-          setAdminEmail('');
-          setAdminPassword('');
-          setAdminSubmitting(false);
-          setActiveForm('admin');
-        }}
-      >
-        관리자
-      </button>
-    </motion.div>
-  );
-
   const renderBackButton = () => (
     <button
       type="button"
       className="absolute right-0 top-0 text-sm text-gray-500 hover:text-gray-700"
-      onClick={() => setActiveForm('buttons')}
+      onClick={() => setActiveForm('main')}
     >
       ← 뒤로가기
     </button>
   );
 
-  /** ------------------------
-   * 수강생 로그인 + Google 버튼
-   * ------------------------ */
-  const renderStudentForm = () => (
+  const renderMainForm = () => (
     <motion.div
-      key="student-form"
+      key="main-form"
       variants={panelVariants}
       initial="hidden"
       animate="visible"
       exit="exit"
       className="relative"
     >
-      {renderBackButton()}
+      <div className="mt-4">
+        <label className="block text-sm font-medium mb-2">역할 선택</label>
+        <div className="flex items-center gap-4 mb-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="role"
+              value="student"
+              checked={selectedRole === 'student'}
+              onChange={() => setSelectedRole('student')}
+            />
+            수강생
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="role"
+              value="vod"
+              checked={selectedRole === 'vod'}
+              onChange={() => setSelectedRole('vod')}
+            />
+            VOD
+          </label>
+        </div>
 
-      <div className="mt-6">
-        <StudentLoginModal
-          onLoginSuccess={() => {
-            closeModal();
-            navigate('/my');
-          }}
-          onSignupSuccess={() => {
-            closeModal();
-            navigate('/');
-          }}
-        />
-      </div>
+        <form onSubmit={handleEmailSubmit}>
+          <label className="block text-sm font-medium mb-1">이메일</label>
+          <input
+            type="email"
+            className="border rounded-md w-full p-2 mb-3"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-      {/* 🔥 수강생 Google 로그인 버튼 */}
-      <button
-        onClick={handleGoogleStudentLogin}
-        className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
-      >
-        Google로 로그인
-      </button>
-    </motion.div>
-  );
+          <label className="block text-sm font-medium mb-1">비밀번호</label>
+          <input
+            type="password"
+            className="border rounded-md w-full p-2 mb-3"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-  /** ------------------------
-   * VOD 로그인 + Google 버튼
-   * ------------------------ */
-  const renderVodForm = () => (
-    <motion.div
-      key="vod-form"
-      variants={panelVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      className="relative"
-    >
-      {renderBackButton()}
+          {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
 
-      <form className="mt-6" onSubmit={handleVodSubmit}>
-        <label className="block text-sm font-medium mb-1">이름</label>
-        <input
-          className="border rounded-md w-full p-2 mb-3"
-          value={vodName}
-          onChange={(e) => setVodName(e.target.value)}
-          required
-        />
-
-        <label className="block text-sm font-medium mb-1">이메일</label>
-        <input
-          type="email"
-          className="border rounded-md w-full p-2 mb-3"
-          value={vodEmail}
-          onChange={(e) => setVodEmail(e.target.value)}
-          required
-        />
-
-        <label className="block text-sm font-medium mb-1">비밀번호</label>
-        <input
-          type="password"
-          className="border rounded-md w-full p-2 mb-3"
-          value={vodPassword}
-          onChange={(e) => setVodPassword(e.target.value)}
-          required
-        />
-
-        {vodError && <p className="text-sm text-red-500 mb-3">{vodError}</p>}
+          <button
+            type="submit"
+            className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? '로그인 중...' : '로그인'}
+          </button>
+        </form>
 
         <button
-          type="submit"
-          className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 w-full"
-          disabled={vodSubmitting}
+          type="button"
+          onClick={handleGoogleLogin}
+          className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
         >
-          {vodSubmitting ? '로그인 중...' : '로그인'}
+          Google로 로그인/회원가입
         </button>
-      </form>
 
-      {/* 🔥 VOD Google 로그인 버튼 */}
-      <button
-        type="button"
-        onClick={handleGoogleVodLogin}
-        className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
-      >
-        Google로 로그인
-      </button>
+        <button
+          type="button"
+          onClick={() => {
+            closeModal();
+            navigate('/signup');
+          }}
+          className="mt-4 w-full bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
+        >
+          회원가입
+        </button>
+      </div>
     </motion.div>
   );
 
-  /** ------------------------
-   * 관리자 로그인
-   * ------------------------ */
   const renderAdminForm = () => (
     <motion.div
       key="admin-form"
@@ -395,9 +294,6 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     </motion.div>
   );
 
-  /** ------------------------
-   * 전체 렌더
-   * ------------------------ */
   return (
     <motion.div
       className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
@@ -412,13 +308,19 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
         animate="visible"
         exit="exit"
       >
-        <h2 className="text-xl font-semibold">로그인</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">로그인</h2>
+          <button
+            className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 px-3 text-sm"
+            onClick={() => setActiveForm('admin')}
+          >
+            관리자 로그인
+          </button>
+        </div>
 
         <div className="mt-4 min-h-[220px]">
           <AnimatePresence mode="wait">
-            {activeForm === 'buttons' && renderButtons()}
-            {activeForm === 'student' && renderStudentForm()}
-            {activeForm === 'vod' && renderVodForm()}
+            {activeForm === 'main' && renderMainForm()}
             {activeForm === 'admin' && renderAdminForm()}
           </AnimatePresence>
         </div>

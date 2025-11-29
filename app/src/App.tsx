@@ -1,5 +1,5 @@
-import GoogleCallbackStudent from './pages/auth/GoogleCallbackStudent';
-import GoogleCallbackVod from './pages/auth/GoogleCallbackVod';
+import GoogleCallback from './pages/auth/GoogleCallback';
+import Signup from './pages/auth/Signup';
 
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
@@ -34,8 +34,7 @@ function App() {
   return (
     <Routes>
       {/* 🔥 구글 로그인 콜백 - 반드시 최상단 위치 */}
-      <Route path="/auth/callback/student" element={<GoogleCallbackStudent />} />
-      <Route path="/auth/callback/vod" element={<GoogleCallbackVod />} />
+      <Route path="/auth/google/callback" element={<GoogleCallback />} />
       
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
@@ -54,6 +53,7 @@ function App() {
         {AdminRoutes()}
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/login" element={<AdminLogin />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/vod" element={<VodList />} />
         <Route path="/internal" element={<Navigate to="/classroom" replace />} />
       </Route>
