@@ -1,36 +1,44 @@
 import { supabase } from '@/lib/supabaseClient';
 
+export type LoginResponse = {
+  user: any;
+  session: {
+    access_token: string;
+    refresh_token: string;
+  } | null;
+  profile: any;
+  error?: string;
+};
+
 export async function login(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
+  const response = await fetch('/api/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
   });
 
-  if (error) throw new Error(error.message);
+  const result: LoginResponse = await response.json();
 
-  // Cloudflare 환경에서 세션 즉시 동기화
-  await supabase.auth.refreshSession();
-
-  const user = data.user;
-  const token = data.session?.access_token;
-
-  if (!user || !token) {
-    throw new Error('로그인에 실패했습니다.');
+  if (!response.ok || result.error) {
+    throw new Error(result.error || '로그인에 실패했습니다.');
   }
 
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  if (result.session?.access_token && result.session?.refresh_token) {
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: result.session.access_token,
+      refresh_token: result.session.refresh_token,
+    });
 
-  if (profileError || !profileData) {
-    throw new Error('해당 계정의 프로필 정보를 불러올 수 없습니다.');
+    if (sessionError) {
+      throw new Error(sessionError.message);
+    }
   }
 
   return {
-    user,
-    profile: profileData,
-    token,
+    user: result.user,
+    profile: result.profile,
+    token: result.session?.access_token,
   };
 }

@@ -14,6 +14,14 @@ export const onRequest = async ({ request, env }) => {
     }
 
     const { email, password } = await request.json()
+
+    if (!email || !password) {
+      return new Response(JSON.stringify({ error: 'Missing fields' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -25,8 +33,29 @@ export const onRequest = async ({ request, env }) => {
       return new Response(JSON.stringify({ error: error.message }), { status: 401 })
     }
 
-    return new Response(JSON.stringify({ user: data.user }), { status: 200 })
+    const { user, session } = data
+
+    let profile = null
+
+    if (user?.id) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      profile = profileData ?? null
+    }
+
+    return new Response(
+      JSON.stringify({
+        user,
+        session,
+        profile,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: e.message ?? 'Server error' }), { status: 500 })
   }
 }
