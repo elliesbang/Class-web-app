@@ -27,7 +27,7 @@ const normaliseNotice = (record: Record<string, any> | null): GlobalNotice | nul
 
 export const getGlobalNotices = async (): Promise<GlobalNotice[]> => {
   const { data, error } = await supabase
-    .from('classroom_content')
+    .from('class_contents')
     .select('*')
     .eq('type', 'global_notice');
 
@@ -42,7 +42,7 @@ export const getGlobalNotices = async (): Promise<GlobalNotice[]> => {
 
 export const createGlobalNotice = async (payload: Partial<GlobalNotice>) => {
   const { data, error } = await supabase
-    .from('classroom_content')
+    .from('class_contents')
     .insert({
       type: 'global_notice',
       title: payload.title,
@@ -58,7 +58,7 @@ export const createGlobalNotice = async (payload: Partial<GlobalNotice>) => {
 
 export const updateGlobalNotice = async (id: string | number, payload: Partial<GlobalNotice>) => {
   const { data, error } = await supabase
-    .from('classroom_content')
+    .from('class_contents')
     .update({
       title: payload.title,
       content: payload.content,
@@ -73,6 +73,6 @@ export const updateGlobalNotice = async (id: string | number, payload: Partial<G
 };
 
 export const deleteGlobalNotice = async (id: string | number) => {
-  const { error } = await supabase.from('classroom_content').delete().eq('id', id);
+  const { error } = await supabase.from('class_contents').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };

@@ -34,7 +34,7 @@ export const onRequest = async ({ request, env }) => {
     }
 
     const { data, error } = await supabase
-      .from('classroom_content')
+      .from('class_contents')
       .select('*')
       .eq('class_id', classroomId)
       .eq('type', 'material')

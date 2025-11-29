@@ -33,9 +33,9 @@ function ClassroomContentTab({ tab, Component }: ContentTabProps) {
 
       try {
         let { data, error } = await supabase
-          .from('classroom_contents')
+          .from('class_contents')
           .select('*, classes(*)')
-          .or(`classroom_id.eq.${classId},class_id.eq.${classId}`)
+          .eq('class_id', classId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
