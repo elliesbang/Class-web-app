@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabaseClient';
 import type { AssignmentRule } from '../components/RuleSelector';
 
 export interface ClassPayload extends AssignmentRule {
