@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { clearAuthUser } from '@/lib/authUser';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import AdminSidebar from './AdminSidebar';
 
 const PAGE_TITLES: Record<string, string> = {
