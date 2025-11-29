@@ -11,7 +11,7 @@ type ClassRow = {
 };
 
 type NotificationSettingRow = {
-  class_id: string | number;
+  classroom_id: string | number;
   notifications_enabled?: boolean | null;
 };
 
@@ -19,7 +19,7 @@ const CREATE_TABLE_SQL = `
 create table if not exists notification_settings (
   id uuid primary key default uuid_generate_v4(),
   admin_id uuid references profiles(id),
-  class_id uuid references classes(id),
+  classroom_id uuid references classes(id),
   notifications_enabled boolean default true,
   created_at timestamptz default now()
 );
@@ -68,7 +68,7 @@ const NotificationSettingsPage = () => {
       if (!adminId) return;
       const { data, error: settingsError } = await supabase
         .from('notification_settings')
-        .select('class_id, notifications_enabled')
+        .select('classroom_id, notifications_enabled')
         .eq('admin_id', adminId);
 
       if (settingsError) {
@@ -77,7 +77,7 @@ const NotificationSettingsPage = () => {
 
       const nextSettings: Record<string | number, boolean> = {};
       data?.forEach((row: NotificationSettingRow) => {
-        nextSettings[row.class_id] = row.notifications_enabled ?? true;
+        nextSettings[row.classroom_id] = row.notifications_enabled ?? true;
       });
       setSettings(nextSettings);
     };
@@ -112,7 +112,7 @@ const NotificationSettingsPage = () => {
 
     const { error: upsertError } = await supabase.from('notification_settings').upsert({
       admin_id: adminId,
-      class_id: classId,
+      classroom_id: classId,
       notifications_enabled: nextValue,
     });
 

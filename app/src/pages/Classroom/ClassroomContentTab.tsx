@@ -35,7 +35,7 @@ function ClassroomContentTab({ tab, Component }: ContentTabProps) {
         let { data, error } = await supabase
           .from('classroom_content')
           .select('*, classes(*)')
-          .eq('class_id', classId)
+          .eq('classroom_id', classId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -43,7 +43,7 @@ function ClassroomContentTab({ tab, Component }: ContentTabProps) {
         const filtered =
           data?.map((item) => ({
             ...item,
-            classroomId: item.classroom_id ?? item.classroomId ?? item.class_id ?? item.classId ?? null,
+            classroomId: item.classroom_id ?? item.classroomId ?? item.classId ?? null,
           }))
             .filter((item) => {
             const type = (item.type ?? item.category ?? '').toLowerCase();

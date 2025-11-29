@@ -6,7 +6,7 @@ import Table from '../../components/Table';
 
 interface AssignmentRow {
   id: number;
-  class_id?: number;
+  classroom_id?: number;
   user_id?: string;
   submission_url?: string;
   submission_image?: string;
@@ -87,7 +87,7 @@ const AssignmentFeedbackPage = () => {
           assignments.map((assignment) => (
             <tr key={assignment.id} className="align-top hover:bg-[#fffaf0]">
               <td className="px-4 py-3 text-sm font-semibold">{assignment.id}</td>
-              <td className="px-4 py-3 text-sm text-[#5c5246]">{assignment.class_id ?? '-'}</td>
+              <td className="px-4 py-3 text-sm text-[#5c5246]">{assignment.classroom_id ?? '-'}</td>
               <td className="px-4 py-3 text-sm text-[#5c5246]">{assignment.user_id ?? '-'}</td>
               <td className="px-4 py-3 text-sm text-[#5c5246]">
                 {assignment.submission_url ? (

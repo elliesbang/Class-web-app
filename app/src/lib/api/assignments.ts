@@ -7,10 +7,10 @@ export type AssignmentWithRelations = Assignment & {
 };
 
 // -----------------------------
-// ✔ payload 타입 (class_id 기반)
+// ✔ payload 타입 (classroom_id 기반)
 // -----------------------------
 type CreateAssignmentPayload = {
-  class_id: number;
+  classroom_id: number;
   student_id: string;
   session_no: number;
   image_base64?: string | null;
@@ -18,10 +18,10 @@ type CreateAssignmentPayload = {
 };
 
 // -----------------------------
-// ✔ list 파라미터 (class_id 기반)
+// ✔ list 파라미터 (classroom_id 기반)
 // -----------------------------
 type ListAssignmentsParams = {
-  class_id: number;
+  classroom_id: number;
   student_id: string;
   session_no?: number;
 };
@@ -77,7 +77,7 @@ export const fetchAssignments = async (
 ): Promise<AssignmentWithRelations[]> => {
   const searchParams = new URLSearchParams();
 
-  searchParams.set('class_id', String(params.class_id));
+  searchParams.set('classroom_id', String(params.classroom_id));
   searchParams.set('student_id', params.student_id);
   if (params.session_no) {
     searchParams.set('session_no', String(params.session_no));

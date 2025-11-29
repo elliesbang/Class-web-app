@@ -84,7 +84,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
         const { data, error } = await supabase
           .from('classroom_sessions')
           .select('*')
-          .eq('class_id', Number(classId))
+          .eq('classroom_id', Number(classId))
           .order('session_no');
 
         if (error) throw error;
@@ -127,7 +127,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
   }, [classInfo]);
 
   // -------------------------
-  // ✔ 4) 과제 목록 로드 (class_id + profiles 기반 student_id)
+  // ✔ 4) 과제 목록 로드 (classroom_id + profiles 기반 student_id)
   // -------------------------
   const loadAssignments = useCallback(async () => {
     if (!studentId) return;
@@ -137,7 +137,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 
     try {
       const list = await fetchAssignments({
-        class_id: Number(classId),
+        classroom_id: Number(classId),
         student_id: studentId,
       });
 
@@ -178,13 +178,13 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       return;
     }
 
-   const payload = {
-  classroom_id: Number(classId),
-  student_id: studentId,
-  session_no: Number(sessionNo),
-  link_url: linkUrl.trim() || null,
-  image_base64: imageBase64 || null,
-};
+    const payload = {
+      classroom_id: Number(classId),
+      student_id: studentId,
+      session_no: Number(sessionNo),
+      link_url: linkUrl.trim() || null,
+      image_base64: imageBase64 || null,
+    };
 
 
     setIsSubmitting(true);

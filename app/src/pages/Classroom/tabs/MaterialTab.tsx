@@ -43,7 +43,7 @@ const normaliseMaterials = (items: any) => {
 
   return items.map((item, index) => {
     const id = item?.id ?? item?.content_id ?? item?.contentId ?? `material-${index}`;
-    const classroomId = item?.classroom_id ?? item?.classroomId ?? item?.class_id ?? item?.classId ?? null;
+    const classroomId = item?.classroom_id ?? item?.classroomId ?? item?.classId ?? null;
     const titleCandidate = item?.title ?? item?.name ?? item?.fileName ?? item?.content_title ?? `자료 ${index + 1}`;
     const descriptionCandidate = item?.description ?? item?.summary ?? item?.content ?? item?.text ?? '';
     const createdAtCandidate = item?.created_at ?? item?.createdAt ?? item?.uploaded_at ?? item?.uploadedAt;
@@ -84,7 +84,7 @@ function MaterialTab({ courseName, classId }: { [key: string]: any }) {
         const { data, error } = await supabase
           .from('classroom_materials')
           .select('*, classes(*)')
-          .eq('class_id', classId)
+          .eq('classroom_id', classId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
