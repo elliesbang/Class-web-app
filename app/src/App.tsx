@@ -1,7 +1,7 @@
 import GoogleCallback from './pages/auth/GoogleCallback';
 import Signup from './pages/auth/Signup';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import MainLayout from './layouts/MainLayout';
@@ -30,7 +30,7 @@ import StudentsPage from './admin/pages/Students/StudentsPage';
 import ContentListPage from './admin/content/ContentListPage';
 import AdminRoutes from './routes/AdminRoutes';
 import LoginModal from './components/LoginModal';
-import LoginModalProvider from './context/LoginModalContext';
+import LoginModalProvider, { LoginModalContext } from './context/LoginModalContext';
 
 function AppRoutes() {
   return (
@@ -77,10 +77,12 @@ function AppRoutes() {
 }
 
 function App() {
+  const { isOpen, close } = useContext(LoginModalContext);
+
   return (
     <LoginModalProvider>
       <AppRoutes />
-      <LoginModal />
+      {isOpen && <LoginModal onClose={close} />}
     </LoginModalProvider>
   );
 }
