@@ -1,44 +1,44 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
 
 export function useAuthUser() {
-  const [authUser, setAuthUser] = useState<any>(null);
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadUser = async () => {
-      // 현재 세션 가져오기
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionUser = sessionData.session?.user;
+    let ignore = false
 
-      if (!sessionUser) {
-        setAuthUser(null);
-        return;
+    const load = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!ignore) {
+          setUser(user ?? null)
+        }
+      } catch (e) {
+        if (!ignore) setUser(null)
+      } finally {
+        if (!ignore) setLoading(false) // 🔥 무조건 loading 종료
       }
+    }
 
-      // 🔥 profiles.role 조회하기
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", sessionUser.id)
-        .single();
+    load()
 
-      setAuthUser({
-        ...sessionUser,
-        role: profile?.role ?? null,
-      });
-    };
-
-    loadUser();
-
-    // 로그인 / 로그아웃 감지
+    // 로그인 상태 변경 리스너
     const { data: listener } = supabase.auth.onAuthStateChange(
-      async () => {
-        await loadUser();
+      (_event, session) => {
+        setUser(session?.user ?? null)
+        setLoading(false)
       }
-    );
+    )
 
-    return () => listener.subscription.unsubscribe();
-  }, []);
+    return () => {
+      ignore = true
+      listener.subscription.unsubscribe()
+    }
+  }, [])
 
-  return authUser;
+  return { user, loading }
 }
