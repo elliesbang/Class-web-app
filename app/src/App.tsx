@@ -1,7 +1,7 @@
 import GoogleCallback from './pages/auth/GoogleCallback';
 import Signup from './pages/auth/Signup';
 
-import React, { useContext } from 'react';
+import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import MainLayout from './layouts/MainLayout';
@@ -29,13 +29,15 @@ import AssignmentAdminTab from './pages/admin/tabs/AssignmentAdminTab';
 import StudentsPage from './admin/pages/Students/StudentsPage';
 import ContentListPage from './admin/content/ContentListPage';
 import AdminRoutes from './routes/AdminRoutes';
+
 import LoginModal from './components/LoginModal';
 import LoginModalProvider, { LoginModalContext } from './context/LoginModalContext';
+import { useContext } from 'react';
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* 🔥 구글 로그인 콜백 - 반드시 최상단 위치 */}
+      {/* google oauth callback */}
       <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
       <Route element={<MainLayout />}>
@@ -50,6 +52,7 @@ function AppRoutes() {
           <Route path="assignment" element={<AssignmentTabRoute />} />
           <Route path="feedback" element={<FeedbackTabRoute />} />
         </Route>
+
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
         <Route path="/mypage" element={<MyPage />} />
@@ -77,13 +80,21 @@ function AppRoutes() {
 }
 
 function App() {
+  return (
+    <LoginModalProvider>
+      <AppWithModal />
+    </LoginModalProvider>
+  );
+}
+
+function AppWithModal() {
   const { isOpen, close } = useContext(LoginModalContext);
 
   return (
-    <LoginModalProvider>
+    <>
       <AppRoutes />
       {isOpen && <LoginModal onClose={close} />}
-    </LoginModalProvider>
+    </>
   );
 }
 
