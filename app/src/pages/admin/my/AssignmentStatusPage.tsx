@@ -14,7 +14,7 @@ type ClassRow = {
 type AssignmentRow = {
   id: string | number;
   title?: string | null;
-  class_id?: string | number | null;
+  classroom_id?: string | number | null;
 };
 
 type SubmissionRow = {
@@ -105,8 +105,8 @@ const AssignmentStatusPage = () => {
 
       const { data: assignmentData, error: assignmentError } = await supabase
         .from('assignments')
-        .select('id, title, class_id')
-        .eq('class_id', selectedClassId);
+        .select('id, title, classroom_id')
+        .eq('classroom_id', selectedClassId);
 
       if (assignmentError) {
         setError(assignmentError.message);
@@ -146,7 +146,7 @@ const AssignmentStatusPage = () => {
       const { data: enrollmentData, error: enrollmentError } = await supabase
         .from('class_students')
         .select('student_id, profiles ( id, name, email )')
-        .eq('class_id', selectedClassId);
+        .eq('classroom_id', selectedClassId);
 
       if (!enrollmentError && enrollmentData) {
         studentProfiles = enrollmentData

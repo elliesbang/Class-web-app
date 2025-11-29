@@ -1,8 +1,8 @@
 import { supabase } from '@/lib/supabaseClient';
 
 export type ClassroomVideo = {
-  id: number | string;
-  classroomId: number | string;
+  id: number;
+  classroomId: number;
   title: string;
   url: string;
   description?: string | null;
@@ -11,8 +11,8 @@ export type ClassroomVideo = {
 };
 
 export type ClassroomMaterial = {
-  id: number | string;
-  classroomId: number | string;
+  id: number;
+  classroomId: number;
   title: string;
   fileUrl: string;
   fileName?: string | null;
@@ -21,8 +21,8 @@ export type ClassroomMaterial = {
 };
 
 export type ClassroomNotice = {
-  id: number | string;
-  classroomId: number | string;
+  id: number;
+  classroomId: number;
   title: string;
   content: string;
   isImportant: boolean;
@@ -31,11 +31,12 @@ export type ClassroomNotice = {
 
 const normaliseVideo = (record: Record<string, any> | null): ClassroomVideo | null => {
   if (!record) return null;
-  const id = record.id;
-  const classroomId = record.classroom_id ?? record.classroomId ?? record.class_id ?? record.classId;
+  const id = Number(record.id);
+  const classroomIdRaw = record.classroom_id ?? record.classroomId ?? record.classId;
+  const classroomId = classroomIdRaw != null ? Number(classroomIdRaw) : Number.NaN;
   const title = (record.title ?? '') as string;
   const url = (record.url as string | undefined) ?? (record.videoUrl as string | undefined) ?? '';
-  if (!id || !classroomId || !title || !url) return null;
+  if (!Number.isFinite(id) || !Number.isFinite(classroomId) || !title || !url) return null;
   return {
     id,
     classroomId,
@@ -52,11 +53,12 @@ const normaliseVideo = (record: Record<string, any> | null): ClassroomVideo | nu
 
 const normaliseMaterial = (record: Record<string, any> | null): ClassroomMaterial | null => {
   if (!record) return null;
-  const id = record.id;
-  const classroomId = record.classroom_id ?? record.classroomId ?? record.class_id ?? record.classId;
+  const id = Number(record.id);
+  const classroomIdRaw = record.classroom_id ?? record.classroomId ?? record.classId;
+  const classroomId = classroomIdRaw != null ? Number(classroomIdRaw) : Number.NaN;
   const title = (record.title ?? '') as string;
   const fileUrl = (record.file_url as string | undefined) ?? (record.fileUrl as string | undefined) ?? '';
-  if (!id || !classroomId || !title || !fileUrl) return null;
+  if (!Number.isFinite(id) || !Number.isFinite(classroomId) || !title || !fileUrl) return null;
   return {
     id,
     classroomId,
@@ -73,11 +75,12 @@ const normaliseMaterial = (record: Record<string, any> | null): ClassroomMateria
 
 const normaliseNotice = (record: Record<string, any> | null): ClassroomNotice | null => {
   if (!record) return null;
-  const id = record.id;
-  const classroomId = record.classroom_id ?? record.classroomId ?? record.class_id ?? record.classId;
+  const id = Number(record.id);
+  const classroomIdRaw = record.classroom_id ?? record.classroomId ?? record.classId;
+  const classroomId = classroomIdRaw != null ? Number(classroomIdRaw) : Number.NaN;
   const title = (record.title ?? '') as string;
   const content = (record.content ?? '') as string;
-  if (!id || !classroomId || !title) return null;
+  if (!Number.isFinite(id) || !Number.isFinite(classroomId) || !title) return null;
   return {
     id,
     classroomId,
