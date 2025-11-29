@@ -10,7 +10,7 @@ import VodList from '@/pages/Vod/VodList';
 import Classroom from './pages/Classroom';
 import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/admin/Notices';
-import AdminLogin from './pages/auth/AdminLogin';
+
 import ClassroomDetailPage from './pages/Classroom/ClassroomDetailPage';
 import {
   AssignmentTabRoute,
@@ -39,11 +39,12 @@ function AppRoutes() {
     <Routes>
       <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
-      {/* MainLayout 아래에 있는 모든 페이지는 하단 내비가 나타남 */}
+      {/* ==== 메인 레이아웃 (하단 내비 포함) ==== */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
         <Route path="/classroom" element={<Classroom />} />
+        
         <Route path="/classroom/:classId" element={<ClassroomDetailPage />}>
           <Route index element={<Navigate to="video" replace />} />
           <Route path="video" element={<VideoTabRoute />} />
@@ -52,17 +53,21 @@ function AppRoutes() {
           <Route path="assignment" element={<AssignmentTabRoute />} />
           <Route path="feedback" element={<FeedbackTabRoute />} />
         </Route>
+
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
         <Route path="/mypage" element={<MyPage />} />
+
         {AdminRoutes()}
-        <Route path="/admin-login" element={<AdminLogin />} />
-        <Route path="/login" element={<AdminLogin />} />
+
+        {/* 회원가입 페이지 (원하면 유지, 모달 사용하면 삭제 가능) */}
         <Route path="/signup" element={<Signup />} />
+
         <Route path="/vod" element={<VodList />} />
         <Route path="/internal" element={<Navigate to="/classroom" replace />} />
       </Route>
 
+      {/* ==== 관리자 레이아웃 ==== */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardHome />} />
