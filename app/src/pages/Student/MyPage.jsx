@@ -9,7 +9,7 @@ function fetchJSON(url) {
 }
 
 export default function StudentMyPage() {
-  const authUser = useAuthUser();
+  const { user: authUser } = useAuthUser();
 
   // 로그인 ID (profiles.id)
   const studentId = useMemo(() => {

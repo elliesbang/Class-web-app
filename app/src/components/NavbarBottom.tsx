@@ -17,11 +17,11 @@ const NavbarBottom = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const authUser = useAuthUser();
+  const { user: authUser, loading } = useAuthUser();
 
   const navItems = useMemo(() => {
-    // 로그인 X → My 탭 제거
-    if (!authUser) {
+    // 로그인 X → My 탭 제거 (로딩 중에는 기본 노출)
+    if (loading || !authUser) {
       return baseItems;
     }
 
@@ -32,7 +32,7 @@ const NavbarBottom = () => {
 
     // 학생/VOD
     return [...baseItems, { label: 'My', to: '/my', Icon: User }];
-  }, [authUser]);
+  }, [authUser, loading]);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 bg-[#fefaf4] px-5 pb-6 pt-3 shadow-[0_-6px_20px_rgba(0,0,0,0.05)]">

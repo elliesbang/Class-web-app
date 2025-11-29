@@ -1,3 +1,4 @@
+import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 
 export type AuthRole = 'student' | 'vod' | 'admin';
@@ -70,32 +71,25 @@ export const subscribeAuthUser = (listener: (u: AuthUser | null) => void) => {
   return () => window.removeEventListener(AUTH_USER_EVENT, handler);
 };
 
-// =======================================================
-// 🔥 Supabase auth 이벤트 (브라우저에서만 실행)
-// =======================================================
-if (isBrowser()) {
-  supabase.auth.onAuthStateChange(async (_event, session) => {
-    if (!session?.user) {
-      clearAuthUser();
-      return;
-    }
+export const hydrateAuthUserFromSession = async (
+  session: Session | null,
+): Promise<AuthUser | null> => {
+  if (!session?.user) {
+    clearAuthUser();
+    return null;
+  }
 
-    // 내부 세션 유지
-    await supabase.auth.setSession({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-    });
-
-    // 프로필 조회
-    const { data: profile } = await supabase
+  try {
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('name, role')
       .eq('id', session.user.id)
       .single();
 
-    if (!profile) {
+    if (error || !profile) {
+      console.error('[authUser] Failed to load profile', error);
       clearAuthUser();
-      return;
+      return null;
     }
 
     const newUser: AuthUser = {
@@ -107,5 +101,10 @@ if (isBrowser()) {
     };
 
     setAuthUser(newUser);
-  });
-}
+    return newUser;
+  } catch (error) {
+    console.error('[authUser] Unexpected error while hydrating user', error);
+    clearAuthUser();
+    return null;
+  }
+};

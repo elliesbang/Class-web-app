@@ -26,7 +26,7 @@ create table if not exists notification_settings (
 `;
 
 const NotificationSettingsPage = () => {
-  const authUser = useAuthUser();
+  const { user: authUser } = useAuthUser();
   const navigate = useNavigate();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [settings, setSettings] = useState<Record<string | number, boolean>>({});

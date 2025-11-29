@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { setAuthUser } from '../lib/authUser';
-import { login } from '@/lib/api/auth/login';
 import { supabase } from '@/lib/supabaseClient';
 
 type ActiveForm = 'main' | 'admin';
@@ -69,34 +67,33 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       try {
         setAdminSubmitting(true);
 
-        const { user, profile, token } = await login(adminEmail.trim(), adminPassword);
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: adminEmail.trim(),
+          password: adminPassword,
+        });
 
-        let role = profile?.role;
-
-        if (!role && profile?.email === (user.email ?? adminEmail)) {
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ role: 'admin' })
-            .eq('id', user.id);
-
-          if (!updateError) {
-            role = 'admin';
-          }
+        if (error) {
+          throw error;
         }
 
-        if (role !== 'admin') {
+        const user = data.user;
+        if (!user) {
+          throw new Error('로그인 실패');
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        const role = profile?.role;
+
+        if (profileError || role !== 'admin') {
           alert('관리자 권한이 없습니다.');
           await supabase.auth.signOut();
           return;
         }
-
-        setAuthUser({
-          user_id: user.id,
-          role: 'admin',
-          name: (user.user_metadata?.name as string | undefined) ?? profile?.name ?? '',
-          email: user.email ?? adminEmail,
-          token,
-        });
         closeModal();
         navigate('/admin/my');
       } catch (caught) {
@@ -121,27 +118,39 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       setIsSubmitting(true);
 
       try {
-        const { user, profile, token } = await login(email.trim(), password.trim());
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password.trim(),
+        });
+
+        if (signInError) {
+          throw signInError;
+        }
+
+        const user = data.user;
+        if (!user) {
+          throw new Error('로그인 실패');
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
         const userRole = (profile?.role as UserRole | null) ?? null;
 
-        if (userRole !== selectedRole) {
+        if (profileError || userRole !== selectedRole) {
           await supabase.auth.signOut();
           throw new Error('ROLE_MISMATCH');
         }
-
-        setAuthUser({
-          user_id: user.id,
-          role: selectedRole,
-          name: profile?.name ?? (user.user_metadata?.name as string | undefined) ?? '',
-          email: user.email ?? email,
-          token,
-        });
 
         closeModal();
         navigate(selectedRole === 'vod' ? '/vod' : '/my');
       } catch (caught) {
         console.error('[LoginModal] login failed', caught);
-        setError('로그인에 실패했습니다.');
+        const message = caught instanceof Error ? caught.message : '로그인에 실패했습니다.';
+        setError(message === 'ROLE_MISMATCH' ? '선택한 역할과 일치하지 않습니다.' : message);
       } finally {
         setIsSubmitting(false);
       }

@@ -1,7 +1,5 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { login } from '@/lib/api/auth/login';
-import { setAuthUser } from '@/lib/authUser';
 
 type LoginFormProps = {
   onSuccess?: () => void;
@@ -22,24 +20,30 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       setIsSubmitting(true);
 
       try {
-        const { user, profile, token } = await login(email.trim(), password.trim());
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password.trim(),
+        });
 
-        // 학생 계정 검증
-        if (profile?.role !== 'student') {
-          alert('학생 계정이 아닙니다.');
-          await supabase.auth.signOut();
-          setIsSubmitting(false);
-          return;
+        if (signInError) {
+          throw signInError;
         }
 
-        // 로그인 성공 → 유저 저장
-        setAuthUser({
-          user_id: user.id,
-          email: user.email ?? email,
-          name: profile?.name ?? (user.user_metadata?.name as string | undefined) ?? '',
-          role: 'student',
-          token,
-        });
+        const user = data.user;
+        if (!user) {
+          throw new Error('로그인 정보를 확인할 수 없습니다.');
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || profile?.role !== 'student') {
+          await supabase.auth.signOut();
+          throw new Error('학생 계정이 아닙니다.');
+        }
 
         // 성공 시에만 onSuccess 호출
         if (typeof onSuccess === 'function') {
@@ -47,7 +51,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         }
       } catch (caught) {
         console.error('[LoginForm] login failed', caught);
-        setError('로그인에 실패했습니다.');
+        const message = caught instanceof Error ? caught.message : '로그인에 실패했습니다.';
+        setError(message);
       } finally {
         setIsSubmitting(false);
       }

@@ -21,7 +21,7 @@ function normaliseRole(role) {
 
 const MyPage = () => {
   const navigate = useNavigate();
-  const authUser = useAuthUser();
+  const { user: authUser } = useAuthUser();
   const [state, setState] = useState({ ready: false, role: null });
 
   useEffect(() => {

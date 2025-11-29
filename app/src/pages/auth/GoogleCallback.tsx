@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
-import { setAuthUser } from '@/lib/authUser';
+import { hydrateAuthUserFromSession } from '@/lib/authUser';
 
 const GoogleCallback = () => {
   const navigate = useNavigate();
@@ -26,13 +26,7 @@ const GoogleCallback = () => {
         role,
       });
 
-      setAuthUser({
-        user_id: user.id,
-        role,
-        name: user.user_metadata?.full_name ?? '',
-        email: user.email ?? '',
-        token: session.access_token,
-      });
+      await hydrateAuthUserFromSession(session);
 
       localStorage.removeItem('oauth_role');
 

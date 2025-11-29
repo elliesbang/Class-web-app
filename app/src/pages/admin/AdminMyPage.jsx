@@ -45,7 +45,7 @@ const ACTIONS = [
 
 const AdminMyPage = () => {
   const navigate = useNavigate();
-  const authUser = useAuthUser();
+  const { user: authUser } = useAuthUser();
   const [isAuthorised, setIsAuthorised] = useState(false);
 
   useEffect(() => {
