@@ -1,10 +1,10 @@
-import { supabase } from '../supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 
 export type CategoryRecord = { id: number; name: string; parent_id: number | null };
 
 export const getCategories = async (): Promise<CategoryRecord[]> => {
   const { data, error } = await supabase
-    .from('class_category')
+    .from('categories')
     .select('*')
     .order('order_num', { ascending: true });
   if (error) throw new Error(error.message);
