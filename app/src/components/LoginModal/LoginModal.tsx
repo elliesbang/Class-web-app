@@ -1,12 +1,11 @@
-import React from 'react';
 import ReactDOM from 'react-dom';
-import '../../styles/modal.css';
 import { useLoginModal } from '../../hooks/useLoginModal';
 import LoginSelector from './LoginSelector';
 import LoginForm from './LoginForm';
+import './modal.css';
 
 export default function LoginModal() {
-  const { isOpen, close, step } = useLoginModal();
+  const { isOpen, step, close } = useLoginModal();
 
   if (!isOpen) return null;
 

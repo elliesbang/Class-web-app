@@ -1,18 +1,18 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLoginModal } from '../../hooks/useLoginModal';
 import { supabase } from '../../lib/supabaseClient';
-import { useNavigate } from 'react-router-dom';
 
 export default function LoginForm() {
   const { userType, close } = useLoginModal();
+  const nav = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const nav = useNavigate();
 
   const login = async () => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password
     });
     if (error) return alert(error.message);
 
