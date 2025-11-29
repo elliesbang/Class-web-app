@@ -29,26 +29,18 @@ import ClassListPage from './admin/pages/Classes/ClassListPage';
 import AssignmentAdminTab from './pages/admin/tabs/AssignmentAdminTab';
 import StudentsPage from './admin/pages/Students/StudentsPage';
 import ContentListPage from './admin/content/ContentListPage';
-
-import AdminMyPage from '@/pages/admin/my/AdminMyPage';
-import AssignmentStatusPage from '@/pages/admin/my/AssignmentStatusPage';
-import NotificationSettingsPage from '@/pages/admin/my/NotificationSettingsPage';
+import AdminRoutes from './routes/AdminRoutes';
 
 import LoginModal from './components/LoginModal';
 import LoginModalProvider, { LoginModalContext } from './context/LoginModalContext';
 
-
-// ----------------------------
-//   앱 라우트 정의
-// ----------------------------
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
-      {/* ==== 메인 레이아웃 (하단 내비 포함) ==== */}
       <Route element={<MainLayout />}>
-        <Route path="/" element={<Home />} />
+        <Route index element={<Home />} />
         <Route path="/home" element={<Home />} />
         <Route path="/classroom" element={<Classroom />} />
 
@@ -63,20 +55,13 @@ function AppRoutes() {
 
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
-        <Route path="/mypage" element={<MyPage />} />
 
-        {/* 🔥 AdminRoutes() 삭제 → 빈 화면 원인 해결 */}
-        {/* 회원가입 */}
+        {AdminRoutes()}
+
         <Route path="/signup" element={<Signup />} />
-
         <Route path="/vod" element={<VodList />} />
-        <Route path="/internal" element={<Navigate to="/classroom" replace />} />
       </Route>
 
-
-      {/* =============================
-           관리자 레이아웃 (정상)
-         ============================= */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardHome />} />
@@ -87,20 +72,11 @@ function AppRoutes() {
         <Route path="students" element={<StudentsPage />} />
         <Route path="assignments" element={<AssignmentAdminTab />} />
         <Route path="content" element={<ContentListPage />} />
-
-        {/* 🔥 여기로 이동 (AdminRoutes 통합) */}
-        <Route path="my" element={<AdminMyPage />} />
-        <Route path="my/notifications" element={<NotificationSettingsPage />} />
-        <Route path="my/assignments" element={<AssignmentStatusPage />} />
       </Route>
     </Routes>
   );
 }
 
-
-// ----------------------------
-//   앱 전체
-// ----------------------------
 function App() {
   return (
     <LoginModalProvider>
@@ -109,12 +85,8 @@ function App() {
   );
 }
 
-// ----------------------------
-//   로그인 모달 쉘
-// ----------------------------
 function AppShell() {
   const { isOpen, close } = useContext(LoginModalContext);
-
   return (
     <>
       <AppRoutes />
