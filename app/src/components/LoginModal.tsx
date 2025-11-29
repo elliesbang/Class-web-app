@@ -22,7 +22,6 @@ const handleGoogleVodLogin = async () => {
   });
 };
 
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -180,7 +179,10 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
 
       setVodSubmitting(true);
       try {
-        await handleRoleLogin({ name: trimmedName, email: trimmedEmail, password: trimmedPassword }, 'vod');
+        await handleRoleLogin(
+          { name: trimmedName, email: trimmedEmail, password: trimmedPassword },
+          'vod'
+        );
       } catch (e) {
         console.error(e);
         setVodError('로그인에 실패했습니다.');
@@ -244,21 +246,15 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     <button
       type="button"
       className="absolute right-0 top-0 text-sm text-gray-500 hover:text-gray-700"
-      onClick={() => {
-        setActiveForm('buttons');
-        setAdminEmail('');
-        setAdminPassword('');
-        setVodName('');
-        setVodEmail('');
-        setVodPassword('');
-        setVodError('');
-        setAdminSubmitting(false);
-      }}
+      onClick={() => setActiveForm('buttons')}
     >
       ← 뒤로가기
     </button>
   );
 
+  /** ------------------------
+   * 수강생 로그인 + Google 버튼
+   * ------------------------ */
   const renderStudentForm = () => (
     <motion.div
       key="student-form"
@@ -269,6 +265,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       className="relative"
     >
       {renderBackButton()}
+
       <div className="mt-6">
         <StudentLoginModal
           onLoginSuccess={() => {
@@ -281,9 +278,20 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           }}
         />
       </div>
+
+      {/* 🔥 수강생 Google 로그인 버튼 */}
+      <button
+        onClick={handleGoogleStudentLogin}
+        className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
+      >
+        Google로 로그인
+      </button>
     </motion.div>
   );
 
+  /** ------------------------
+   * VOD 로그인 + Google 버튼
+   * ------------------------ */
   const renderVodForm = () => (
     <motion.div
       key="vod-form"
@@ -294,6 +302,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       className="relative"
     >
       {renderBackButton()}
+
       <form className="mt-6" onSubmit={handleVodSubmit}>
         <label className="block text-sm font-medium mb-1">이름</label>
         <input
@@ -331,9 +340,21 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           {vodSubmitting ? '로그인 중...' : '로그인'}
         </button>
       </form>
+
+      {/* 🔥 VOD Google 로그인 버튼 */}
+      <button
+        type="button"
+        onClick={handleGoogleVodLogin}
+        className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
+      >
+        Google로 로그인
+      </button>
     </motion.div>
   );
 
+  /** ------------------------
+   * 관리자 로그인
+   * ------------------------ */
   const renderAdminForm = () => (
     <motion.div
       key="admin-form"
@@ -383,30 +404,6 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-
-      // 🔥 모바일 터치 안전 가드
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) {
-          (e.currentTarget as any).dataset.closing = 'true';
-        }
-      }}
-      onMouseUp={(e) => {
-        if ((e.currentTarget as any).dataset.closing === 'true') {
-          closeModal();
-        }
-        (e.currentTarget as any).dataset.closing = 'false';
-      }}
-      onTouchStart={(e) => {
-        if (e.target === e.currentTarget) {
-          (e.currentTarget as any).dataset.closing = 'true';
-        }
-      }}
-      onTouchEnd={(e) => {
-        if ((e.currentTarget as any).dataset.closing === 'true') {
-          closeModal();
-        }
-        (e.currentTarget as any).dataset.closing = 'false';
-      }}
     >
       <motion.div
         className="bg-white rounded-2xl shadow-xl p-6 w-[400px]"
@@ -414,10 +411,6 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
         initial="hidden"
         animate="visible"
         exit="exit"
-
-        // 🔥 내부 클릭은 절대 배경 클릭으로 인식되지 않도록 차단
-        onMouseDown={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-semibold">로그인</h2>
 
@@ -425,22 +418,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           <AnimatePresence mode="wait">
             {activeForm === 'buttons' && renderButtons()}
             {activeForm === 'student' && renderStudentForm()}
-            <button
-  onClick={handleGoogleStudentLogin}
-  className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
->
-  Google로 로그인
-</button>
-
             {activeForm === 'vod' && renderVodForm()}
-            <button
-  type="button"
-  onClick={handleGoogleVodLogin}
-  className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
->
-  Google로 로그인
-</button>
-
             {activeForm === 'admin' && renderAdminForm()}
           </AnimatePresence>
         </div>
