@@ -32,12 +32,12 @@ const setup = () => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : input.toString();
       const authUser = getAuthUser();
 
-      if (!authUser || !authUser.token || !shouldAttachHeaders(url)) {
+      if (!authUser || !authUser.accessToken || !shouldAttachHeaders(url)) {
         return originalFetch(input, init);
       }
 
       const baseHeaders = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
-      baseHeaders.set('Authorization', `Bearer ${authUser.token}`);
+      baseHeaders.set('Authorization', `Bearer ${authUser.accessToken}`);
       baseHeaders.set('X-User-Role', authUser.role);
 
       const nextInit: RequestInit = {

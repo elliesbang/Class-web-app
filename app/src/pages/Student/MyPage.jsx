@@ -14,7 +14,7 @@ export default function StudentMyPage() {
   // 로그인 ID (profiles.id)
   const studentId = useMemo(() => {
     if (!authUser || authUser.role !== 'student') return null;
-    return authUser.user_id;
+    return authUser.id;
   }, [authUser]);
 
   const [classrooms, setClassrooms] = useState([]);

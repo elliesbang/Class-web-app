@@ -73,7 +73,7 @@ const AdminMyPage = () => {
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     clearAuthUser();
-    navigate('/');
+    navigate('/login');
   }, [navigate]);
 
   if (!isAuthorised) {

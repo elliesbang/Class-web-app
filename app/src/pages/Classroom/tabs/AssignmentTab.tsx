@@ -24,11 +24,11 @@ const formatDateTime = (value?: string) => {
 
 function AssignmentTab({ classId }: AssignmentTabProps) {
   // -------------------------
-  // ✔ authUser 최신 방식(user_id 사용)
+  // ✔ authUser 최신 방식(id 사용)
   // -------------------------
   const authUser = useMemo(() => getAuthUser(), []);
 
-  const studentId = authUser?.user_id ?? null;
+  const studentId = authUser?.id ?? null;
 
   const [sessionNo, setSessionNo] = useState('1');
   const [sessions, setSessions] = useState<any[]>([]);

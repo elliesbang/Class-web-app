@@ -46,7 +46,7 @@ const NotificationSettingsPage = () => {
     }
   }, [authUser, navigate]);
 
-  const adminId = useMemo(() => authUser?.user_id ?? null, [authUser?.user_id]);
+  const adminId = useMemo(() => authUser?.id ?? null, [authUser?.id]);
 
   useEffect(() => {
     const ensureTableExists = async () => {

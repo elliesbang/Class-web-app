@@ -2,12 +2,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import NotificationBell from './notifications/NotificationBell';
 import { useAuthUser } from '../hooks/useAuthUser';
+import { supabase } from '../lib/supabaseClient';
+import { clearAuthUser } from '../lib/authUser';
 
-interface HeaderProps {
-  onOpenLoginModal: () => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ onOpenLoginModal }) => {
+const Header: React.FC = () => {
   const { user: authUser } = useAuthUser();
   const navigate = useNavigate();
 
@@ -15,13 +13,20 @@ const Header: React.FC<HeaderProps> = ({ onOpenLoginModal }) => {
     navigate('/admin');
   };
 
+  const handleLogin = () => {
+    navigate('/login');
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    clearAuthUser();
+    navigate('/login');
+  };
+
   return (
     <header className="fixed top-0 z-30 w-full bg-white/90 shadow-md backdrop-blur">
       <div className="flex h-16 items-center justify-between px-5">
-
-        <span className="pointer-events-none text-lg font-semibold text-gray-800">
-          엘리의방 클래스
-        </span>
+        <span className="pointer-events-none text-lg font-semibold text-gray-800">엘리의방 클래스</span>
 
         <div className="flex items-center gap-3">
           <NotificationBell />
@@ -33,10 +38,19 @@ const Header: React.FC<HeaderProps> = ({ onOpenLoginModal }) => {
             >
               관리자 대시보드
             </button>
+          ) : null}
+          {authUser ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
+            >
+              로그아웃
+            </button>
           ) : (
             <button
               type="button"
-              onClick={onOpenLoginModal}
+              onClick={handleLogin}
               className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
             >
               로그인
