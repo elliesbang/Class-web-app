@@ -42,6 +42,9 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
 
   const navigate = useNavigate();
 
+  /** --------------------------
+   * 닫기 (모든 입력 리셋)
+   * -------------------------- */
   const closeModal = useCallback(() => {
     onClose();
     setActiveForm('main');
@@ -55,6 +58,9 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     setAdminSubmitting(false);
   }, [onClose]);
 
+  /** --------------------------
+   * 관리자 로그인
+   * -------------------------- */
   const handleAdminSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -95,7 +101,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
         navigate('/admin/my');
       } catch (caught) {
         console.error('[LoginModal] admin login failed', caught);
-        alert('관리자 권한이 없거나 로그인에 실패했습니다.');
+        alert('관리자 로그인 실패 또는 권한 없음');
       } finally {
         setAdminSubmitting(false);
       }
@@ -103,6 +109,9 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     [adminEmail, adminPassword, adminSubmitting, closeModal, navigate],
   );
 
+  /** --------------------------
+   * 이메일 로그인 (수강생/VOD)
+   * -------------------------- */
   const handleEmailSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -140,16 +149,18 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     [closeModal, email, isSubmitting, navigate, password, selectedRole],
   );
 
+  /** --------------------------
+   * Google OAuth 로그인 (역할 선택 포함)
+   * -------------------------- */
   const handleGoogleLogin = useCallback(async () => {
     localStorage.setItem('oauth_role', selectedRole);
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/google/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/google/callback` },
     });
   }, [selectedRole]);
 
+  /** ESC로 닫기 */
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeModal();
@@ -158,16 +169,9 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [closeModal]);
 
-  const renderBackButton = () => (
-    <button
-      type="button"
-      className="absolute right-0 top-0 text-sm text-gray-500 hover:text-gray-700"
-      onClick={() => setActiveForm('main')}
-    >
-      ← 뒤로가기
-    </button>
-  );
-
+  /** --------------------------
+   * 메인 폼
+   * -------------------------- */
   const renderMainForm = () => (
     <motion.div
       key="main-form"
@@ -178,6 +182,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       className="relative"
     >
       <div className="mt-4">
+        {/* 역할 선택 */}
         <label className="block text-sm font-medium mb-2">역할 선택</label>
         <div className="flex items-center gap-4 mb-4">
           <label className="flex items-center gap-2 text-sm">
@@ -202,6 +207,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           </label>
         </div>
 
+        {/* 이메일 로그인 */}
         <form onSubmit={handleEmailSubmit}>
           <label className="block text-sm font-medium mb-1">이메일</label>
           <input
@@ -232,6 +238,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           </button>
         </form>
 
+        {/* 구글 로그인 */}
         <button
           type="button"
           onClick={handleGoogleLogin}
@@ -240,6 +247,7 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           Google로 로그인/회원가입
         </button>
 
+        {/* 회원가입 버튼 */}
         <button
           type="button"
           onClick={() => {
@@ -254,6 +262,9 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     </motion.div>
   );
 
+  /** --------------------------
+   * 관리자 로그인 폼
+   * -------------------------- */
   const renderAdminForm = () => (
     <motion.div
       key="admin-form"
@@ -263,7 +274,14 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       exit="exit"
       className="relative"
     >
-      {renderBackButton()}
+      <button
+        type="button"
+        className="absolute right-0 top-0 text-sm text-gray-500 hover:text-gray-700"
+        onClick={() => setActiveForm('main')}
+      >
+        ← 뒤로가기
+      </button>
+
       <form className="mt-6" onSubmit={handleAdminSubmit}>
         <label className="block font-medium mb-1">이메일</label>
         <input
@@ -294,6 +312,9 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     </motion.div>
   );
 
+  /** --------------------------
+   * 전체 모달 렌더링
+   * -------------------------- */
   return (
     <motion.div
       className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
@@ -302,13 +323,23 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="bg-white rounded-2xl shadow-xl p-6 w-[400px]"
+        className="bg-white rounded-2xl shadow-xl p-6 w-[400px] relative"
         variants={modalVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
       >
-        <div className="flex items-center justify-between">
+        {/* 🔥 X 버튼 추가 */}
+        <button
+          onClick={closeModal}
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl leading-none"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+
+        {/* 제목 + 관리자 로그인 */}
+        <div className="flex items-center justify-between pr-8">
           <h2 className="text-xl font-semibold">로그인</h2>
           <button
             className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 px-3 text-sm"
