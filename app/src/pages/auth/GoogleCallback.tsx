@@ -1,36 +1,15 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabaseClient';
-import { hydrateAuthUserFromSession } from '@/lib/authUser';
+
+import { completeOAuthLogin } from '@/lib/auth';
 
 const GoogleCallback = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkLogin = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.user) return;
-
-      const user = session.user;
-      const savedRole = localStorage.getItem('oauth_role');
-      const role = savedRole === 'vod' ? 'vod' : 'student';
-
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        email: user.email,
-        name: user.user_metadata?.full_name ?? '',
-        avatar_url: user.user_metadata?.avatar_url ?? undefined,
-        role,
-      });
-
-      await hydrateAuthUserFromSession(session);
-
-      localStorage.removeItem('oauth_role');
-
-      navigate(role === 'vod' ? '/vod' : '/my');
+      await completeOAuthLogin();
+      navigate(0);
     };
 
     checkLogin();

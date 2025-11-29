@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { logout } from '@/lib/auth';
 
 function readVodHistory() {
   if (typeof window === 'undefined') {
@@ -149,6 +150,16 @@ export default function VodMyPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={logout}
+          className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ellieGray shadow-sm transition-colors hover:bg-[#fef568]/40"
+        >
+          로그아웃
+        </button>
+      </div>
+
       <header className="rounded-3xl bg-white px-6 py-5 shadow-soft">
         <h1 className="text-xl font-bold text-ellieGray">VOD 마이페이지</h1>
         <p className="mt-2 text-sm text-ellieGray/70">카테고리와 검색으로 원하는 강의를 찾아보세요.</p>
