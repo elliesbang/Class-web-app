@@ -30,6 +30,10 @@ import AdminRoutes from './routes/AdminRoutes';
 function App() {
   return (
     <Routes>
+      {/* 🔥 구글 로그인 콜백 - 반드시 최상단 위치 */}
+      <Route path="/auth/callback/student" element={<GoogleCallbackStudent />} />
+      <Route path="/auth/callback/vod" element={<GoogleCallbackVod />} />
+      
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/classroom" element={<Classroom />} />
