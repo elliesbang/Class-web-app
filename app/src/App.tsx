@@ -1,7 +1,7 @@
 import GoogleCallback from './pages/auth/GoogleCallback';
 import Signup from './pages/auth/Signup';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import MainLayout from './layouts/MainLayout';
@@ -19,6 +19,7 @@ import {
   NoticeTabRoute,
   VideoTabRoute,
 } from './pages/Classroom/ClassroomTabRoutes';
+
 import AdminLayout from './admin/layout/AdminLayout';
 import DashboardHome from './admin/pages/DashboardHome';
 import ClassCreatePage from './admin/pages/Classes/ClassCreatePage';
@@ -32,14 +33,13 @@ import AdminRoutes from './routes/AdminRoutes';
 
 import LoginModal from './components/LoginModal';
 import LoginModalProvider, { LoginModalContext } from './context/LoginModalContext';
-import { useContext } from 'react';
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* google oauth callback */}
       <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
+      {/* MainLayout 아래에 있는 모든 페이지는 하단 내비가 나타남 */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
@@ -52,7 +52,6 @@ function AppRoutes() {
           <Route path="assignment" element={<AssignmentTabRoute />} />
           <Route path="feedback" element={<FeedbackTabRoute />} />
         </Route>
-
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
         <Route path="/mypage" element={<MyPage />} />
@@ -82,12 +81,12 @@ function AppRoutes() {
 function App() {
   return (
     <LoginModalProvider>
-      <AppWithModal />
+      <AppShell />
     </LoginModalProvider>
   );
 }
 
-function AppWithModal() {
+function AppShell() {
   const { isOpen, close } = useContext(LoginModalContext);
 
   return (
