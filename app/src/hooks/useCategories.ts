@@ -25,7 +25,7 @@ export function useCategories(): UseCategoriesResult {
       setLoading(true);
 
       const { data, error } = await supabase
-        .from('categories')
+        .from('class_category')
         .select('*')
         .order('order_num', { ascending: true });
 
