@@ -5,6 +5,7 @@ export type Category = {
   id: number;
   name: string;
   parent_id: number | null;
+  depth: number | null;
   order_num: number | null;
 };
 
@@ -24,9 +25,9 @@ export function useCategories(): UseCategoriesResult {
       setLoading(true);
 
       const { data, error } = await supabase
-        .from('class_categories')              // ★ 올바른 테이블
+        .from('classroom_category')    // ★ 수정됨
         .select('*')
-        .order('order_num', { ascending: true });   // ★ 순서 보장
+        .order('order_num', { ascending: true });
 
       if (error) {
         console.error('카테고리 불러오기 오류:', error.message);
@@ -40,7 +41,7 @@ export function useCategories(): UseCategoriesResult {
     }
 
     load();
-  }, []); // ★ authUser 의존성 없음 → 즉시 로딩 시작
+  }, []);
 
   return { categories, loading, error };
 }
