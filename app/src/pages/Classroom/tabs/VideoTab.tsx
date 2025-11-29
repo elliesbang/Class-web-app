@@ -47,6 +47,7 @@ const normaliseVideos = (items: any) => {
 
   return items.map((item, index) => {
     const id = item?.id ?? item?.content_id ?? item?.contentId ?? `video-${index}`;
+    const classroomId = item?.classroom_id ?? item?.classroomId ?? item?.class_id ?? item?.classId ?? null;
     const titleCandidate =
       item?.title ?? item?.name ?? item?.content_title ?? item?.contentTitle ?? `영상 ${index + 1}`;
     const descriptionCandidate = item?.description ?? item?.summary ?? item?.content ?? item?.text ?? '';
@@ -62,6 +63,7 @@ const normaliseVideos = (items: any) => {
           : descriptionCandidate != null
           ? String(descriptionCandidate)
           : '',
+      classroomId,
       url: urlCandidate,
       createdAt: createdAtCandidate,
     };
@@ -87,8 +89,8 @@ function VideoTab({ courseName, classId }: { [key: string]: any }) {
       try {
         const { data, error } = await supabase
           .from('classroom_videos')
-          .select('*')
-          .eq('classroom_id', classId)
+          .select('*, classes(*)')
+          .or(`classroom_id.eq.${classId},class_id.eq.${classId}`)
           .order('order_num', { ascending: true });
 
         if (error) throw error;

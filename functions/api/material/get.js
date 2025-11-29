@@ -34,8 +34,8 @@ export const onRequest = async ({ request, env }) => {
 
     const { data, error } = await supabase
       .from('classroom_content')
-      .select('*')
-      .eq('class_id', classroomId)
+      .select('*, classes(*)')
+      .or(`class_id.eq.${classroomId},classroom_id.eq.${classroomId}`)
       .eq('type', 'material')
       .order('display_order', { ascending: true })
 

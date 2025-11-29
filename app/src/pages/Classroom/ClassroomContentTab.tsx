@@ -34,14 +34,18 @@ function ClassroomContentTab({ tab, Component }: ContentTabProps) {
       try {
         let { data, error } = await supabase
           .from('classroom_contents')
-          .select('*')
-          .eq('classroom_id', classId)
+          .select('*, classes(*)')
+          .or(`classroom_id.eq.${classId},class_id.eq.${classId}`)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
 
         const filtered =
-          data?.filter((item) => {
+          data?.map((item) => ({
+            ...item,
+            classroomId: item.classroom_id ?? item.classroomId ?? item.class_id ?? item.classId ?? null,
+          }))
+            .filter((item) => {
             const type = (item.type ?? item.category ?? '').toLowerCase();
             if (tab === 'video') return type === 'video' || type === '영상';
             if (tab === 'material') return type === 'material' || type === '자료';

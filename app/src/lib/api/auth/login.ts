@@ -8,6 +8,9 @@ export async function login(email: string, password: string) {
 
   if (error) throw new Error(error.message);
 
+  // Cloudflare 환경에서 세션 즉시 동기화
+  await supabase.auth.refreshSession();
+
   const user = data.user;
   const token = data.session?.access_token;
 

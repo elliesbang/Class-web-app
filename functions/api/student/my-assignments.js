@@ -4,7 +4,14 @@ export const onRequest = async ({ request, env }) => {
   try {
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
-    const token = request.headers.get("authorization")?.replace("Bearer ", "");
+    const rawAuth =
+      request.headers.get('authorization') ||
+      request.headers.get('Authorization');
+
+    const token =
+      rawAuth?.replace('Bearer ', '') ||
+      request.headers.get("authorization")?.replace("Bearer ", "") ||
+      null;
 
     if (!token) return new Response(JSON.stringify({ assignments: [] }), { status: 200 });
 
