@@ -82,7 +82,7 @@ function MaterialTab({ courseName, classId }: { [key: string]: any }) {
 
       try {
         const { data, error } = await supabase
-          .from('class_materials')
+          .from('classroom_materials')
           .select('*, classes(*)')
           .eq('class_id', classId)
           .order('created_at', { ascending: false });

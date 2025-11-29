@@ -29,7 +29,7 @@ export async function onRequest({ request, env }) {
     );
 
     const { data, error } = await supabase
-      .from("class_materials")
+      .from("classroom_materials")
       .insert({
         class_id: Number(classroom_id),
         title,
@@ -41,7 +41,7 @@ export async function onRequest({ request, env }) {
       .single();
 
     if (error) {
-      console.error("[class_materials/save] DB Error:", error);
+      console.error("[classroom_materials/save] DB Error:", error);
       return new Response(
         JSON.stringify({ error: "DB insert failed", detail: error.message }),
         { status: 500 }
@@ -54,7 +54,7 @@ export async function onRequest({ request, env }) {
     });
 
   } catch (err) {
-    console.error("[class_materials/save] Internal Error:", err);
+    console.error("[classroom_materials/save] Internal Error:", err);
     return new Response(JSON.stringify({ error: "Internal Error" }), {
       status: 500
     });

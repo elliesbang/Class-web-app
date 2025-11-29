@@ -88,7 +88,7 @@ function VideoTab({ courseName, classId }: { [key: string]: any }) {
 
       try {
         const { data, error } = await supabase
-          .from('class_videos')
+          .from('classroom_videos')
           .select('*, classes(*)')
           .eq('class_id', classId)
           .order('order_num', { ascending: true });

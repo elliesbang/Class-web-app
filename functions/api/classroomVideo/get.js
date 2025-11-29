@@ -33,7 +33,7 @@ export const onRequest = async ({ request, env }) => {
     }
 
     const { data, error } = await supabase
-      .from('class_contents')
+      .from('classroom_content')
       .select('*, classes(*)')
       .eq('class_id', classroomId)
       .eq('type', 'video')
