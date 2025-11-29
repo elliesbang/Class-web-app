@@ -1,32 +1,13 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { getAuthUser, subscribeAuthUser, type AuthUser } from '../lib/authUser';
 
 export function useAuthUser() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<AuthUser | null>(() => getAuthUser());
 
   useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      const { data, error } = await supabase.auth.getUser();
-
-      if (!mounted) return;
-
-      if (error || !data?.user) {
-        setUser(null);
-      } else {
-        setUser(data.user);
-      }
-    };
-
-    load();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(() => load());
-
-    return () => {
-      mounted = false;
-      listener.subscription.unsubscribe();
-    };
+    setUser(getAuthUser());
+    const unsubscribe = subscribeAuthUser(setUser);
+    return () => unsubscribe?.();
   }, []);
 
   return user;
