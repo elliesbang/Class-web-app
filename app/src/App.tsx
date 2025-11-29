@@ -1,3 +1,6 @@
+import GoogleCallbackStudent from './pages/auth/GoogleCallbackStudent';
+import GoogleCallbackVod from './pages/auth/GoogleCallbackVod';
+
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
