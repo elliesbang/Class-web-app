@@ -12,8 +12,16 @@ const anon =
 
 export const supabase = createClient(url, anon, {
   auth: {
-    persistSession: true,       // 🔥 로그인 유지 필수
-    detectSessionInUrl: true,   // 🔥 OAuth/토큰 유지 필수
-    autoRefreshToken: true,     // 🔥 토큰 자동 갱신
+    // 🔥 Cloudflare Pages에서는 반드시 storage를 명시해야 함
+    storage: window.localStorage,
+
+    // 🔥 세션 유지 필수
+    persistSession: true,
+
+    // 🔥 OAuth/URL 기반 세션 유지
+    detectSessionInUrl: true,
+
+    // 🔥 토큰 자동 갱신
+    autoRefreshToken: true,
   },
 });
