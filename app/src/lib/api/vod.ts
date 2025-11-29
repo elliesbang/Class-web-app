@@ -47,7 +47,7 @@ const normaliseVodVideo = (record: Record<string, any> | null): VodVideo | null 
  * ------------------------- */
 export const getVodCategories = async (): Promise<VodCategory[]> => {
   const { data, error } = await supabase
-    .from('categories')
+    .from('vod_category')
     .select('*')
     .order('order_num', { ascending: true });
 
