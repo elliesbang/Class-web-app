@@ -17,8 +17,7 @@ const NavbarBottom = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // ⬇⬇⬇ 수정 포인트: 구조분해로 authUser만 가져오기
-  const { authUser } = useAuthUser();
+  const authUser = useAuthUser();
 
   const navItems = useMemo(() => {
     // 로그인 X → My 탭 제거

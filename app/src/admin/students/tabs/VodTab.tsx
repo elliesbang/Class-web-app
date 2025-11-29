@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import Table from '../../components/Table';
-import { supabase } from "../../../lib/supabaseClient";
+import { supabase } from '@/lib/supabaseClient';
 
 interface VodMember {
   id: number;

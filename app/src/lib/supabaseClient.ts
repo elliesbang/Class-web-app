@@ -6,7 +6,7 @@ export const supabase = createClient(
   {
     auth: {
       persistSession: false,
-      storage: undefined      // Cloudflare Pages에서는 localStorage 접근 불가
+      storage: undefined
     }
   }
 );

@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 
 export type ClassroomVideo = {
   id: number | string;
@@ -115,7 +115,7 @@ export const getClassrooms = async () =>
 export const deleteClassroom = async (id: string | number) => supabase.from('classes').delete().eq('id', id);
 
 export async function getClassCategories() {
-  return supabase.from('class_category').select('*').order('order_num', { ascending: true });
+  return supabase.from('categories').select('*').order('order_num', { ascending: true });
 }
 
 /* ----------------------------------

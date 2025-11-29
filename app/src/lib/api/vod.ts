@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 
 export type VodCategory = {
   id: number | string;
@@ -47,16 +47,16 @@ const normaliseVodVideo = (record: Record<string, any> | null): VodVideo | null 
  * ------------------------- */
 export const getVodCategories = async (): Promise<VodCategory[]> => {
   const { data, error } = await supabase
-    .from('vod_category')
+    .from('categories')
     .select('*')
-    .order('order_', { ascending: true });
+    .order('order_num', { ascending: true });
 
   if (error) throw new Error('Failed to load VOD categories : ' + error.message);
 
   return (data ?? []).map((item) => ({
     id: item.id,
     name: item.name,
-    order: item.order_,
+    order: item.order_num ?? 0,
   }));
 };
 
@@ -65,7 +65,7 @@ export const getVodCategories = async (): Promise<VodCategory[]> => {
  * ------------------------- */
 export const getVodList = async (): Promise<VodListResponse> => {
   const { data, error } = await supabase
-    .from('class_contents')
+    .from('classroom_contents')
     .select('*')
     .eq('type', 'vod');
 
@@ -87,7 +87,7 @@ export const getVodByCategory = async (
   categoryId: string | number
 ): Promise<VodVideo[]> => {
   const { data, error } = await supabase
-    .from('class_contents')
+    .from('classroom_contents')
     .select('*')
     .eq('type', 'vod')
     .eq('vod_category', categoryId);
@@ -104,7 +104,7 @@ export const getVodByCategory = async (
  * ------------------------- */
 export const createVod = async (payload: Partial<VodVideo>) => {
   const { data, error } = await supabase
-    .from('class_contents')
+    .from('classroom_contents')
     .insert({
       type: 'vod',
       vod_category: payload.categoryId,
@@ -130,7 +130,7 @@ export const updateVod = async (
   payload: Partial<VodVideo>
 ) => {
   const { data, error } = await supabase
-    .from('class_contents')
+    .from('classroom_contents')
     .update({
       vod_category: payload.categoryId,
       title: payload.title,
@@ -153,7 +153,7 @@ export const updateVod = async (
  * ------------------------- */
 export const deleteVod = async (id: string | number) => {
   const { error } = await supabase
-    .from('class_contents')
+    .from('classroom_contents')
     .delete()
     .eq('id', id);
 
