@@ -24,7 +24,7 @@ const AdminLayout = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     clearAuthUser();
-    navigate('/', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   if (loading) return <LoadingSpinner text="로그인 중..." />;

@@ -4,11 +4,11 @@ import { supabase } from './supabaseClient';
 export type AuthRole = 'student' | 'vod' | 'admin';
 
 export type AuthUser = {
-  user_id: string;
+  id: string;
   email: string;
   name?: string;
   role: AuthRole;
-  token: string;
+  accessToken: string;
 };
 
 export const AUTH_USER_STORAGE_KEY = 'authUser';
@@ -28,7 +28,7 @@ export const getAuthUser = (): AuthUser | null => {
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
-    if (parsed?.token && parsed?.user_id && parsed?.role) {
+    if (parsed?.accessToken && parsed?.id && parsed?.role) {
       return parsed;
     }
   } catch (e) {
@@ -82,7 +82,7 @@ export const hydrateAuthUserFromSession = async (
   try {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('name, role')
+      .select('id, email, name, role')
       .eq('id', session.user.id)
       .single();
 
@@ -93,11 +93,11 @@ export const hydrateAuthUserFromSession = async (
     }
 
     const newUser: AuthUser = {
-      user_id: session.user.id,
-      email: session.user.email ?? '',
+      id: profile.id ?? session.user.id,
+      email: profile.email ?? session.user.email ?? '',
       name: profile.name ?? '',
       role: profile.role,
-      token: session.access_token,
+      accessToken: session.access_token ?? '',
     };
 
     setAuthUser(newUser);

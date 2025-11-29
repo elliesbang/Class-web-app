@@ -1,11 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  clearAuthUser,
-  getAuthUser,
-  hydrateAuthUserFromSession,
-  subscribeAuthUser,
-  type AuthUser,
-} from '../lib/authUser';
+import { clearAuthUser, getAuthUser, setAuthUser, subscribeAuthUser, type AuthUser } from '../lib/authUser';
 import { supabase } from '../lib/supabaseClient';
 
 export function useAuthUser() {
@@ -15,14 +9,51 @@ export function useAuthUser() {
   useEffect(() => {
     let isMounted = true;
 
-    const resolveSession = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+    const loadAuthUser = async () => {
+      if (isMounted) {
+        setLoading(true);
+      }
 
-        const nextUser = await hydrateAuthUserFromSession(session);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token ?? '';
+
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !userData.user) {
+          if (!isMounted) return;
+          clearAuthUser();
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email, name, role')
+          .eq('id', userData.user.id)
+          .single();
+
+        if (profileError || !profile) {
+          console.error('[useAuthUser] Failed to load profile', profileError);
+          if (!isMounted) return;
+          clearAuthUser();
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        const nextUser: AuthUser = {
+          id: profile.id ?? userData.user.id,
+          email: profile.email ?? userData.user.email ?? '',
+          name: profile.name ?? '',
+          role: profile.role,
+          accessToken,
+        };
+
         if (!isMounted) return;
+
+        setAuthUser(nextUser);
         setUser(nextUser);
         setLoading(false);
       } catch (error) {
@@ -34,13 +65,10 @@ export function useAuthUser() {
       }
     };
 
-    resolveSession();
+    loadAuthUser();
 
-    const authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const nextUser = await hydrateAuthUserFromSession(session);
-      if (!isMounted) return;
-      setUser(nextUser);
-      setLoading(false);
+    const authListener = supabase.auth.onAuthStateChange(async () => {
+      await loadAuthUser();
     });
 
     const unsubscribe = subscribeAuthUser((next) => {
