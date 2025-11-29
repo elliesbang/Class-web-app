@@ -50,30 +50,35 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 
   const [classInfo, setClassInfo] = useState<any>(null);
   const [classInfoError, setClassInfoError] = useState('');
+  const [classInfoLoading, setClassInfoLoading] = useState(false);
 
   // -------------------------
   // ✔ 1) 수업 날짜 불러오기
   // -------------------------
-  useEffect(() => {
-    const loadClass = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('classes')
-          .select('start_date, end_date')
-          .eq('id', Number(classId))
-          .single();
+  const loadClassInfo = useCallback(async () => {
+    setClassInfoLoading(true);
+    setClassInfoError('');
 
-        if (error) throw error;
-        setClassInfo(data);
-        setClassInfoError('');
-      } catch (err) {
-        setClassInfoError('수업 정보를 불러오지 못했습니다. 제출 기간 확인 불가.');
-        setClassInfo(null);
-      }
-    };
+    try {
+      const res = await fetch(`/api/class/info/${classId}`);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
 
-    loadClass();
+      const { classInfo } = await res.json();
+      if (!classInfo) throw new Error('NO_CLASS_INFO');
+
+      setClassInfo(classInfo);
+    } catch (e) {
+      console.error(e);
+      setClassInfoError('수업 정보를 불러오지 못했습니다. 제출 기간 확인 불가.');
+      setClassInfo(null);
+    } finally {
+      setClassInfoLoading(false);
+    }
   }, [classId]);
+
+  useEffect(() => {
+    loadClassInfo();
+  }, [loadClassInfo]);
 
   // -------------------------
   // ✔ 2) 세션 목록 로드
@@ -228,6 +233,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
         <div>
           <h3 className="font-semibold text-ellieGray">과제 제출</h3>
           <p className="text-sm text-ellieGray/70">이미지 또는 링크로 제출하세요.</p>
+          {classInfoLoading && <p className="text-sm text-ellieGray/70">수업 정보를 불러오는 중...</p>}
           {classInfoError && <p className="text-red-500 text-sm">{classInfoError}</p>}
         </div>
 
