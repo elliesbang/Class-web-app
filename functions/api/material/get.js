@@ -33,11 +33,12 @@ export const onRequest = async ({ request, env }) => {
     }
 
     const { data, error } = await supabase
-      .from('classroom_content')
+      .from('class_contents')
       .select('*, classes(*)')
-      .or(`class_id.eq.${classroomId},classroom_id.eq.${classroomId}`)
+      .eq('class_id', classroomId)
       .eq('type', 'material')
       .order('display_order', { ascending: true })
+      .order('created_at', { ascending: false })
 
     if (error) throw error
     return jsonResponse(data ?? [])

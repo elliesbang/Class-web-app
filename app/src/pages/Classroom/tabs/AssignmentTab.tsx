@@ -82,9 +82,9 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     const loadSessions = async () => {
       try {
         const { data, error } = await supabase
-          .from('classroom_sessions')
+          .from('class_sessions')
           .select('*')
-          .eq('classroom_id', Number(classId))
+          .eq('class_id', Number(classId))
           .order('session_no');
 
         if (error) throw error;

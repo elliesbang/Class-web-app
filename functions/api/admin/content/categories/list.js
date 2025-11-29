@@ -5,7 +5,7 @@ export const onRequest = async ({ env }) => {
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
     const { data, error } = await supabase
-      .from('classroom_category')
+      .from('class_category')
       .select('*')
       .order('order_num', { ascending: true });
 

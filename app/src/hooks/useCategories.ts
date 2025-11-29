@@ -25,7 +25,7 @@ export function useCategories(): UseCategoriesResult {
       setLoading(true);
 
       const { data, error } = await supabase
-        .from('classroom_category')    // ★ 수정됨
+        .from('class_category')    // ★ 수정됨
         .select('*')
         .order('order_num', { ascending: true });
 

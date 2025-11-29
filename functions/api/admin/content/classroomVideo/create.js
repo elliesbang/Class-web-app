@@ -30,9 +30,9 @@ export async function onRequest({ request, env }) {
     );
 
     const { data, error } = await supabase
-      .from("classroom_videos")
+      .from("class_videos")
       .insert({
-        classroom_id: Number(classroom_id),
+        class_id: Number(classroom_id),
         title,
         url: video_url,
         description: description || null,
@@ -42,7 +42,7 @@ export async function onRequest({ request, env }) {
       .single();
 
     if (error) {
-      console.error("[classroom_videos/save] DB Error:", error);
+      console.error("[class_videos/save] DB Error:", error);
       return new Response(
         JSON.stringify({ error: "DB insert failed", detail: error.message }),
         { status: 500 }
@@ -55,7 +55,7 @@ export async function onRequest({ request, env }) {
     });
 
   } catch (err) {
-    console.error("[classroom_videos/save] Internal Error:", err);
+    console.error("[class_videos/save] Internal Error:", err);
     return new Response(JSON.stringify({ error: "Internal Error" }), {
       status: 500
     });

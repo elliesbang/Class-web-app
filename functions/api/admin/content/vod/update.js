@@ -64,7 +64,7 @@ export const onRequest = async ({ request, env }) => {
     const supabase = getSupabaseClient(env)
 
     const { data, error } = await supabase
-      .from('classroom_content')
+      .from('class_contents')
       .update(updates)
       .eq('id', id)
       .eq('type', 'vod')

@@ -65,7 +65,7 @@ export const getVodCategories = async (): Promise<VodCategory[]> => {
  * ------------------------- */
 export const getVodList = async (): Promise<VodListResponse> => {
   const { data, error } = await supabase
-    .from('classroom_content')
+    .from('class_contents')
     .select('*')
     .eq('type', 'vod');
 
@@ -87,7 +87,7 @@ export const getVodByCategory = async (
   categoryId: string | number
 ): Promise<VodVideo[]> => {
   const { data, error } = await supabase
-    .from('classroom_content')
+    .from('class_contents')
     .select('*')
     .eq('type', 'vod')
     .eq('vod_category', categoryId);
@@ -104,7 +104,7 @@ export const getVodByCategory = async (
  * ------------------------- */
 export const createVod = async (payload: Partial<VodVideo>) => {
   const { data, error } = await supabase
-    .from('classroom_content')
+    .from('class_contents')
     .insert({
       type: 'vod',
       vod_category: payload.categoryId,
@@ -130,7 +130,7 @@ export const updateVod = async (
   payload: Partial<VodVideo>
 ) => {
   const { data, error } = await supabase
-    .from('classroom_content')
+    .from('class_contents')
     .update({
       vod_category: payload.categoryId,
       title: payload.title,
@@ -153,7 +153,7 @@ export const updateVod = async (
  * ------------------------- */
 export const deleteVod = async (id: string | number) => {
   const { error } = await supabase
-    .from('classroom_content')
+    .from('class_contents')
     .delete()
     .eq('id', id);
 
