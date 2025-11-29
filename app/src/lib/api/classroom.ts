@@ -32,7 +32,7 @@ export type ClassroomNotice = {
 const normaliseVideo = (record: Record<string, any> | null): ClassroomVideo | null => {
   if (!record) return null;
   const id = record.id;
-  const classroomId = record.classroom_id ?? record.classroomId;
+  const classroomId = record.classroom_id ?? record.classroomId ?? record.class_id ?? record.classId;
   const title = (record.title ?? '') as string;
   const url = (record.url as string | undefined) ?? (record.videoUrl as string | undefined) ?? '';
   if (!id || !classroomId || !title || !url) return null;
@@ -53,7 +53,7 @@ const normaliseVideo = (record: Record<string, any> | null): ClassroomVideo | nu
 const normaliseMaterial = (record: Record<string, any> | null): ClassroomMaterial | null => {
   if (!record) return null;
   const id = record.id;
-  const classroomId = record.classroom_id ?? record.classroomId;
+  const classroomId = record.classroom_id ?? record.classroomId ?? record.class_id ?? record.classId;
   const title = (record.title ?? '') as string;
   const fileUrl = (record.file_url as string | undefined) ?? (record.fileUrl as string | undefined) ?? '';
   if (!id || !classroomId || !title || !fileUrl) return null;
@@ -74,7 +74,7 @@ const normaliseMaterial = (record: Record<string, any> | null): ClassroomMateria
 const normaliseNotice = (record: Record<string, any> | null): ClassroomNotice | null => {
   if (!record) return null;
   const id = record.id;
-  const classroomId = record.classroom_id ?? record.classroomId;
+  const classroomId = record.classroom_id ?? record.classroomId ?? record.class_id ?? record.classId;
   const title = (record.title ?? '') as string;
   const content = (record.content ?? '') as string;
   if (!id || !classroomId || !title) return null;

@@ -25,7 +25,15 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
 
   try {
     const body = await request.json();
-    const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? undefined;
+    const rawAuth =
+      request.headers.get('authorization') ||
+      request.headers.get('Authorization');
+
+    const token =
+      rawAuth?.replace('Bearer ', '') ||
+      request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ||
+      request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') ||
+      undefined;
 
     const { assignment_id, content } = body as { assignment_id?: number; content?: string };
     if (!assignment_id || !content) {

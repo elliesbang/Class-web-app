@@ -1,44 +1,38 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 export function useAuthUser() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let ignore = false
+    let mounted = true;
 
-    const load = async () => {
+    const init = async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!ignore) {
-          setUser(user ?? null)
-        }
-      } catch (e) {
-        if (!ignore) setUser(null)
+        // Cloudflare 환경에서 가장 안정적인 방식
+        const { data } = await supabase.auth.getSession();
+        if (mounted) setUser(data?.session?.user ?? null);
       } finally {
-        if (!ignore) setLoading(false) // 🔥 무조건 loading 종료
+        if (mounted) setLoading(false);
       }
-    }
+    };
 
-    load()
+    init();
 
-    // 로그인 상태 변경 리스너
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        setUser(session?.user ?? null)
-        setLoading(false)
+        if (!mounted) return;
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
-    )
+    );
 
     return () => {
-      ignore = true
-      listener.subscription.unsubscribe()
-    }
-  }, [])
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
-  return { user, loading }
+  return { user, loading };
 }

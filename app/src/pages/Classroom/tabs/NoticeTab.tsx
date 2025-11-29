@@ -32,6 +32,7 @@ const normaliseNotices = (items: any) => {
 
   return items.map((item, index) => {
     const id = item?.id ?? item?.content_id ?? item?.contentId ?? `notice-${index}`;
+    const classroomId = item?.classroom_id ?? item?.classroomId ?? item?.class_id ?? item?.classId ?? null;
     const titleCandidate = item?.title ?? item?.name ?? item?.content_title ?? `공지 ${index + 1}`;
     const contentCandidate = item?.description ?? item?.content ?? item?.text ?? '';
     const authorCandidate = item?.author ?? item?.writer ?? item?.creator ?? '';
@@ -46,6 +47,7 @@ const normaliseNotices = (items: any) => {
           : contentCandidate != null
           ? String(contentCandidate)
           : '',
+      classroomId,
       author:
         typeof authorCandidate === 'string'
           ? authorCandidate
@@ -76,8 +78,8 @@ function NoticeTab({ courseName, classId }: { [key: string]: any }) {
       try {
         const { data, error } = await supabase
           .from('classroom_notices')
-          .select('*')
-          .eq('classroom_id', classId)
+          .select('*, classes(*)')
+          .or(`classroom_id.eq.${classId},class_id.eq.${classId}`)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
