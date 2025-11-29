@@ -7,24 +7,21 @@ export function useAuthUser() {
   useEffect(() => {
     let mounted = true;
 
-    const loadUser = async () => {
+    const load = async () => {
       const { data, error } = await supabase.auth.getUser();
 
       if (!mounted) return;
 
       if (error || !data?.user) {
         setUser(null);
-        return;
+      } else {
+        setUser(data.user);
       }
-
-      setUser(data.user);
     };
 
-    loadUser();
+    load();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      loadUser();
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(() => load());
 
     return () => {
       mounted = false;
