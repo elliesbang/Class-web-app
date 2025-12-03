@@ -22,3 +22,7 @@
 - **Root directory**: `app`
 
 Cloudflare Pages는 루트 `package.json`의 workspace 스크립트를 통해 하위 프로젝트에서 `npm run build`를 실행하며, 빌드 결과는 `app/dist`에 생성됩니다.
+
+git add .
+git commit -m "force deploy"
+git push
