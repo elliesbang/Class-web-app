@@ -126,14 +126,14 @@ export async function getClassCategories() {
 ---------------------------------- */
 
 export const getClassroomVideos = async (classroomId: number | string): Promise<ClassroomVideo[]> => {
-  const data = await fetchJson(`/api/classroomVideo/get?classroom_id=${encodeURIComponent(classroomId)}`);
+  const data = await fetchJson(`/api/classroom-video-get?classroom_id=${encodeURIComponent(classroomId)}`);
   return resolveArrayData(data)
     .map((item) => normaliseVideo(item as Record<string, any>))
     .filter((item): item is ClassroomVideo => item != null);
 };
 
 export const createClassroomVideo = async (payload: Partial<ClassroomVideo>): Promise<ClassroomVideo | null> => {
-  const data = await fetchJson('/api/classroomVideo/create', {
+  const data = await fetchJson('/api/classroom-video-create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -151,7 +151,7 @@ export const updateClassroomVideo = async (
   id: string | number,
   payload: Partial<ClassroomVideo>
 ): Promise<ClassroomVideo | null> => {
-  const data = await fetchJson(`/api/classroomVideo/update?id=${encodeURIComponent(id)}`, {
+  const data = await fetchJson(`/api/classroom-video-update?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -165,7 +165,7 @@ export const updateClassroomVideo = async (
 };
 
 export const deleteClassroomVideo = async (id: string | number): Promise<void> => {
-  await fetchJson(`/api/classroomVideo/delete?id=${encodeURIComponent(id)}`, {
+  await fetchJson(`/api/classroom-video-delete?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 };
@@ -173,7 +173,7 @@ export const deleteClassroomVideo = async (id: string | number): Promise<void> =
 /* --------- 자료(Material) --------- */
 
 export const getClassroomMaterials = async (classroomId: number | string): Promise<ClassroomMaterial[]> => {
-  const data = await fetchJson(`/api/material/get?classroom_id=${encodeURIComponent(classroomId)}`);
+  const data = await fetchJson(`/api/material-get?classroom_id=${encodeURIComponent(classroomId)}`);
   return resolveArrayData(data)
     .map((item) => normaliseMaterial(item as Record<string, any>))
     .filter((item): item is ClassroomMaterial => item != null);
@@ -182,7 +182,7 @@ export const getClassroomMaterials = async (classroomId: number | string): Promi
 export const createClassroomMaterial = async (
   payload: Partial<ClassroomMaterial>
 ): Promise<ClassroomMaterial | null> => {
-  const data = await fetchJson('/api/material/create', {
+  const data = await fetchJson('/api/material-create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -200,7 +200,7 @@ export const updateClassroomMaterial = async (
   id: string | number,
   payload: Partial<ClassroomMaterial>
 ): Promise<ClassroomMaterial | null> => {
-  const data = await fetchJson(`/api/material/update?id=${encodeURIComponent(id)}`, {
+  const data = await fetchJson(`/api/material-update?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -214,7 +214,7 @@ export const updateClassroomMaterial = async (
 };
 
 export const deleteClassroomMaterial = async (id: string | number): Promise<void> => {
-  await fetchJson(`/api/material/delete?id=${encodeURIComponent(id)}`, {
+  await fetchJson(`/api/material-delete?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 };
@@ -222,7 +222,7 @@ export const deleteClassroomMaterial = async (id: string | number): Promise<void
 /* --------- 공지(Notice) --------- */
 
 export const getClassroomNotices = async (classroomId: number | string): Promise<ClassroomNotice[]> => {
-  const data = await fetchJson(`/api/classroomNotice/get?classroom_id=${encodeURIComponent(classroomId)}`);
+  const data = await fetchJson(`/api/classroom-notice-get?classroom_id=${encodeURIComponent(classroomId)}`);
   return resolveArrayData(data)
     .map((item) => normaliseNotice(item as Record<string, any>))
     .filter((item): item is ClassroomNotice => item != null);
@@ -231,7 +231,7 @@ export const getClassroomNotices = async (classroomId: number | string): Promise
 export const createClassroomNotice = async (
   payload: Partial<ClassroomNotice>
 ): Promise<ClassroomNotice | null> => {
-  const data = await fetchJson('/api/classroomNotice/create', {
+  const data = await fetchJson('/api/classroom-notice-create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -248,7 +248,7 @@ export const updateClassroomNotice = async (
   id: string | number,
   payload: Partial<ClassroomNotice>
 ): Promise<ClassroomNotice | null> => {
-  const data = await fetchJson(`/api/classroomNotice/update?id=${encodeURIComponent(id)}`, {
+  const data = await fetchJson(`/api/classroom-notice-update?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -261,7 +261,7 @@ export const updateClassroomNotice = async (
 };
 
 export const deleteClassroomNotice = async (id: string | number): Promise<void> => {
-  await fetchJson(`/api/classroomNotice/delete?id=${encodeURIComponent(id)}`, {
+  await fetchJson(`/api/classroom-notice-delete?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 };

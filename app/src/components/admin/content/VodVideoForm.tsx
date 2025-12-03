@@ -42,8 +42,8 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: BaseFormProps) => 
     try {
       const isUpdate = Boolean(editingItem?.id);
       const endpoint = isUpdate
-        ? `/api/admin/content/vod/update/${editingItem?.id}`
-        : '/api/admin/content/vod/create';
+        ? `/api/admin-content-vod-update/${editingItem?.id}`
+        : '/api/admin-content-vod-create';
       const method = isUpdate ? 'PUT' : 'POST';
 
       const payload = {

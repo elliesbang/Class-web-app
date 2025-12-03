@@ -61,8 +61,8 @@ const MaterialForm = ({
     try {
       const isUpdate = Boolean(editingItem?.id);
       const endpoint = isUpdate
-        ? `/api/admin/content/material/update/${editingItem?.id}`
-        : '/api/admin/content/material/create';
+        ? `/api/admin-content-material-update/${editingItem?.id}`
+        : '/api/admin-content-material-create';
       const method = isUpdate ? 'PUT' : 'POST';
 
       const payload = {

@@ -63,8 +63,8 @@ const ClassroomVideoForm = ({
     try {
       const isUpdate = Boolean(editingItem?.id);
       const endpoint = isUpdate
-        ? `/api/admin/content/classroomVideo/update/${editingItem?.id}`
-        : '/api/admin/content/classroomVideo/create';
+        ? `/api/admin-content-classroom-video-update/${editingItem?.id}`
+        : '/api/admin-content-classroom-video-create';
       const method = isUpdate ? 'PUT' : 'POST';
 
       const payload = {

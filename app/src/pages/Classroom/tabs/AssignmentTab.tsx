@@ -60,10 +60,11 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     setClassInfoError('');
 
     try {
-      const res = await fetch(`/api/class/info/${classId}`);
+      const res = await fetch(`/api/class-info-get?id=${encodeURIComponent(classId)}`);
       if (!res.ok) throw new Error(`API error: ${res.status}`);
 
-      const { classInfo } = await res.json();
+      const payload = await res.json();
+      const classInfo = payload.classInfo ?? payload.data ?? payload.class;
       if (!classInfo) throw new Error('NO_CLASS_INFO');
 
       setClassInfo(classInfo);

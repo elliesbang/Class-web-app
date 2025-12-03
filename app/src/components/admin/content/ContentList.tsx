@@ -44,13 +44,28 @@ const ContentList = ({
 
       try {
         const query = categoryId ? `?category_id=${encodeURIComponent(categoryId)}` : '';
-        const response = await fetch(`/api/admin/content/${type}/list${query}`);
+        const endpointType =
+          type === 'classroomVideo'
+            ? 'classroom-video'
+            : type === 'classroomNotice'
+              ? 'classroom-notice'
+              : type === 'vod'
+                ? 'vod'
+                : type === 'global'
+                  ? 'global'
+                  : 'material';
+        const response = await fetch(`/api/admin-content-${endpointType}-list${query}`);
         if (!response.ok) {
           throw new Error('콘텐츠 목록을 불러올 수 없습니다.');
         }
         const data = await response.json();
         if (!isMounted) return;
-        setItems(Array.isArray(data) ? data : []);
+        const payloadItems = Array.isArray(data)
+          ? data
+          : Array.isArray((data as Record<string, any>)?.data)
+            ? (data as Record<string, any>).data
+            : [];
+        setItems(payloadItems);
       } catch (caught) {
         if (!isMounted) return;
         console.error(`[content] list load failed (${type})`, caught);
@@ -80,7 +95,17 @@ const ContentList = ({
 
     setDeletingId(numericId);
     try {
-      const response = await fetch(`/api/admin/content/${type}/delete/${numericId}`, {
+      const endpointType =
+        type === 'classroomVideo'
+          ? 'classroom-video'
+          : type === 'classroomNotice'
+            ? 'classroom-notice'
+            : type === 'vod'
+              ? 'vod'
+              : type === 'global'
+                ? 'global'
+                : 'material';
+      const response = await fetch(`/api/admin-content-${endpointType}-delete/${numericId}`, {
         method: 'DELETE',
       });
       if (!response.ok) {

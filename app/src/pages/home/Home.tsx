@@ -35,7 +35,7 @@ function Home() {
   useEffect(() => {
     async function loadNotices() {
       try {
-        const json = await fetchData('/api/global/list');
+        const json = await fetchData('/api/global-list');
         setNotices(json.data ?? []);
       } catch (e) {
         console.error('공지 불러오기 실패:', e);
@@ -52,7 +52,7 @@ function Home() {
   useEffect(() => {
     async function loadVodVideos() {
       try {
-        const json = await fetchData('/api/vod/list');
+        const json = await fetchData('/api/vod-list');
         setVodVideos(json.data ?? []);
       } catch (e) {
         console.error('VOD 불러오기 실패:', e);
@@ -69,7 +69,7 @@ function Home() {
   useEffect(() => {
     async function loadCategories() {
       try {
-        const json = await fetchData('/api/vod/categories');
+        const json = await fetchData('/api/vod-categories');
         setVodCategories(json.data ?? []);
       } catch (e) {
         console.error('카테고리 불러오기 실패:', e);

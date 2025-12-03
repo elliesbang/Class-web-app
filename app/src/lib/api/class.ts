@@ -75,7 +75,7 @@ const toMutationResult = (data: Record<string, any>[] | null, fallbackMessage: s
 export const getClasses = async (): Promise<ClassInfo[]> => {
   const token = localStorage.getItem('supabase_token');
 
-  const res = await fetch('/api/classes/list', {
+  const res = await fetch('/api/classes-list', {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : '',
@@ -88,7 +88,7 @@ export const getClasses = async (): Promise<ClassInfo[]> => {
   }
 
   const json = await res.json();
-  const records = json.classes ?? [];
+  const records = json.classes ?? json.data ?? [];
 
   return records
     .map((item: Record<string, any>) => normaliseClass(item))
