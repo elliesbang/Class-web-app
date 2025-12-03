@@ -29,10 +29,10 @@ export default function StudentMyPage() {
   // ------------------------------
   // 📌 Cloudflare Functions API 주소
   // ------------------------------
-  const API_CLASSROOM = `/api/student/classrooms?student=${studentId}`;
-  const API_ASSIGNMENT = `/api/student/assignments?student=${studentId}`;
-  const API_FEEDBACK = `/api/student/feedback?student=${studentId}`;
-  const API_COURSE = `/api/student/courses`;
+  const API_CLASSROOM = `/api/student-classrooms?student=${studentId}`;
+  const API_ASSIGNMENT = `/api/student-assignments?student=${studentId}`;
+  const API_FEEDBACK = `/api/student-feedback?student=${studentId}`;
+  const API_COURSE = `/api/student-courses`;
 
   useEffect(() => {
     if (!studentId) {

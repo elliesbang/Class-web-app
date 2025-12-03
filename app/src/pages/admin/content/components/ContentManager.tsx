@@ -17,11 +17,11 @@ const TAB_ITEMS = [
 
 // Cloudflare Functions 라우팅에 맞춘 정답 매핑
 const API_MAP = {
-  globalNotice: '/api/admin/content/global/list',
-  classroomVideo: '/api/admin/content/classroomVideo/list',
-  classroomMaterial: '/api/admin/content/material/list',
-  classroomNotice: '/api/admin/content/classroomNotice/list',
-  vodVideo: '/api/admin/content/vod/list'
+  globalNotice: '/api/admin-content-global-list',
+  classroomVideo: '/api/admin-content-classroom-video-list',
+  classroomMaterial: '/api/admin-content-material-list',
+  classroomNotice: '/api/admin-content-classroom-notice-list',
+  vodVideo: '/api/admin-content-vod-list'
 }
 
 const ContentManager = () => {
@@ -79,7 +79,9 @@ const ContentManager = () => {
         <div className="item-list">
           {items.map((item) => (
             <div key={item.id} className="item-card">
-              <p><strong>{item.title}</strong></p>
+              <p>
+                <strong>{item.title}</strong>
+              </p>
               <p>{item.description || ''}</p>
             </div>
           ))}

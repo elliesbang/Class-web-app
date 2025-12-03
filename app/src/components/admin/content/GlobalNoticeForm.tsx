@@ -34,8 +34,8 @@ const GlobalNoticeForm = ({ onSaved, editingItem, onCancelEdit }: BaseFormProps)
     try {
       const isUpdate = Boolean(editingItem?.id);
       const endpoint = isUpdate
-        ? `/api/admin/content/global/update/${editingItem?.id}`
-        : '/api/admin/content/global/create';
+        ? `/api/admin-content-global-update/${editingItem?.id}`
+        : '/api/admin-content-global-create';
       const method = isUpdate ? 'PUT' : 'POST';
 
       const payload = {

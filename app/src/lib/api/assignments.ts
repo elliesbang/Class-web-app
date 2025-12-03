@@ -60,7 +60,7 @@ const jsonFetch = async <T>(url: string, options: RequestInit = {}): Promise<T> 
 // -----------------------------
 export const submitAssignment = async (payload: CreateAssignmentPayload): Promise<Assignment> => {
   const response = await jsonFetch<{ assignment: Assignment }>(
-    '/api/assignments/create',
+    '/api/assignments-create',
     {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -84,7 +84,7 @@ export const fetchAssignments = async (
   }
 
   const query = searchParams.toString();
-  const url = `/api/assignments/list?${query}`;
+  const url = `/api/assignments-list?${query}`;
 
   const response = await jsonFetch<{ assignments: AssignmentWithRelations[] }>(url, {
     method: 'GET',

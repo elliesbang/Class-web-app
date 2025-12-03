@@ -34,7 +34,7 @@ export const createAssignmentFeedback = async (
   payload: CreateAssignmentFeedbackPayload,
 ): Promise<AssignmentFeedback> => {
   const response = await jsonFetch<{ feedback: AssignmentFeedback }>(
-    '/api/assignmentFeedback/create',
+    '/api/assignment-feedback-create',
     {
       method: 'POST',
       body: JSON.stringify(payload),

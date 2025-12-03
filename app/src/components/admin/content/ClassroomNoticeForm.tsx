@@ -61,8 +61,8 @@ const ClassroomNoticeForm = ({
     try {
       const isUpdate = Boolean(editingItem?.id);
       const endpoint = isUpdate
-        ? `/api/admin/content/classroomNotice/update/${editingItem?.id}`
-        : '/api/admin/content/classroomNotice/create';
+        ? `/api/admin-content-classroom-notice-update/${editingItem?.id}`
+        : '/api/admin-content-classroom-notice-create';
       const method = isUpdate ? 'PUT' : 'POST';
 
       const payload = {

@@ -3,7 +3,7 @@ import ContentManager from './components/ContentManager'
 
 // Cloudflare API 기반 카테고리 호출
 const fetchCategories = async () => {
-  const res = await fetch('/api/admin/content/categories')
+  const res = await fetch('/api/admin-content-categories-list')
   if (!res.ok) return []
   const json = await res.json()
   return json.data || []
