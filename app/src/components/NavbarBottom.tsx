@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GraduationCap, Home, Megaphone, PlayCircle, User } from 'lucide-react';
-import { useAuthUser } from '../hooks/useAuthUser';
+import { useAuthUser } from '@/context/AuthContext';
 
 const baseItems = [
   { label: '홈', to: '/', Icon: Home },

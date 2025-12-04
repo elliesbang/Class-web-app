@@ -138,6 +138,10 @@ export const logout = async () => {
   } catch (error) {
     console.error('[auth] logout failed', error);
   } finally {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+    }
     setAuthUser(null);
     window.location.href = '/home';
   }

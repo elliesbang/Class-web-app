@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuthUser } from '@/context/AuthContext';
 import { clearAuthUser } from '@/lib/authUser';
 import { supabase } from '@/lib/supabaseClient';
 import AdminSidebar from './AdminSidebar';

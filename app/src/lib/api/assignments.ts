@@ -30,7 +30,7 @@ type ListAssignmentsParams = {
 // 공통 fetch wrapper
 // -----------------------------
 const jsonFetch = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
-  const token = getAuthUser()?.token;
+  const token = getAuthUser()?.accessToken ?? (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
 

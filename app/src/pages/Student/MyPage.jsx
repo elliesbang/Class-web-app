@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { logout } from '@/lib/auth';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuthUser } from '@/context/AuthContext';
 
 function fetchJSON(url) {
   return fetch(url).then((res) => {

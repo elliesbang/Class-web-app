@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthUser } from '../../hooks/useAuthUser';
+import { useAuthUser } from '@/context/AuthContext';
 import { clearAuthUser } from '../../lib/authUser';
 import { supabase } from '@/lib/supabaseClient';
 

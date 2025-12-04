@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+
+import { useAuthUser } from '@/context/AuthContext';
+import type { AuthRole, AuthUser } from '@/lib/authUser';
 import { supabase } from '@/lib/supabaseClient';
 
 type ActiveForm = 'main' | 'admin';
-type UserRole = 'student' | 'vod';
+type UserRole = AuthRole;
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95 },
@@ -39,12 +42,15 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
   const [adminSubmitting, setAdminSubmitting] = useState(false);
 
   const navigate = useNavigate();
+  const { refresh, setUser } = useAuthUser();
 
   /** --------------------------
    * 닫기 (모든 입력 리셋)
    * -------------------------- */
-  const closeModal = useCallback(() => {
-    onClose();
+  const closeModal = useCallback(
+    (force = false) => {
+      if (!force && (isSubmitting || adminSubmitting)) return;
+      onClose();
     setActiveForm('main');
     setEmail('');
     setPassword('');
@@ -54,7 +60,43 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
     setAdminEmail('');
     setAdminPassword('');
     setAdminSubmitting(false);
-  }, [onClose]);
+  }, [adminSubmitting, isSubmitting, onClose]);
+
+  const handleLoginSuccess = useCallback(
+    async (
+      payload: { access_token?: string; user_role?: UserRole | null; user?: Partial<AuthUser> | null },
+      fallbackRole: UserRole,
+      fallbackEmail: string,
+    ) => {
+      const accessToken = payload?.access_token;
+      const resolvedRole = (payload?.user_role as UserRole | null) ?? fallbackRole;
+
+      if (!accessToken) {
+        throw new Error('토큰을 발급받지 못했습니다.');
+      }
+
+      const nextUser: AuthUser = {
+        id: payload?.user?.id ?? '',
+        email: payload?.user?.email ?? fallbackEmail,
+        name: payload?.user?.name ?? '',
+        role: resolvedRole,
+        accessToken,
+      } as AuthUser;
+
+      setUser(nextUser);
+      await refresh();
+
+      closeModal(true);
+
+      if (resolvedRole === 'admin') {
+        navigate('/admin');
+        return;
+      }
+
+      navigate(resolvedRole === 'vod' ? '/vod' : '/my');
+    },
+    [closeModal, navigate, refresh, setUser],
+  );
 
   /** --------------------------
    * 관리자 로그인
@@ -64,46 +106,39 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
       event.preventDefault();
       if (adminSubmitting) return;
 
+      setError('');
+
       try {
         setAdminSubmitting(true);
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: adminEmail.trim(),
-          password: adminPassword,
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: adminEmail.trim(), password: adminPassword }),
         });
 
-        if (error) {
-          throw error;
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.message ?? '관리자 로그인 실패');
         }
 
-        const user = data.user;
-        if (!user) {
-          throw new Error('로그인 실패');
+        if (payload?.user_role && payload.user_role !== 'admin') {
+          throw new Error('관리자 권한이 없습니다.');
         }
 
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        const role = profile?.role;
-
-        if (profileError || role !== 'admin') {
-          alert('관리자 권한이 없습니다.');
-          await supabase.auth.signOut();
-          return;
-        }
-       closeModal();
-navigate('/');
-      } catch (caught) {
+        await handleLoginSuccess(payload, 'admin', adminEmail.trim());
+      } catch (caught: any) {
         console.error('[LoginModal] admin login failed', caught);
-        alert('관리자 로그인 실패 또는 권한 없음');
+        const message = caught?.message ?? '관리자 로그인 실패 또는 권한 없음';
+        setError(message);
       } finally {
         setAdminSubmitting(false);
       }
     },
-    [adminEmail, adminPassword, adminSubmitting, closeModal, navigate],
+    [adminEmail, adminPassword, adminSubmitting, handleLoginSuccess],
   );
 
   /** --------------------------
@@ -118,44 +153,36 @@ navigate('/');
       setIsSubmitting(true);
 
       try {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password.trim(),
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: email.trim(), password: password.trim() }),
         });
 
-        if (signInError) {
-          throw signInError;
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.message ?? '로그인에 실패했습니다.');
         }
 
-        const user = data.user;
-        if (!user) {
-          throw new Error('로그인 실패');
-        }
+        const resolvedRole = (payload?.user_role as UserRole | null) ?? selectedRole;
 
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        const userRole = (profile?.role as UserRole | null) ?? null;
-
-        if (profileError || userRole !== selectedRole) {
-          await supabase.auth.signOut();
+        if (resolvedRole !== selectedRole) {
           throw new Error('ROLE_MISMATCH');
         }
 
-        closeModal();
-        navigate(selectedRole === 'vod' ? '/vod' : '/my');
-      } catch (caught) {
+        await handleLoginSuccess(payload, resolvedRole ?? selectedRole, email.trim());
+      } catch (caught: any) {
         console.error('[LoginModal] login failed', caught);
-        const message = caught instanceof Error ? caught.message : '로그인에 실패했습니다.';
+        const message = caught?.message ?? '로그인에 실패했습니다.';
         setError(message === 'ROLE_MISMATCH' ? '선택한 역할과 일치하지 않습니다.' : message);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [closeModal, email, isSubmitting, navigate, password, selectedRole],
+    [email, handleLoginSuccess, isSubmitting, password, selectedRole],
   );
 
   /** --------------------------
@@ -286,7 +313,10 @@ navigate('/');
       <button
         type="button"
         className="absolute right-0 top-0 text-sm text-gray-500 hover:text-gray-700"
-        onClick={() => setActiveForm('main')}
+        onClick={() => {
+          setError('');
+          setActiveForm('main');
+        }}
       >
         ← 뒤로가기
       </button>
@@ -309,6 +339,8 @@ navigate('/');
           onChange={(e) => setAdminPassword(e.target.value)}
           required
         />
+
+        {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
 
         <button
           type="submit"
@@ -352,7 +384,10 @@ navigate('/');
           <h2 className="text-xl font-semibold">로그인</h2>
           <button
             className="bg-yellow-400 hover:bg-yellow-500 rounded-lg text-white py-2 px-3 text-sm"
-            onClick={() => setActiveForm('admin')}
+            onClick={() => {
+              setError('');
+              setActiveForm('admin');
+            }}
           >
             관리자 로그인
           </button>
