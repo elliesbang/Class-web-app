@@ -1,4 +1,0 @@
-/api/*
-  Access-Control-Allow-Headers: Authorization
-  Access-Control-Expose-Headers: Authorization
-  Authorization: *
