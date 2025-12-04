@@ -2,35 +2,28 @@ import { createClient } from '@supabase/supabase-js';
 
 export async function onRequest(context) {
   try {
-    // 1) Supabase 클라이언트 생성
     const supabase = createClient(
       context.env.SUPABASE_URL,
       context.env.SUPABASE_ANON_KEY,
-      {
-        global: {
-          fetch: (...args) => fetch(...args),
-        },
-      }
+      { global: { fetch: (...args) => fetch(...args) } }
     );
 
-    // 2) Authorization 헤더는 소문자로 들어온다
+    // Cloudflare에서는 headers는 소문자로 들어옴
     const authHeader = context.request.headers.get('authorization');
-
     if (!authHeader) {
       return new Response(JSON.stringify({ user: null }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const token = authHeader.replace('Bearer ', '').replace('bearer ', '');
-
+    const token = authHeader.replace(/Bearer\s+/i, '');
     if (!token) {
       return new Response(JSON.stringify({ user: null }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // 3) Edge 환경 호환 getUser
+    // Supabase Auth에서 user 가져오기
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
@@ -39,14 +32,34 @@ export async function onRequest(context) {
       });
     }
 
-    // 4) user 역할(role)이 supabase user.metadata에 있다고 가정
-    // FE가 바로 쓸 수 있는 구조
-    return new Response(JSON.stringify({ user }), {
+    // 🔥 profiles 테이블에서 role, name 가져오기
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('id, email, name, role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileErr || !profile) {
+      return new Response(JSON.stringify({ user: null }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 🔥 FE가 요구하는 AuthUser 구조로 변환
+    const authUser = {
+      id: profile.id,
+      email: profile.email ?? user.email ?? '',
+      name: profile.name ?? '',
+      role: profile.role,
+      accessToken: token,
+    };
+
+    return new Response(JSON.stringify({ user: authUser }), {
       headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (err) {
-    console.error('[auth-me] error', err);
+    console.error('auth-me error:', err);
     return new Response(JSON.stringify({ user: null }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
