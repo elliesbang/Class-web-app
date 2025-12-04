@@ -5,9 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: './',
 
-  plugins: [react()],
+  publicDir: '../',   // ← 루트에 있는 파일(_headers)도 dist로 복사됨
 
-  publicDir: 'public',   // ⭐⭐⭐ dist에 _headers 복사 필수
+  plugins: [react()],
 
   resolve: {
     alias: {
@@ -18,7 +18,6 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-
     rollupOptions: {
       output: {
         entryFileNames: `assets/[name].[hash].js`,
