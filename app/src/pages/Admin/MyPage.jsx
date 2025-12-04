@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 const QUICK_ACTIONS = [
-  { id: 'content', label: '콘텐츠 관리', href: '/admin/content' },
+  { id: 'classrooms', label: '강의실 관리', href: '/admin/classrooms' },
   { id: 'class', label: '수업 추가', href: '/admin/classroom/new' },
   { id: 'progress', label: '학습 현황', href: '/admin/analytics' },
 ];

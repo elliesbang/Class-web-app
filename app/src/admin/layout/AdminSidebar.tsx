@@ -6,7 +6,9 @@ const MENU_ITEMS = [
   { label: '수업 관리', to: '/admin/classes' },
   { label: '수강생 관리', to: '/admin/students' },
   { label: '과제·피드백 관리', to: '/admin/assignments' },
-  { label: '콘텐츠 관리', to: '/admin/content', icon: FolderKanban },
+  { label: '강의실 관리 (Classrooms)', to: '/admin/classrooms', icon: FolderKanban },
+  { label: '전체 공지 관리', to: '/admin/notices' },
+  { label: 'VOD 관리', to: '/admin/vod' },
 ];
 
 interface AdminSidebarProps {
