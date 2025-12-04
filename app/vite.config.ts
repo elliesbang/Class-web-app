@@ -5,7 +5,11 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: './',
 
-  publicDir: '../',   // ← 루트에 있는 파일(_headers)도 dist로 복사됨
+  // ❌ 절대 상위 폴더 지정 금지
+  // publicDir: '../',
+
+  // ✅ 앱 내부 public 폴더만 사용
+  publicDir: 'public',
 
   plugins: [react()],
 
