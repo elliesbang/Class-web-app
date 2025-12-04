@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthUser } from '../hooks/useAuthUser';
+import { useAuthUser } from '@/context/AuthContext';
 import { getVerifiedCode, setVerifiedCode, verifyCourseCode } from '../lib/course-verification';
 
 function CourseCard({ course, accentColor }: { [key: string]: any }) {

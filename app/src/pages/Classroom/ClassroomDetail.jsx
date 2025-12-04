@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+const buildAuthHeaders = () => {
+  if (typeof window === 'undefined') return {};
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const AssignmentSubmit = ({ classroomId, onSubmitted }) => {
   const [linkUrl, setLinkUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -12,12 +18,11 @@ const AssignmentSubmit = ({ classroomId, onSubmitted }) => {
     setStatus('제출 중...');
 
     try {
-      const token = localStorage.getItem('token');
       await fetch('/.netlify/functions/assignment/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...buildAuthHeaders(),
         },
         body: JSON.stringify({
           classroom_id: classroomId,
@@ -79,13 +84,12 @@ const AssignmentSubmit = ({ classroomId, onSubmitted }) => {
 
 const AssignmentList = ({ items = [], onChanged }) => {
   const handleDelete = async (assignmentId) => {
-    const token = localStorage.getItem('token');
     try {
       await fetch('/.netlify/functions/assignment/delete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...buildAuthHeaders(),
         },
         body: JSON.stringify({ assignment_id: assignmentId }),
       });
@@ -98,7 +102,6 @@ const AssignmentList = ({ items = [], onChanged }) => {
   };
 
   const handleEdit = async (assignmentId) => {
-    const token = localStorage.getItem('token');
     const nextLink = window.prompt('새 링크 URL을 입력하세요.');
     const nextImage = window.prompt('새 이미지 URL을 입력하세요.');
     if (nextLink === null && nextImage === null) return;
@@ -107,7 +110,7 @@ const AssignmentList = ({ items = [], onChanged }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...buildAuthHeaders(),
         },
         body: JSON.stringify({ assignment_id: assignmentId, link_url: nextLink, image_url: nextImage }),
       });
@@ -202,6 +205,7 @@ function ClassroomDetail() {
       try {
         const response = await fetch(`/.netlify/functions/classroom/detail?class_id=${classroomId}`, {
           signal: controller.signal,
+          headers: buildAuthHeaders(),
         });
         if (!response.ok) {
           throw new Error('강의실 정보를 불러오지 못했습니다.');
@@ -233,7 +237,10 @@ function ClassroomDetail() {
       setIsLoadingTabs(true);
       setError('');
       try {
-        const response = await fetch(`/.netlify/functions/classroom/tabs?class_id=${classroomId}`, { signal: controller.signal });
+        const response = await fetch(`/.netlify/functions/classroom/tabs?class_id=${classroomId}`, {
+          signal: controller.signal,
+          headers: buildAuthHeaders(),
+        });
         if (!response.ok) {
           throw new Error('탭 정보를 불러오지 못했습니다.');
         }
@@ -268,7 +275,10 @@ function ClassroomDetail() {
       setError('');
       try {
         const query = new URLSearchParams({ class_id: classroomId, tab: activeTab });
-        const response = await fetch(`/.netlify/functions/classroom-content?${query.toString()}`, { signal: controller.signal });
+        const response = await fetch(`/.netlify/functions/classroom-content?${query.toString()}`, {
+          signal: controller.signal,
+          headers: buildAuthHeaders(),
+        });
         if (!response.ok) {
           throw new Error('탭 콘텐츠를 불러오지 못했습니다.');
         }

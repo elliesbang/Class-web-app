@@ -30,6 +30,12 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 
   const studentId = authUser?.id ?? null;
 
+  const getAuthHeaders = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : null;
+  }, []);
+
   const [sessionNo, setSessionNo] = useState('1');
   const [sessions, setSessions] = useState<any[]>([]);
 
@@ -60,7 +66,10 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     setClassInfoError('');
 
     try {
-      const res = await fetch(`/api/class-info-get?id=${encodeURIComponent(classId)}`);
+      const headers = getAuthHeaders();
+      const res = await fetch(`/api/class-info-get?id=${encodeURIComponent(classId)}`, {
+        ...(headers ? { headers } : {}),
+      });
       if (!res.ok) throw new Error(`API error: ${res.status}`);
 
       const payload = await res.json();
@@ -75,7 +84,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     } finally {
       setClassInfoLoading(false);
     }
-  }, [classId]);
+  }, [classId, getAuthHeaders]);
 
   useEffect(() => {
     loadClassInfo();

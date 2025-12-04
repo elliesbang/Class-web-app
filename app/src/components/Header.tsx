@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import NotificationBell from './notifications/NotificationBell';
-import { useAuthUser } from '../hooks/useAuthUser';
+import { useAuthUser } from '@/context/AuthContext';
 import { LoginModalContext } from '../context/LoginModalContext';
 
 const Header: React.FC = () => {

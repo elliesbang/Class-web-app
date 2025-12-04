@@ -12,6 +12,9 @@ const resolveUrl = (input: string) => {
 const safeGetToken = () => {
   if (typeof window === 'undefined') return null;
 
+  const storedToken = localStorage.getItem('token');
+  if (storedToken) return storedToken;
+
   // ① 네가 직접 저장했을 가능성 있는 값
   const token1 = localStorage.getItem('sb-access-token');
 

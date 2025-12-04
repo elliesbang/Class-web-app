@@ -1,7 +1,7 @@
 import { useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuthUser } from '@/context/AuthContext';
 import { LoginModalContext } from '@/context/LoginModalContext';
 
 const cardClassName =

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuthUser } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 
 type ClassRow = {

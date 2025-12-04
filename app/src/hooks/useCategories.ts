@@ -21,8 +21,20 @@ export function useCategories(): UseCategoriesResult {
 
   useEffect(() => {
     async function load() {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+      if (!token) {
+        setCategories([]);
+        setLoading(false);
+        return;
+      }
+
       try {
-        const res = await fetch('/api/classroom/categories');
+        const res = await fetch('/categories', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         if (!res.ok) {
           throw new Error('카테고리 로딩 실패');
