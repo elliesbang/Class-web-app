@@ -6,7 +6,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && npm run build --workspace app && mkdir -p dist && cp -a app/dist/* dist/ && cp _headers dist/_headers"
-  }
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
     "bcryptjs": "^2.4.3",
