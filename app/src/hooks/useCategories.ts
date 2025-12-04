@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 
 export type Category = {
   id: number;
@@ -22,22 +21,21 @@ export function useCategories(): UseCategoriesResult {
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
+      try {
+        const res = await fetch('/api/classroom/categories');
 
-      const { data, error } = await supabase
-        .from('class_category')
-        .select('*')
-        .order('order_num', { ascending: true });
+        if (!res.ok) {
+          throw new Error('카테고리 로딩 실패');
+        }
 
-      if (error) {
-        console.error('카테고리 불러오기 오류:', error.message);
+        const json = await res.json();
+        setCategories(json.categories ?? []);
+      } catch (err) {
+        console.error('카테고리 불러오기 오류:', err);
         setError('카테고리를 불러오지 못했습니다.');
-        setCategories([]);
-      } else {
-        setCategories(data ?? []);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     load();
