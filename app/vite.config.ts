@@ -3,9 +3,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: './',            // ⭐⭐⭐ 반드시 추가!!
+  base: './',
 
   plugins: [react()],
+
+  publicDir: 'public',   // ⭐⭐⭐ dist에 _headers 복사 필수
 
   resolve: {
     alias: {
