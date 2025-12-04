@@ -1,42 +1,40 @@
-import { supabase } from '@/lib/supabaseClient';
+import { getAuthUser } from '../authUser';
 
-const API_BASE_URL = '/functions';
+const API_BASE_URL = '/api';
 
 const resolveUrl = (input: string) => {
   if (/^https?:\/\//.test(input)) return input;
-
   const normalized = input.startsWith('/') ? input : `/${input}`;
-  return `${API_BASE_URL}${normalized}`.replace(/\/{2,}/g, '/');
+  return `${API_BASE_URL}${normalized}`;
 };
 
-const parseJsonSafe = async <T>(response: Response): Promise<T> => {
+// ❗ Node 환경(localStorage 없음) 보호
+const safeGetToken = () => {
+  if (typeof window === 'undefined') return null;
+  return getAuthUser()?.accessToken ?? null;
+};
+
+const parseJsonSafe = async (response) => {
   const text = await response.text();
-  if (!text) return null as T;
+  if (!text) return null;
 
   try {
-    return JSON.parse(text) as T;
-  } catch (e) {
-    console.error('[apiClient] JSON parse error', e);
-    throw new Error('서버 응답 처리 오류');
+    return JSON.parse(text);
+  } catch (err) {
+    console.error('JSON parse error', err);
+    throw new Error('서버 응답 처리 실패');
   }
 };
 
-export type ApiFetchOptions = RequestInit & { skipJsonParse?: boolean };
-
-export const apiFetch = async <T = unknown>(
-  url: string,
-  options: ApiFetchOptions = {}
-): Promise<T> => {
+export async function apiFetch(url, options = {}) {
   const { skipJsonParse, headers, body, ...rest } = options;
-
   const resolvedUrl = resolveUrl(url);
 
-  // ⭐ 현재 로그인된 Supabase 세션 token 얻기 (localStorage token 금지)
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token ?? null;
+  const token = safeGetToken(); // 🔥 SSR-safe 토큰 접근
 
   const mergedHeaders = new Headers(headers);
   mergedHeaders.set('Accept', 'application/json');
+
   if (!(body instanceof FormData)) {
     mergedHeaders.set('Content-Type', 'application/json');
   }
@@ -52,12 +50,13 @@ export const apiFetch = async <T = unknown>(
   });
 
   if (!response.ok) {
-    throw new Error(response.statusText || '요청 실패');
+    const message = response.statusText || 'API 요청 실패';
+    throw new Error(message);
   }
 
   if (skipJsonParse || response.status === 204) {
-    return null as T;
+    return null;
   }
 
-  return parseJsonSafe<T>(response);
-};
+  return parseJsonSafe(response);
+}
