@@ -2,13 +2,27 @@ import { createClient } from '@supabase/supabase-js';
 
 export async function onRequest(context) {
   try {
+    // 1) Supabase 클라이언트 생성
     const supabase = createClient(
       context.env.SUPABASE_URL,
-      context.env.SUPABASE_ANON_KEY
+      context.env.SUPABASE_ANON_KEY,
+      {
+        global: {
+          fetch: (...args) => fetch(...args),
+        },
+      }
     );
 
-    // ⚠️ FE에서 보낸 Authorization 헤더 읽기
-    const token = context.request.headers.get('Authorization')?.replace('Bearer ', '');
+    // 2) Authorization 헤더는 소문자로 들어온다
+    const authHeader = context.request.headers.get('authorization');
+
+    if (!authHeader) {
+      return new Response(JSON.stringify({ user: null }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '').replace('bearer ', '');
 
     if (!token) {
       return new Response(JSON.stringify({ user: null }), {
@@ -16,7 +30,7 @@ export async function onRequest(context) {
       });
     }
 
-    // 🔥 Supabase에서 현재 user 정보 확인
+    // 3) Edge 환경 호환 getUser
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
@@ -25,14 +39,14 @@ export async function onRequest(context) {
       });
     }
 
-    // 필요하면 role도 DB에서 가져올 수 있음
-    // const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-
+    // 4) user 역할(role)이 supabase user.metadata에 있다고 가정
+    // FE가 바로 쓸 수 있는 구조
     return new Response(JSON.stringify({ user }), {
       headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (err) {
+    console.error('[auth-me] error', err);
     return new Response(JSON.stringify({ user: null }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
