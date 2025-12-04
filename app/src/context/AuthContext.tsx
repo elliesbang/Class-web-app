@@ -18,22 +18,24 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUserState] = useState<AuthUser | null>(() => getAuthUser());
+  // ❗ Cloudflare Pages 빌드 환경에서는 window/localStorage 없음
+  // → 초기 user는 항상 null로 두고, hydration에서 복원해야 함
+  const [user, setUserState] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 안전한 setter
   const setUser = (u: AuthUser | null) => {
     setUserState(u);
     setAuthUser(u);
   };
 
-  // 🔥 서버 auth-me 기반 로그인 유지
+  // 🔥 auth-me 서버 기반으로 User 인증 유지
   const loadUser = useCallback(async () => {
     setLoading(true);
 
     try {
-      // 1) Supabase 세션 먼저 확인
+      // 1) Supabase 세션 확인
       const { data: { session } } = await supabase.auth.getSession();
-
       const token = session?.access_token;
 
       if (!token) {
@@ -43,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // 2) 서버(auth-me)로 유효성 체크
+      // 2) 서버 인증 (/api/auth-me)
       const res = await apiFetch<{ user: AuthUser | null }>('/api/auth-me');
 
       if (!res?.user) {
@@ -53,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // 3) FE AuthUser로 저장
+      // 3) FE AuthUser 구조 저장
       setUser(res.user);
 
     } catch (err) {
@@ -66,20 +68,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // 초기 hydration
   useEffect(() => {
+    // 브라우저 환경에서만 localStorage 접근 가능
+    if (typeof window !== 'undefined') {
+      const saved = getAuthUser();
+      if (saved) {
+        setUserState(saved);
+      }
+    }
+
     loadUser();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!session?.access_token) {
-        clearAuthUser();
-        setUser(null);
-        return;
+    // Supabase auth 이벤트 구독
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!session?.access_token) {
+          clearAuthUser();
+          setUser(null);
+          return;
+        }
+
+        await loadUser();
       }
+    );
 
-      await loadUser();
-    });
-
-    return () => subscription.subscription.unsubscribe();
+    return () => {
+      subscription?.subscription?.unsubscribe?.();
+    };
   }, [loadUser]);
 
   return (
