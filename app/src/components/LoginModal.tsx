@@ -94,8 +94,8 @@ const LoginModal = ({ onClose }: { onClose: () => void }) => {
           await supabase.auth.signOut();
           return;
         }
-        closeModal();
-        navigate('/admin/my');
+       closeModal();
+navigate('/');
       } catch (caught) {
         console.error('[LoginModal] admin login failed', caught);
         alert('관리자 로그인 실패 또는 권한 없음');
