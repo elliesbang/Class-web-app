@@ -1,16 +1,55 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import VodContentList from '@/components/admin/vod/VodContentList';
 import VodVideoForm from '@/components/admin/vod/VodVideoForm';
+import { fetchVodCategories } from '@/lib/api/vod-categories';
+
+type VodCategory = {
+  id: string;
+  name: string;
+};
 
 const VodContentTabs = () => {
   const [refreshToken, setRefreshToken] = useState(0);
   const [editingItem, setEditingItem] = useState<Record<string, any> | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<VodCategory[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCategories = async () => {
+      try {
+        const categories = await fetchVodCategories();
+        if (!isMounted) return;
+        setCategoryOptions(categories as VodCategory[]);
+        setSelectedCategoryId((prev) => prev || (categories?.[0]?.id?.toString?.() ?? ''));
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('[vod-content] failed to load categories', error);
+        setCategoryOptions([]);
+        setSelectedCategoryId('');
+      }
+    };
+
+    void loadCategories();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSaved = () => {
     setRefreshToken((prev) => prev + 1);
     setEditingItem(null);
   };
+
+  const handleCategoryChange = (nextCategoryId: string) => {
+    setSelectedCategoryId(nextCategoryId);
+    setEditingItem(null);
+  };
+
+  const effectiveCategoryId = selectedCategoryId || categoryOptions[0]?.id?.toString?.() || '';
 
   return (
     <div className="space-y-6">
@@ -22,10 +61,23 @@ const VodContentTabs = () => {
       </header>
 
       <section className="rounded-3xl bg-white p-6 shadow-soft">
-        <VodVideoForm onSaved={handleSaved} editingItem={editingItem} onCancelEdit={() => setEditingItem(null)} />
+        <VodVideoForm
+          categoryId={effectiveCategoryId}
+          categoryOptions={categoryOptions}
+          onCategoryChange={handleCategoryChange}
+          onSaved={handleSaved}
+          editingItem={editingItem}
+          onCancelEdit={() => setEditingItem(null)}
+        />
 
         <div className="mt-8">
-          <VodContentList refreshToken={refreshToken} onEdit={setEditingItem} onDeleted={handleSaved} />
+          <VodContentList
+            categoryId={effectiveCategoryId}
+            categoryOptions={categoryOptions}
+            refreshToken={refreshToken}
+            onEdit={setEditingItem}
+            onDeleted={handleSaved}
+          />
         </div>
       </section>
     </div>

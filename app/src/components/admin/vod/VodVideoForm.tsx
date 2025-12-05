@@ -1,7 +1,15 @@
 import type { FormEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+type VodCategoryOption = {
+  id: string;
+  name: string;
+};
 
 type VodVideoFormProps = {
+  categoryId: string;
+  categoryOptions: VodCategoryOption[];
+  onCategoryChange: (categoryId: string) => void;
   onSaved: () => void | Promise<void>;
   editingItem: Record<string, any> | null;
   onCancelEdit: () => void;
@@ -13,20 +21,38 @@ const toInt = (value: string | number | null | undefined) => {
   return Number.isNaN(numberValue) ? null : numberValue;
 };
 
-const initialState = {
-  title: '',
-  description: '',
-  videoUrl: '',
-  displayOrder: '0',
-};
+const VodVideoForm = ({
+  categoryId,
+  categoryOptions,
+  onCategoryChange,
+  onSaved,
+  editingItem,
+  onCancelEdit,
+}: VodVideoFormProps) => {
+  const initialCategoryId = useMemo(
+    () => categoryId || categoryOptions[0]?.id?.toString?.() || '',
+    [categoryId, categoryOptions],
+  );
 
-const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: VodVideoFormProps) => {
-  const [formState, setFormState] = useState(initialState);
+  const [formState, setFormState] = useState({
+    title: '',
+    description: '',
+    videoUrl: '',
+    displayOrder: '0',
+    categoryId: initialCategoryId,
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!editingItem) {
-      setFormState(initialState);
+      setFormState((prev) => ({
+        ...prev,
+        title: '',
+        description: '',
+        videoUrl: '',
+        displayOrder: '0',
+        categoryId: initialCategoryId,
+      }));
       return;
     }
 
@@ -35,8 +61,14 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: VodVideoFormProps)
       description: editingItem.description ?? '',
       videoUrl: editingItem.url ?? editingItem.videoUrl ?? '',
       displayOrder: String(editingItem.order_num ?? editingItem.displayOrder ?? '0'),
+      categoryId:
+        editingItem.category_id?.toString?.() || editingItem.categoryId?.toString?.() || initialCategoryId,
     });
-  }, [editingItem]);
+  }, [editingItem, initialCategoryId]);
+
+  useEffect(() => {
+    setFormState((prev) => ({ ...prev, categoryId: initialCategoryId }));
+  }, [initialCategoryId]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -54,6 +86,7 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: VodVideoFormProps)
         title: formState.title,
         description: formState.description,
         url: formState.videoUrl,
+        category_id: toInt(formState.categoryId),
         order_num: toInt(formState.displayOrder) ?? 0,
       };
 
@@ -68,7 +101,13 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: VodVideoFormProps)
       }
 
       await Promise.resolve(onSaved());
-      setFormState(initialState);
+      setFormState({
+        title: '',
+        description: '',
+        videoUrl: '',
+        displayOrder: '0',
+        categoryId: initialCategoryId,
+      });
       onCancelEdit();
     } catch (error) {
       console.error('[content] vod video save error', error);
@@ -80,6 +119,25 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: VodVideoFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-semibold text-ellieGray">카테고리</label>
+        <select
+          value={formState.categoryId}
+          onChange={(event) => {
+            const nextId = event.target.value;
+            setFormState((prev) => ({ ...prev, categoryId: nextId }));
+            onCategoryChange(nextId);
+          }}
+          className="rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
+        >
+          {categoryOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-ellieGray">제목</label>
         <input
