@@ -8,9 +8,10 @@ export async function onRequest({ request, env }) {
     const supabase = getClient(env);
     const url = new URL(request.url);
     const studentId = url.searchParams.get('student');
+    const classId = url.searchParams.get('class_id') || url.searchParams.get('classId');
 
-    if (!studentId) {
-      return new Response(JSON.stringify({ error: 'Missing student id' }), {
+    if (!studentId || !classId) {
+      return new Response(JSON.stringify({ error: 'Missing student or class id' }), {
         status: 400,
       });
     }
@@ -19,6 +20,7 @@ export async function onRequest({ request, env }) {
       .from('assignments')
       .select('*')
       .eq('student_id', studentId)
+      .eq('class_id', classId)
       .order('created_at', { ascending: false });
 
     if (error) {

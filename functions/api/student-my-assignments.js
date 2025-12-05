@@ -17,13 +17,17 @@ export async function onRequest({ request, env }) {
 
     const { data: auth } = await supabase.auth.getUser(token);
     const studentId = auth?.user?.id ?? null;
+    const { searchParams } = new URL(request.url);
+    const classId = searchParams.get('class_id') || searchParams.get('classId');
 
-    if (!studentId) return new Response(JSON.stringify({ assignments: [] }), { status: 200 });
+    if (!studentId || !classId)
+      return new Response(JSON.stringify({ assignments: [] }), { status: 200 });
 
     const { data, error } = await supabase
       .from("assignments")
       .select("*")
       .eq("student_id", studentId)
+      .eq("class_id", classId)
       .order("created_at", { ascending: false })
       .limit(10);
 
