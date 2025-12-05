@@ -27,16 +27,15 @@ const GlobalContentList = ({ refreshToken, onEdit, onDeleted }: GlobalContentLis
 
       try {
         const response = await fetch('/api/admin-content-global-list');
-        if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as
+          | { success?: boolean; items?: Record<string, any>[] }
+          | null;
+
+        if (!response.ok || !data?.success) {
           throw new Error('콘텐츠 목록을 불러올 수 없습니다.');
         }
-        const data = await response.json();
         if (!isMounted) return;
-        const payloadItems = Array.isArray(data)
-          ? data
-          : Array.isArray((data as Record<string, any>)?.data)
-            ? (data as Record<string, any>).data
-            : [];
+        const payloadItems = Array.isArray(data.items) ? data.items : [];
         setItems(payloadItems);
       } catch (caught) {
         if (!isMounted) return;

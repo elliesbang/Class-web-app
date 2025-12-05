@@ -20,7 +20,7 @@ const getSupabaseClient = (env) => {
   return createClient(url, key, { auth: { persistSession: false }, global: { fetch } })
 }
 
-export const onRequestGet = async ({ env }) => {
+export async function onRequestGet({ env }) {
   try {
     const supabase = getSupabaseClient(env)
 
@@ -30,13 +30,14 @@ export const onRequestGet = async ({ env }) => {
       .eq('type', 'global_notice')
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('[global/list] ERROR:', error)
+      return jsonResponse({ success: false, items: [], error: error.message }, 500)
+    }
 
-    return jsonResponse({ data: data ?? [] })
+    return jsonResponse({ success: true, items: data ?? [] })
   } catch (error) {
     console.error('[global/list] ERROR:', error)
-    return jsonResponse({ error: error.message ?? 'Internal Error' }, 500)
+    return jsonResponse({ success: false, items: [], error: error.message }, 500)
   }
 }
-
-export const onRequest = async () => jsonResponse({ error: 'Method not allowed' }, 405)

@@ -33,8 +33,8 @@ const ClassroomContentList = ({
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const endpointSuffix = useMemo(() => {
-    if (type === 'classroomVideo') return 'classroom-video';
-    if (type === 'classroomNotice') return 'classroom-notice';
+    if (type === 'classroomVideo') return 'classroomVideo';
+    if (type === 'classroomNotice') return 'classroomNotice';
     return 'material';
   }, [type]);
 
@@ -62,16 +62,15 @@ const ClassroomContentList = ({
           query.set('category_id', categoryId);
         }
         const response = await fetch(`/api/admin-content-${endpointSuffix}-list?${query.toString()}`);
-        if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as
+          | { success?: boolean; items?: Record<string, any>[] }
+          | null;
+
+        if (!response.ok || !data?.success) {
           throw new Error('콘텐츠 목록을 불러올 수 없습니다.');
         }
-        const data = await response.json();
         if (!isMounted) return;
-        const payloadItems = Array.isArray(data)
-          ? data
-          : Array.isArray((data as Record<string, any>)?.data)
-            ? (data as Record<string, any>).data
-            : [];
+        const payloadItems = Array.isArray(data.items) ? data.items : [];
         setItems(payloadItems);
       } catch (caught) {
         if (!isMounted) return;

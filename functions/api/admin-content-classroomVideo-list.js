@@ -1,5 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
+const jsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
+
 const getSupabaseClient = (env) => {
   const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
   const key =
@@ -9,44 +15,38 @@ const getSupabaseClient = (env) => {
     env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
     env.VITE_SUPABASE_ANON_KEY
 
-  return createClient(url, key)
+  if (!url || !key) throw new Error('Missing Supabase credentials')
+
+  return createClient(url, key, { auth: { persistSession: false }, global: { fetch } })
 }
 
-const jsonResponse = (body, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-export async function onRequest({ request, env }) {
+export async function onRequestGet({ request, env }) {
   try {
-    if (request.method !== 'GET') {
-      return jsonResponse({ error: 'Method not allowed' }, 405)
-    }
-
     const supabase = getSupabaseClient(env)
 
     const { searchParams } = new URL(request.url)
-    const classroomId = searchParams.get('classroom_id')
+    const classroomIdParam = searchParams.get('classroom_id')
+    const classroomId = classroomIdParam !== null ? Number(classroomIdParam) : null
 
-    if (!classroomId) {
-      return jsonResponse({ error: 'classroom_id is required' }, 400)
+    if (classroomId === null || Number.isNaN(classroomId)) {
+      return jsonResponse({ success: false, items: [], error: 'classroom_id is required' }, 400)
     }
 
     const { data, error } = await supabase
-      .from('classroom_content')
+      .from('classroom_videos')
       .select('*')
       .eq('class_id', classroomId)
-      .eq('type', 'video')
-      .order('display_order', { ascending: true })
+      .order('order_num', { ascending: true })
       .order('created_at', { ascending: false })
 
     if (error) {
-      throw error
+      console.error('[classroom_videos/list] error', error)
+      return jsonResponse({ success: false, items: [], error: error.message }, 500)
     }
 
-    return jsonResponse(data ?? [])
+    return jsonResponse({ success: true, items: data ?? [] })
   } catch (error) {
-    return jsonResponse({ error: error.message }, 500)
+    console.error('[classroom_videos/list] error', error)
+    return jsonResponse({ success: false, items: [], error: error.message }, 500)
   }
 }
