@@ -20,20 +20,12 @@ const BottomNav = () => {
   const { user: authUser, loading } = useAuth();
 
   const navItems = useMemo(() => {
-    if (!loading && authUser?.role === 'admin') {
-      return [];
-    }
-
     if (!loading && authUser) {
       return [...baseItems, { label: 'My', to: '/my', Icon: User }];
     }
 
     return baseItems;
   }, [authUser, loading]);
-
-  if (navItems.length === 0) {
-    return null;
-  }
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 bg-[#fefaf4] px-5 pb-6 pt-3 shadow-[0_-6px_20px_rgba(0,0,0,0.05)]">
