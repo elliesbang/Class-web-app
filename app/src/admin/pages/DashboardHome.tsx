@@ -4,7 +4,7 @@ const quickLinks = [
   {
     title: '수업 관리',
     description: '수업을 생성하고 과제 규칙을 설정하세요.',
-    to: '/admin/classes',
+    to: '/admin/lessons',
     action: '수업 목록 보기',
   },
   {

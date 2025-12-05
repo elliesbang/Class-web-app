@@ -29,6 +29,7 @@ import ClassListPage from './admin/pages/Classes/ClassListPage';
 import AssignmentAdminTab from './pages/admin/tabs/AssignmentAdminTab';
 import StudentsPage from './admin/pages/Students/StudentsPage';
 import ClassroomContentTabs from './pages/admin/classroom/ClassroomContentTabs';
+import AssignmentFeedbackDashboard from './pages/admin/classroom/AssignmentFeedbackDashboard';
 import GlobalContentTabs from './pages/admin/global/GlobalContentTabs';
 import VodContentTabs from './pages/admin/vod/VodContentTabs';
 import AdminRoutes from './routes/AdminRoutes';
@@ -67,16 +68,18 @@ function AppRoutes() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardHome />} />
-        <Route path="classes" element={<ClassListPage />} />
-        <Route path="classes/create" element={<ClassCreatePage />} />
-        <Route path="classes/:id/edit" element={<ClassEditPage />} />
-        <Route path="classes/:id" element={<ClassDetailPage />} />
+        <Route path="lessons" element={<ClassListPage />} />
+        <Route path="lessons/new" element={<ClassCreatePage />} />
+        <Route path="lessons/:lesson_id/edit" element={<ClassEditPage />} />
+        <Route path="lessons/:lesson_id" element={<ClassDetailPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="assignments" element={<AssignmentAdminTab />} />
         <Route path="global" element={<GlobalContentTabs />} />
         <Route path="vod" element={<VodContentTabs />} />
-        <Route path="classrooms" element={<Navigate to="/admin/classes" replace />} />
-        <Route path="classrooms/:class_id" element={<ClassroomContentTabs />} />
+        <Route path="classrooms" element={<ClassroomContentTabs />} />
+        <Route path="classrooms/:class_id" element={<Navigate to="content" replace />} />
+        <Route path="classrooms/:class_id/content" element={<ClassroomContentTabs />} />
+        <Route path="classrooms/:class_id/assignments" element={<AssignmentFeedbackDashboard />} />
       </Route>
     </Routes>
   );

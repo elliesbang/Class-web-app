@@ -19,7 +19,8 @@ const initialRule: AssignmentRule = {
 };
 
 const ClassEditPage = () => {
-  const { id } = useParams();
+  const { lesson_id } = useParams();
+  const lessonId = lesson_id;
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
@@ -36,10 +37,10 @@ const ClassEditPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!id) return;
+      if (!lessonId) return;
       setLoading(true);
       const [{ data, error: classError }, { data: categoryData, error: categoryError }] = await Promise.all([
-        getClass(id),
+        getClass(lessonId),
         getClassCategories(),
       ]);
 
@@ -71,11 +72,11 @@ const ClassEditPage = () => {
     };
 
     fetchData();
-  }, [id]);
+  }, [lessonId]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!id) return;
+    if (!lessonId) return;
 
     setSaving(true);
     setError(null);
@@ -102,7 +103,7 @@ const ClassEditPage = () => {
       end_date: endDate || null,
     };
 
-    const { error: submitError } = await updateClass(id, payload);
+    const { error: submitError } = await updateClass(lessonId, payload);
     setSaving(false);
 
     if (submitError) {
@@ -111,7 +112,7 @@ const ClassEditPage = () => {
     }
 
     alert('수업 정보가 수정되었습니다.');
-    navigate('/admin/classes');
+    navigate('/admin/lessons');
   };
 
   if (loading) {
@@ -132,7 +133,7 @@ const ClassEditPage = () => {
           <>
             <button
               type="button"
-              onClick={() => navigate('/admin/classes')}
+              onClick={() => navigate('/admin/lessons')}
               className="rounded-full bg-[#fff7d6] px-4 py-2 text-sm font-semibold text-[#3f3a37] shadow-inner hover:bg-[#ffe8a3]"
             >
               취소

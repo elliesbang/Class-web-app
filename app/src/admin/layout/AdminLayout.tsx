@@ -9,8 +9,8 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard': '대시보드 홈',
-  '/admin/classes': '수업 관리',
-  '/admin/classes/create': '수업 생성',
+  '/admin/lessons': '수업 관리',
+  '/admin/lessons/new': '수업 생성',
   '/admin/students': '수강생 관리',
   '/admin/assignments': '과제·피드백 관리',
 };

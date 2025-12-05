@@ -263,7 +263,7 @@ const AdminCourseDetail = () => {
           <button
             type="button"
             className="mt-4 rounded-full bg-[#ffd331] px-6 py-2 text-sm font-semibold text-[#404040] shadow-md transition-all hover:-translate-y-0.5 hover:bg-[#e6bd2c]"
-            onClick={() => navigate('/admin/class')}
+            onClick={() => navigate('/admin/lessons')}
           >
             수업 목록으로 이동
           </button>
@@ -289,7 +289,7 @@ const AdminCourseDetail = () => {
           <button
             type="button"
             className="rounded-full bg-[#ffd331] px-4 py-2 text-sm font-semibold text-[#404040] shadow-md transition-all hover:-translate-y-0.5 hover:bg-[#e6bd2c]"
-            onClick={() => navigate(`/admin/classrooms/${id}`)}
+            onClick={() => navigate(`/admin/classrooms/${id}/content`)}
           >
             콘텐츠 관리로 이동
           </button>
@@ -421,7 +421,7 @@ const AdminCourseDetail = () => {
               <button
                 type="button"
                 className="rounded-full border border-[#e9dccf] bg-white px-4 py-2 text-sm font-semibold text-[#404040] transition-all hover:-translate-y-0.5 hover:border-[#ffd331]"
-                onClick={() => navigate(`/admin/classrooms/${id}`)}
+                onClick={() => navigate(`/admin/classrooms/${id}/content`)}
               >
                 콘텐츠 관리로 이동
               </button>
