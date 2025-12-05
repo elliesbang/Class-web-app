@@ -6,7 +6,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import MainLayout from './layouts/MainLayout';
 import Home from './pages/home/Home';
-import VodList from '@/pages/Vod/VodList';
+import VodPage from '@/pages/vod/VodPage';
 import Classroom from './pages/Classroom';
 import MyPage from './pages/MyPage.jsx';
 import Notices from './pages/admin/Notices';
@@ -31,7 +31,6 @@ import StudentsPage from './admin/pages/Students/StudentsPage';
 import ClassroomContentTabs from './pages/admin/classroom/ClassroomContentTabs';
 import GlobalContentTabs from './pages/admin/global/GlobalContentTabs';
 import VodContentTabs from './pages/admin/vod/VodContentTabs';
-import VodCategoryPage from './pages/admin/vod/VodCategoryPage';
 import AdminRoutes from './routes/AdminRoutes';
 
 import LoginModal from './components/LoginModal';
@@ -62,7 +61,7 @@ function AppRoutes() {
         {AdminRoutes()}
 
         <Route path="/signup" element={<Signup />} />
-        <Route path="/vod" element={<VodList />} />
+        <Route path="/vod" element={<VodPage />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
@@ -76,7 +75,6 @@ function AppRoutes() {
         <Route path="assignments" element={<AssignmentAdminTab />} />
         <Route path="global" element={<GlobalContentTabs />} />
         <Route path="vod" element={<VodContentTabs />} />
-        <Route path="vod/categories" element={<VodCategoryPage />} />
         <Route path="classrooms" element={<Navigate to="/admin/classes" replace />} />
         <Route path="classrooms/:class_id" element={<ClassroomContentTabs />} />
       </Route>
