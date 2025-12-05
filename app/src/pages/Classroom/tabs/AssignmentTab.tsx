@@ -41,7 +41,27 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 
   const [certificateUrl, setCertificateUrl] = useState('');
 
-  const sessionCount = useMemo(() => getSessionCount(classInfo?.name ?? classInfo?.code ?? ''), [classInfo]);
+  const sessionCount = useMemo(() => {
+    const dbSessions =
+      classInfo?.total_sessions ??
+      classInfo?.totalSessions ??
+      classInfo?.sessions_count ??
+      classInfo?.session_count ??
+      classInfo?.sessionCount ??
+      null;
+
+    if (typeof dbSessions === 'number' && dbSessions > 0) return dbSessions;
+
+    const maxSessionNo = assignments.reduce((max, item) => {
+      const value = Number(item.session_no ?? 0);
+      return Number.isFinite(value) ? Math.max(max, value) : max;
+    }, 0);
+
+    if (maxSessionNo > 0) return maxSessionNo;
+
+    const fallback = getSessionCount(classInfo?.name ?? classInfo?.code ?? '');
+    return Math.max(fallback || 0, 1);
+  }, [assignments, classInfo]);
 
   const completedSessions = useMemo(
     () => new Set(assignments.map((item) => item.session_no)).size,
@@ -62,7 +82,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 
     try {
       const headers = getAuthHeaders();
-      const res = await fetch(`/api/class-info-get?id=${encodeURIComponent(classId)}`, {
+      const res = await fetch(`/api/classroom-info?class_id=${encodeURIComponent(classId)}`, {
         ...(headers ? { headers } : {}),
       });
       if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -211,7 +231,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       )}
 
       <AssignmentUploadForm
-        className={classInfo?.name ?? ''}
+        sessionCount={sessionCount}
         onSubmit={handleSubmit}
         allowSubmission={allowSubmission}
         submitting={isSubmitting}

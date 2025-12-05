@@ -30,7 +30,7 @@ export default function StudentMyPage() {
   // 📌 Cloudflare Functions API 주소
   // ------------------------------
   const API_CLASSROOM = `/api/student-classrooms?student=${studentId}`;
-  const API_ASSIGNMENT = `/api/student-assignments?student=${studentId}`;
+  const API_ASSIGNMENT_BASE = `/api/student-assignments?student=${studentId}`;
   const API_FEEDBACK = `/api/student-feedback?student=${studentId}`;
   const API_COURSE = `/api/student-courses`;
 
@@ -44,32 +44,58 @@ export default function StudentMyPage() {
     setLoading(true);
     setError(null);
 
-    Promise.all([
-      fetchJSON(API_CLASSROOM),
-      fetchJSON(API_ASSIGNMENT),
-      fetchJSON(API_FEEDBACK),
-      fetchJSON(API_COURSE),
-    ])
-      .then(([classroomRes, assignmentRes, feedbackRes, courseRes]) => {
+    const load = async () => {
+      try {
+        const classroomRes = await fetchJSON(API_CLASSROOM);
         if (cancel) return;
 
-        setClassrooms(classroomRes?.items ?? []);
+        const classroomItems = classroomRes?.items ?? [];
+        setClassrooms(classroomItems);
+
+        const searchClassId = typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('classId')
+          : null;
+
+        const derivedClassId =
+          searchClassId ||
+          classroomItems[0]?.classroom_id ||
+          classroomItems[0]?.class_id ||
+          classroomItems[0]?.id ||
+          null;
+
+        const assignmentUrl = derivedClassId
+          ? `${API_ASSIGNMENT_BASE}&class_id=${derivedClassId}`
+          : null;
+
+        const [assignmentRes, feedbackRes, courseRes] = await Promise.all([
+          assignmentUrl ? fetchJSON(assignmentUrl) : Promise.resolve({ items: [] }),
+          fetchJSON(
+            derivedClassId
+              ? `${API_FEEDBACK}&class_id=${derivedClassId}`
+              : API_FEEDBACK,
+          ),
+          fetchJSON(API_COURSE),
+        ]);
+
+        if (cancel) return;
+
         setAssignments(assignmentRes?.items ?? []);
         setFeedbacks(feedbackRes?.items ?? []);
         setCourses(courseRes?.items ?? []);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (cancel) return;
         console.error('MyPage Load Failed:', err);
         setError(err);
-      })
-      .finally(() => {
+      } finally {
         if (cancel) return;
         setLoading(false);
-      });
+      }
+    };
+
+    void load();
 
     return () => (cancel = true);
-  }, [studentId]);
+  }, [API_ASSIGNMENT_BASE, API_CLASSROOM, API_COURSE, API_FEEDBACK, studentId]);
 
   // ------------------------------
   // 📌 가까운 주차(week) 정렬

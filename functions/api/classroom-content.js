@@ -7,7 +7,7 @@ export async function onRequest({ request, env }) {
   try {
     const supabase = getClient(env);
     const { searchParams } = new URL(request.url);
-    const classId = searchParams.get("classId");
+    const classId = searchParams.get("class_id") || searchParams.get("classId");
 
     if (!classId) {
       return new Response(JSON.stringify({ error: "missing classId" }), {

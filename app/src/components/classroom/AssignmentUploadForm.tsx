@@ -1,9 +1,7 @@
 import React, { useMemo, useState } from 'react';
 
-import { getSessionCount } from '@/lib/utils/getSessionCount';
-
 type AssignmentUploadFormProps = {
-  className: string;
+  sessionCount: number;
   onSubmit: (values: {
     sessionNo: number;
     assignmentType: 'image' | 'link' | 'text';
@@ -18,14 +16,14 @@ type AssignmentUploadFormProps = {
 };
 
 const AssignmentUploadForm = ({
-  className,
+  sessionCount,
   onSubmit,
   allowSubmission,
   submitting,
   submitError,
   statusMessage,
 }: AssignmentUploadFormProps) => {
-  const sessionCount = useMemo(() => getSessionCount(className), [className]);
+  const safeSessionCount = useMemo(() => Math.max(1, Number(sessionCount) || 0), [sessionCount]);
   const [sessionNo, setSessionNo] = useState(1);
   const [assignmentType, setAssignmentType] = useState<'image' | 'link' | 'text'>('image');
   const [linkUrl, setLinkUrl] = useState('');
@@ -33,13 +31,13 @@ const AssignmentUploadForm = ({
   const [imageBase64, setImageBase64] = useState('');
   const [imageName, setImageName] = useState('');
 
-  const sessions = useMemo(() => Array.from({ length: sessionCount }, (_, idx) => idx + 1), [sessionCount]);
+  const sessions = useMemo(() => Array.from({ length: safeSessionCount }, (_, idx) => idx + 1), [safeSessionCount]);
 
   React.useEffect(() => {
-    if (sessionNo > sessionCount) {
+    if (sessionNo > safeSessionCount) {
       setSessionNo(1);
     }
-  }, [sessionCount, sessionNo]);
+  }, [safeSessionCount, sessionNo]);
 
   const canSubmit = useMemo(() => {
     if (assignmentType === 'image') return !!imageBase64;
