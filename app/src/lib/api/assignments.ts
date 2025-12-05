@@ -7,22 +7,24 @@ export type AssignmentWithRelations = Assignment & {
 };
 
 // -----------------------------
-// ✔ payload 타입 (classroom_id 기반)
+// ✔ payload 타입 (class_id 기반)
 // -----------------------------
-type CreateAssignmentPayload = {
-  classroom_id: number;
+export type CreateAssignmentPayload = {
+  class_id: number;
   student_id: string;
   session_no: number;
+  content_type: 'image' | 'link' | 'text';
   image_base64?: string | null;
   link_url?: string | null;
+  text_content?: string | null;
 };
 
 // -----------------------------
-// ✔ list 파라미터 (classroom_id 기반)
+// ✔ list 파라미터 (class_id 기반)
 // -----------------------------
 type ListAssignmentsParams = {
-  classroom_id: number;
-  student_id: string;
+  class_id: number;
+  student_id?: string;
   session_no?: number;
 };
 
@@ -60,7 +62,7 @@ const jsonFetch = async <T>(url: string, options: RequestInit = {}): Promise<T> 
 // -----------------------------
 export const submitAssignment = async (payload: CreateAssignmentPayload): Promise<Assignment> => {
   const response = await jsonFetch<{ assignment: Assignment }>(
-    '/api/assignments-create',
+    '/api/assignments-submit',
     {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -77,8 +79,10 @@ export const fetchAssignments = async (
 ): Promise<AssignmentWithRelations[]> => {
   const searchParams = new URLSearchParams();
 
-  searchParams.set('classroom_id', String(params.classroom_id));
-  searchParams.set('student_id', params.student_id);
+  searchParams.set('class_id', String(params.class_id));
+  if (params.student_id) {
+    searchParams.set('student_id', params.student_id);
+  }
   if (params.session_no) {
     searchParams.set('session_no', String(params.session_no));
   }

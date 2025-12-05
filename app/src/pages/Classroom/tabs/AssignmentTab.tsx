@@ -1,25 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import AssignmentList from '@/components/classroom/AssignmentList';
+import AssignmentProgressBar from '@/components/classroom/AssignmentProgressBar';
+import AssignmentUploadForm from '@/components/classroom/AssignmentUploadForm';
+import CertificateDownload from '@/components/classroom/CertificateDownload';
+import { fetchAssignments, submitAssignment, type AssignmentWithRelations, type CreateAssignmentPayload } from '@/lib/api/assignments';
 import { getAuthUser } from '@/lib/authUser';
-import { fetchAssignments, submitAssignment } from '@/lib/api/assignments';
-import { supabase } from '@/lib/supabaseClient';
-import type { Assignment } from '@/types/db';
+import { getSessionCount } from '@/lib/utils/getSessionCount';
 
 type AssignmentTabProps = {
   classId: string;
-};
-
-const formatDateTime = (value?: string) => {
-  if (!value) return '';
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(d);
 };
 
 function AssignmentTab({ classId }: AssignmentTabProps) {
@@ -36,14 +26,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     return token ? { Authorization: `Bearer ${token}` } : null;
   }, []);
 
-  const [sessionNo, setSessionNo] = useState('1');
-  const [sessions, setSessions] = useState<any[]>([]);
-
-  const [linkUrl, setLinkUrl] = useState('');
-  const [imageBase64, setImageBase64] = useState('');
-  const [imageName, setImageName] = useState('');
-
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentWithRelations[]>([]);
   const [loadingList, setLoadingList] = useState(false);
 
   const [submitError, setSubmitError] = useState('');
@@ -52,11 +35,23 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
-  const canSubmit = useMemo(() => !!linkUrl.trim() || !!imageBase64, [imageBase64, linkUrl]);
-
   const [classInfo, setClassInfo] = useState<any>(null);
   const [classInfoError, setClassInfoError] = useState('');
   const [classInfoLoading, setClassInfoLoading] = useState(false);
+
+  const [certificateUrl, setCertificateUrl] = useState('');
+
+  const sessionCount = useMemo(() => getSessionCount(classInfo?.name ?? classInfo?.code ?? ''), [classInfo]);
+
+  const completedSessions = useMemo(
+    () => new Set(assignments.map((item) => item.session_no)).size,
+    [assignments],
+  );
+
+  const isCompleted = useMemo(
+    () => sessionCount > 0 && completedSessions === sessionCount && sessionCount > 0,
+    [completedSessions, sessionCount],
+  );
 
   // -------------------------
   // ✔ 1) 수업 날짜 불러오기
@@ -91,42 +86,6 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
   }, [loadClassInfo]);
 
   // -------------------------
-  // ✔ 2) 세션 목록 로드
-  // -------------------------
-  useEffect(() => {
-    const loadSessions = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('classroom_sessions')
-          .select('*')
-          .eq('classroom_id', Number(classId))
-          .order('session_no');
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          setSessions(data);
-          setSessionNo(String(data[0].session_no));
-        } else {
-          const fallback = Array.from({ length: 15 }).map((_, i) => ({
-            session_no: i + 1,
-          }));
-          setSessions(fallback);
-          setSessionNo('1');
-        }
-      } catch {
-        const fallback = Array.from({ length: 15 }).map((_, i) => ({
-          session_no: i + 1,
-        }));
-        setSessions(fallback);
-        setSessionNo('1');
-      }
-    };
-
-    loadSessions();
-  }, [classId]);
-
-  // -------------------------
   // ✔ 3) 제출 기간 체크
   // -------------------------
   const allowSubmission = useMemo(() => {
@@ -152,7 +111,7 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
 
     try {
       const list = await fetchAssignments({
-        classroom_id: Number(classId),
+        class_id: Number(classId),
         student_id: studentId,
       });
 
@@ -169,12 +128,39 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
     loadAssignments();
   }, [loadAssignments]);
 
+  useEffect(() => {
+    const generateCertificate = async () => {
+      if (!isCompleted || !studentId || !classId) return;
+      if (certificateUrl) return;
+
+      try {
+        const headers = getAuthHeaders();
+        const res = await fetch(`/api/certificate-generate?class_id=${encodeURIComponent(classId)}&user_id=${encodeURIComponent(studentId)}`, {
+          ...(headers ? { headers } : {}),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setCertificateUrl(data.url ?? '');
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    generateCertificate();
+  }, [certificateUrl, classId, getAuthHeaders, isCompleted, studentId]);
+
   // -------------------------
   // ✔ 5) 과제 제출
   // -------------------------
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async (values: {
+    sessionNo: number;
+    assignmentType: 'image' | 'link' | 'text';
+    linkUrl?: string;
+    textContent?: string;
+    imageBase64?: string;
+  }) => {
     setSubmitError('');
     setStatusMessage('');
 
@@ -188,27 +174,20 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
       return;
     }
 
-    if (!linkUrl.trim() && !imageBase64) {
-      setSubmitError('이미지 또는 링크를 입력해주세요.');
-      return;
-    }
-
-    const payload = {
-      classroom_id: Number(classId),
-      student_id: studentId,
-      session_no: Number(sessionNo),
-      link_url: linkUrl.trim() || null,
-      image_base64: imageBase64 || null,
-    };
-
-
     setIsSubmitting(true);
+
+    const payload: CreateAssignmentPayload = {
+      class_id: Number(classId),
+      student_id: studentId,
+      session_no: values.sessionNo,
+      content_type: values.assignmentType,
+      link_url: values.assignmentType === 'link' ? values.linkUrl : null,
+      text_content: values.assignmentType === 'text' ? values.textContent : null,
+      image_base64: values.assignmentType === 'image' ? values.imageBase64 : null,
+    };
 
     try {
       await submitAssignment(payload);
-      setLinkUrl('');
-      setImageBase64('');
-      setImageName('');
       setStatusMessage('성공적으로 제출되었습니다.');
 
       await loadAssignments();
@@ -220,105 +199,35 @@ function AssignmentTab({ classId }: AssignmentTabProps) {
   };
 
   // -------------------------
-  // ✔ 6) 이미지 → Base64 변환
-  // -------------------------
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageBase64(reader.result as string);
-      setImageName(file.name);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // -------------------------
   // UI
   // -------------------------
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft space-y-4">
-        <div>
-          <h3 className="font-semibold text-ellieGray">과제 제출</h3>
-          <p className="text-sm text-ellieGray/70">이미지 또는 링크로 제출하세요.</p>
-          {classInfoLoading && <p className="text-sm text-ellieGray/70">수업 정보를 불러오는 중...</p>}
-          {classInfoError && <p className="text-red-500 text-sm">{classInfoError}</p>}
-        </div>
+      {classInfoLoading && <p className="text-sm text-ellieGray/70">수업 정보를 불러오는 중...</p>}
+      {classInfoError && <p className="text-red-500 text-sm">{classInfoError}</p>}
 
-        <div className="flex gap-2 items-center">
-          <label className="text-sm font-semibold">회차 선택</label>
-          <select className="border rounded-xl px-3 py-2" value={sessionNo} onChange={(e) => setSessionNo(e.target.value)}>
-            {sessions.map((s) => (
-              <option key={s.session_no} value={s.session_no}>
-                {s.session_no}회차
-              </option>
-            ))}
-          </select>
-        </div>
+      {sessionCount > 1 && (
+        <AssignmentProgressBar totalSessions={sessionCount} completedSessions={completedSessions} />
+      )}
 
-        <div>
-          <label className="text-sm font-semibold">이미지 업로드</label>
-          <input type="file" accept="image/*" onChange={handleFileChange} />
-          {imageName && <p className="text-xs">{imageName}</p>}
-        </div>
+      <AssignmentUploadForm
+        className={classInfo?.name ?? ''}
+        onSubmit={handleSubmit}
+        allowSubmission={allowSubmission}
+        submitting={isSubmitting}
+        submitError={submitError}
+        statusMessage={statusMessage}
+      />
 
-        <div>
-          <label className="text-sm font-semibold">링크 제출</label>
-          <input
-            className="border rounded-xl px-3 py-2 w-full"
-            type="url"
-            value={linkUrl}
-            onChange={(e) => setLinkUrl(e.target.value)}
-          />
-        </div>
-
-        {submitError && <p className="text-red-500 text-sm">{submitError}</p>}
-        {statusMessage && <p className="text-sm">{statusMessage}</p>}
-
-        <button
-          type="submit"
-          disabled={isSubmitting || !allowSubmission || !canSubmit}
-          className="bg-[#ffd331] rounded-2xl px-4 py-2 font-semibold text-ellieGray shadow-soft w-full"
-        >
-          {isSubmitting ? '제출 중...' : '제출하기'}
-        </button>
-      </form>
+      {isCompleted && <CertificateDownload completed={isCompleted} certificateUrl={certificateUrl} />}
 
       <section className="rounded-2xl bg-white/70 px-5 py-6 shadow-soft">
         <h3 className="font-semibold mb-3">제출된 과제</h3>
 
         {loadingList && <p className="text-sm">불러오는 중...</p>}
         {listError && <p className="text-red-500">{listError}</p>}
-        {!loadingList && assignments.length === 0 && <p className="text-sm">제출된 과제가 없습니다.</p>}
 
-        <ul className="space-y-3">
-          {assignments.map((item) => (
-            <li key={item.id} className="bg-ivory/80 rounded-xl p-4">
-              <div className="flex flex-col gap-2 text-xs">
-                <span className="font-semibold text-sm">
-                  {item.session_no}회차 · {item.status === 'success' ? '성공' : '미제출'}
-                </span>
-                <span>{formatDateTime(item.created_at)}</span>
-
-                {item.link_url && (
-                  <a href={item.link_url} target="_blank" className="text-[#d98200] underline text-sm font-semibold">
-                    제출 링크
-                  </a>
-                )}
-
-                {item.image_url && (
-                  <img src={item.image_url} className="rounded-xl max-h-64 object-contain" />
-                )}
-
-                {!item.image_url && !item.link_url && (
-                  <span className="text-ellieGray/60 text-sm">제출 내용이 없습니다.</span>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        {!loadingList && <AssignmentList assignments={assignments} />}
       </section>
     </div>
   );
