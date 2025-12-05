@@ -33,7 +33,7 @@ const AssignmentAdminTab = () => {
     setError('');
     try {
       const data = await fetchAssignments({
-        classroom_id: classroomId || undefined,
+        class_id: classroomId ? Number(classroomId) : undefined,
         session_no: sessionNo || undefined,
       });
       setAssignments(data ?? []);
