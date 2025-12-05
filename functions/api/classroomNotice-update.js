@@ -24,25 +24,26 @@ export async function onRequest({ request, env }) {
       return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
-    const { pathname } = new URL(request.url)
-    const segments = pathname.split('/').filter(Boolean)
+    const url = new URL(request.url)
+    const segments = url.pathname.split('/').filter(Boolean)
     const id = segments.pop()
+    const classId = url.searchParams.get('class_id')
 
     if (!id) {
       return jsonResponse({ error: 'ID is required' }, 400)
     }
 
-    const { classroom_id, title, content, display_order } = await request.json()
+    if (!classId) {
+      return jsonResponse({ error: 'class_id required' }, 400)
+    }
+
+    const { title, content, display_order } = await request.json()
 
     if (!title || !content) {
       return jsonResponse({ error: 'title and content are required' }, 400)
     }
 
-    const updates = { title, content }
-
-    if (typeof classroom_id !== 'undefined') {
-      updates.class_id = classroom_id
-    }
+    const updates = { title, content, class_id: classId }
 
     if (typeof display_order !== 'undefined') {
       updates.display_order = display_order
@@ -54,6 +55,7 @@ export async function onRequest({ request, env }) {
       .from('classroom_content')
       .update(updates)
       .eq('id', id)
+      .eq('class_id', classId)
       .eq('type', 'notice')
       .select()
       .single()

@@ -20,27 +20,36 @@ const jsonResponse = (body, status = 200) =>
 
 export async function onRequest({ request, env }) {
   try {
-    if (request.method !== 'GET') {
+    if (request.method !== 'DELETE') {
       return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
-    const supabase = getSupabaseClient(env)
-    const { searchParams } = new URL(request.url)
-    const classroomId = searchParams.get('classroom_id')
+    const url = new URL(request.url)
+    const segments = url.pathname.split('/').filter(Boolean)
+    const id = segments.pop()
+    const classId = url.searchParams.get('class_id')
 
-    if (!classroomId) {
-      return jsonResponse({ error: 'classroom_id is required' }, 400)
+    if (!id) {
+      return jsonResponse({ error: 'ID is required' }, 400)
     }
 
-    const { data, error } = await supabase
-      .from('classroom_content')
-      .select('*, classes(*)')
-      .eq('class_id', classroomId)
-      .eq('type', 'notice')
-      .order('created_at', { ascending: false })
+    if (!classId) {
+      return jsonResponse({ error: 'class_id required' }, 400)
+    }
 
-    if (error) throw error
-    return jsonResponse(data ?? [])
+    const supabase = getSupabaseClient(env)
+
+    const { error } = await supabase
+      .from('classroom_content')
+      .delete()
+      .eq('id', id)
+      .eq('class_id', classId)
+
+    if (error) {
+      throw error
+    }
+
+    return jsonResponse({ success: true })
   } catch (error) {
     return jsonResponse({ error: error.message }, 500)
   }
