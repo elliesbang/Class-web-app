@@ -40,14 +40,16 @@ const VodContentList = ({ categoryId, refreshToken, onEdit, onDeleted }: VodCont
         }
 
         const response = await fetch(`/api/admin-content-vod-list?category_id=${normalizedCategoryId}`);
-        if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { success?: boolean; items?: Record<string, any>[] }
+          | null;
+
+        if (!response.ok || !payload?.success) {
           throw new Error('failed to load vod list');
         }
-
-        const payload = await response.json();
         if (!isMounted) return;
 
-        const payloadItems = Array.isArray(payload.data) ? payload.data : [];
+        const payloadItems = Array.isArray(payload.items) ? payload.items : [];
         setItems(payloadItems);
       } catch (caught) {
         if (!isMounted) return;

@@ -15,6 +15,8 @@ const getSupabaseClient = (env) => {
     env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
     env.VITE_SUPABASE_ANON_KEY
 
+  if (!url || !key) throw new Error('Missing Supabase credentials')
+
   return createClient(url, key, { auth: { persistSession: false }, global: { fetch } })
 }
 
@@ -22,8 +24,8 @@ export async function onRequestGet({ request, env }) {
   try {
     const supabase = getSupabaseClient(env)
     const { searchParams } = new URL(request.url)
-
-    const categoryId = searchParams.get('category_id')
+    const categoryIdParam = searchParams.get('category_id')
+    const categoryId = categoryIdParam !== null ? Number(categoryIdParam) : null
 
     let query = supabase
       .from('vod_videos')
@@ -31,17 +33,20 @@ export async function onRequestGet({ request, env }) {
       .order('order_index', { ascending: true })
       .order('created_at', { ascending: false })
 
-    if (categoryId) {
-      query = query.eq('category_id', Number(categoryId))
+    if (categoryId !== null && !Number.isNaN(categoryId)) {
+      query = query.eq('category_id', categoryId)
     }
 
     const { data, error } = await query
 
-    if (error) throw error
+    if (error) {
+      console.error('[vod_videos/list] error', error)
+      return jsonResponse({ success: false, items: [], error: error.message }, 500)
+    }
 
-    return jsonResponse({ data: data ?? [] })
+    return jsonResponse({ success: true, items: data ?? [] })
   } catch (error) {
     console.error('[vod_videos/list] error', error)
-    return jsonResponse({ error: error.message }, 500)
+    return jsonResponse({ success: false, items: [], error: error.message }, 500)
   }
 }
