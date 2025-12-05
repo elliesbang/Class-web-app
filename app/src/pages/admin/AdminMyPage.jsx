@@ -15,7 +15,7 @@ const ACTIONS = [
     id: 'classrooms',
     label: '강의실 관리',
     description: '강의실 정보를 확인하고 수정하세요.',
-    to: '/admin/classroom',
+    to: '/admin/classes',
   },
   {
     id: 'vod',
