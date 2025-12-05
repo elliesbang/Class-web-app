@@ -2,12 +2,7 @@ import { useEffect, useState } from 'react';
 
 import VodCategoryNav from '@/components/vod/VodCategoryNav';
 import VodVideoList from '@/components/vod/VodVideoList';
-import { fetchVodCategories } from '@/lib/api/vod-categories';
-
-type VodCategory = {
-  id: string;
-  name: string;
-};
+import { fetchVodCategories, type VodCategory } from '@/lib/api/vod-categories';
 
 const VodPage = () => {
   const [categories, setCategories] = useState<VodCategory[]>([]);
@@ -24,7 +19,7 @@ const VodPage = () => {
       try {
         const data = await fetchVodCategories();
         if (!isMounted) return;
-        setCategories(data as VodCategory[]);
+        setCategories(data ?? []);
         setSelectedCategoryId((prev) => prev || (data?.[0]?.id?.toString?.() ?? ''));
       } catch (caught) {
         if (!isMounted) return;
@@ -67,7 +62,7 @@ const VodPage = () => {
         />
       )}
 
-      <VodVideoList selectedCategoryId={selectedCategoryId} />
+      <VodVideoList categoryId={selectedCategoryId} />
     </div>
   );
 };

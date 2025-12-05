@@ -4,7 +4,7 @@ import VodContentList from '@/components/admin/vod/VodContentList';
 import VodVideoForm from '@/components/admin/vod/VodVideoForm';
 import { fetchVodCategories } from '@/lib/api/vod-categories';
 
-type VodCategory = {
+type VodCategoryOption = {
   id: string;
   name: string;
 };
@@ -12,7 +12,7 @@ type VodCategory = {
 const VodContentTabs = () => {
   const [refreshToken, setRefreshToken] = useState(0);
   const [editingItem, setEditingItem] = useState<Record<string, any> | null>(null);
-  const [categoryOptions, setCategoryOptions] = useState<VodCategory[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<VodCategoryOption[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
   useEffect(() => {
@@ -22,8 +22,12 @@ const VodContentTabs = () => {
       try {
         const categories = await fetchVodCategories();
         if (!isMounted) return;
-        setCategoryOptions(categories as VodCategory[]);
-        setSelectedCategoryId((prev) => prev || (categories?.[0]?.id?.toString?.() ?? ''));
+        const options = (categories ?? []).map((category) => ({
+          id: String(category.id),
+          name: category.name,
+        }));
+        setCategoryOptions(options);
+        setSelectedCategoryId((prev) => prev || (options?.[0]?.id ?? ''));
       } catch (error) {
         if (!isMounted) return;
         console.error('[vod-content] failed to load categories', error);
@@ -73,7 +77,6 @@ const VodContentTabs = () => {
         <div className="mt-8">
           <VodContentList
             categoryId={effectiveCategoryId}
-            categoryOptions={categoryOptions}
             refreshToken={refreshToken}
             onEdit={setEditingItem}
             onDeleted={handleSaved}

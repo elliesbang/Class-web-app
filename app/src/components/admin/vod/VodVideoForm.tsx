@@ -60,7 +60,7 @@ const VodVideoForm = ({
       title: editingItem.title ?? '',
       description: editingItem.description ?? '',
       videoUrl: editingItem.url ?? editingItem.videoUrl ?? '',
-      displayOrder: String(editingItem.order_num ?? editingItem.displayOrder ?? '0'),
+      displayOrder: String(editingItem.order_index ?? editingItem.order_num ?? editingItem.displayOrder ?? '0'),
       categoryId:
         editingItem.category_id?.toString?.() || editingItem.categoryId?.toString?.() || initialCategoryId,
     });
@@ -86,8 +86,8 @@ const VodVideoForm = ({
         title: formState.title,
         description: formState.description,
         url: formState.videoUrl,
-        category_id: toInt(formState.categoryId),
-        order_num: toInt(formState.displayOrder) ?? 0,
+        category_id: Number(formState.categoryId),
+        order_index: toInt(formState.displayOrder) ?? 0,
       };
 
       const response = await fetch(endpoint, {

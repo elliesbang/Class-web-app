@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 
+import { supabase } from '@/lib/supabaseClient';
+
 type VodVideoListProps = {
-  selectedCategoryId: string;
+  categoryId: string;
 };
 
 type VodVideoItem = {
@@ -12,13 +14,13 @@ type VodVideoItem = {
   created_at?: string;
 };
 
-const VodVideoList = ({ selectedCategoryId }: VodVideoListProps) => {
+const VodVideoList = ({ categoryId }: VodVideoListProps) => {
   const [items, setItems] = useState<VodVideoItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!selectedCategoryId) {
+    if (!categoryId) {
       setItems([]);
       return;
     }
@@ -30,17 +32,17 @@ const VodVideoList = ({ selectedCategoryId }: VodVideoListProps) => {
       setError(null);
 
       try {
-        const response = await fetch(`/api/vod-list?category_id=${encodeURIComponent(selectedCategoryId)}`);
-        if (!response.ok) {
-          throw new Error('VOD 목록을 불러올 수 없습니다.');
+        const { data, error: supabaseError } = await supabase
+          .from('vod_videos')
+          .select('*')
+          .eq('category_id', Number(categoryId))
+          .order('order_index', { ascending: true });
+
+        if (supabaseError) {
+          throw supabaseError;
         }
-        const data = await response.json();
         if (!isMounted) return;
-        const payloadItems = Array.isArray(data)
-          ? data
-          : Array.isArray((data as Record<string, any>)?.results)
-            ? (data as Record<string, any>).results
-            : [];
+        const payloadItems = Array.isArray(data) ? data : [];
         setItems(payloadItems as VodVideoItem[]);
       } catch (caught) {
         if (!isMounted) return;
@@ -58,9 +60,9 @@ const VodVideoList = ({ selectedCategoryId }: VodVideoListProps) => {
     return () => {
       isMounted = false;
     };
-  }, [selectedCategoryId]);
+  }, [categoryId]);
 
-  if (!selectedCategoryId) {
+  if (!categoryId) {
     return <p className="text-sm text-ellieGray/70">카테고리를 먼저 선택해주세요.</p>;
   }
 
