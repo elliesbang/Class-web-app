@@ -18,16 +18,17 @@ interface ClassDetail {
 }
 
 const ClassDetailPage = () => {
-  const { id } = useParams();
+  const { lesson_id } = useParams();
+  const lessonId = lesson_id;
   const [classData, setClassData] = useState<ClassDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!id) return;
+      if (!lessonId) return;
       setLoading(true);
-      const { data, error: fetchError } = await getClass(id);
+      const { data, error: fetchError } = await getClass(lessonId);
       if (fetchError) {
         setError(fetchError.message);
       } else {
@@ -38,7 +39,7 @@ const ClassDetailPage = () => {
     };
 
     fetchData();
-  }, [id]);
+  }, [lessonId]);
 
   const ruleDescription = useMemo(() => {
     if (!classData) return '-';
@@ -66,7 +67,7 @@ const ClassDetailPage = () => {
         <p className="text-sm font-semibold text-red-700">수업 정보를 불러오는 중 오류가 발생했습니다.</p>
         {error ? <p className="text-sm text-[#6a5c50]">{error}</p> : null}
         <Link
-          to="/admin/classes"
+          to="/admin/lessons"
           className="inline-flex w-max items-center rounded-full bg-[#ffd331] px-4 py-2 text-sm font-semibold text-[#3f3a37] shadow-md hover:bg-[#f3c623]"
         >
           목록으로 돌아가기
@@ -84,7 +85,7 @@ const ClassDetailPage = () => {
           <p className="text-sm text-[#6a5c50]">수업 코드: {classData.code}</p>
         </div>
         <Link
-          to="/admin/classes"
+          to="/admin/lessons"
           className="inline-flex items-center rounded-full bg-[#fff7d6] px-4 py-2 text-sm font-semibold text-[#3f3a37] shadow-inner hover:bg-[#ffe8a3]"
         >
           목록으로

@@ -87,7 +87,7 @@ const ClassCreatePage = () => {
     }
 
     alert('수업이 생성되었습니다.');
-    navigate('/admin/classes');
+    navigate('/admin/lessons');
   };
 
   return (
@@ -104,7 +104,7 @@ const ClassCreatePage = () => {
           <>
             <button
               type="button"
-              onClick={() => navigate('/admin/classes')}
+              onClick={() => navigate('/admin/lessons')}
               className="rounded-full bg-[#fff7d6] px-4 py-2 text-sm font-semibold text-[#3f3a37] shadow-inner hover:bg-[#ffe8a3]"
             >
               취소

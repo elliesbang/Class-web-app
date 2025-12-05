@@ -32,8 +32,8 @@ type ClassroomContentTabsProps = {
 };
 
 const ClassroomContentTabs = ({ initialTab = 'classroomVideo' }: ClassroomContentTabsProps) => {
-  const params = useParams();
-  const classId = params.class_id ?? '';
+  const { class_id } = useParams();
+  const classId = class_id ?? '';
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
