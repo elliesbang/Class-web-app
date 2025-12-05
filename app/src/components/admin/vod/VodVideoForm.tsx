@@ -73,6 +73,10 @@ const VodVideoForm = ({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (isSaving) return;
+    if (!formState.categoryId) {
+      alert('카테고리를 선택해주세요.');
+      return;
+    }
 
     setIsSaving(true);
     try {

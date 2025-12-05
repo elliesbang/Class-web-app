@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 
-import { supabase } from '@/lib/supabaseClient';
-
 type VodContentListProps = {
   categoryId: string;
   refreshToken: number;
@@ -41,17 +39,15 @@ const VodContentList = ({ categoryId, refreshToken, onEdit, onDeleted }: VodCont
           return;
         }
 
-        const { data, error: supabaseError } = await supabase
-          .from('vod_videos')
-          .select('*')
-          .eq('category_id', normalizedCategoryId)
-          .order('order_index', { ascending: true });
-
-        if (supabaseError) {
-          throw supabaseError;
+        const response = await fetch(`/api/admin-content-vod-list?category_id=${normalizedCategoryId}`);
+        if (!response.ok) {
+          throw new Error('failed to load vod list');
         }
+
+        const payload = await response.json();
         if (!isMounted) return;
-        const payloadItems = Array.isArray(data) ? data : [];
+
+        const payloadItems = Array.isArray(payload.data) ? payload.data : [];
         setItems(payloadItems);
       } catch (caught) {
         if (!isMounted) return;

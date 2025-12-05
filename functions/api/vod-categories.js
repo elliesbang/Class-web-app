@@ -18,30 +18,31 @@ const getSupabaseClient = (env) => {
   return createClient(url, key, { auth: { persistSession: false }, global: { fetch } })
 }
 
-export async function onRequestGet({ request, env }) {
+const mapCategory = (row) => ({
+  id: row.id,
+  name: row.name,
+  description: row.description,
+  orderNum: row.order_num,
+  isVisible: row.is_visible
+})
+
+export async function onRequestGet({ env }) {
   try {
     const supabase = getSupabaseClient(env)
-    const { searchParams } = new URL(request.url)
 
-    const categoryId = searchParams.get('category_id')
-
-    let query = supabase
-      .from('vod_videos')
+    const { data, error } = await supabase
+      .from('vod_category')
       .select('*')
-      .order('order_index', { ascending: true })
-      .order('created_at', { ascending: false })
-
-    if (categoryId) {
-      query = query.eq('category_id', Number(categoryId))
-    }
-
-    const { data, error } = await query
+      .eq('is_visible', true)
+      .order('order_num', { ascending: true })
 
     if (error) throw error
 
-    return jsonResponse({ data: data ?? [] })
+    const mapped = Array.isArray(data) ? data.map(mapCategory) : []
+
+    return jsonResponse({ data: mapped })
   } catch (error) {
-    console.error('[vod_videos/list] error', error)
+    console.error('[vod/categories] error', error)
     return jsonResponse({ error: error.message }, 500)
   }
 }

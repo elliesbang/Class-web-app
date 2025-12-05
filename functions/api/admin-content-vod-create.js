@@ -1,74 +1,72 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js'
 
-export async function onRequest({ request, env }) {
+const jsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
+
+const getSupabaseClient = (env) => {
+  const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
+  const key =
+    env.SUPABASE_SERVICE_ROLE_KEY ??
+    env.SUPABASE_KEY ??
+    env.SUPABASE_ANON_KEY ??
+    env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
+    env.VITE_SUPABASE_ANON_KEY
+
+  return createClient(url, key, { auth: { persistSession: false }, global: { fetch } })
+}
+
+export async function onRequestPost({ request, env }) {
   try {
-    if (request.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Method Not Allowed" }),
-        { status: 405 }
-      );
+    if (request.method !== 'POST') {
+      return jsonResponse({ error: 'Method not allowed' }, 405)
     }
 
-    const body = await request.json();
+    const body = await request.json()
     const {
       title,
-      video_url,
+      url,
       description,
       category_id,
-      display_order,
+      order_index,
       is_recommended,
-      thumbnail_url
-    } = body;
+      thumbnail_url,
+      is_visible
+    } = body ?? {}
 
-    if (!title || !video_url) {
-      return new Response(
-        JSON.stringify({ error: "title and video_url are required" }),
-        { status: 400 }
-      );
+    if (!title || !url || typeof category_id === 'undefined' || category_id === null) {
+      return jsonResponse({ error: 'title, url and category_id are required' }, 400)
     }
 
-    // Supabase Cloudflare Client
-    const supabase = createClient(
-      env.SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: { persistSession: false },
-        global: { fetch }
-      }
-    );
+    const payload = {
+      title,
+      url,
+      description: description ?? null,
+      category_id: Number(category_id),
+      order_index: typeof order_index === 'number' ? order_index : Number(order_index) || 0,
+      is_recommended: Boolean(is_recommended),
+      thumbnail_url: thumbnail_url ?? null,
+      is_visible: typeof is_visible === 'boolean' ? is_visible : true
+    }
 
-    // Insert into vod_videos
+    const supabase = getSupabaseClient(env)
+
     const { data, error } = await supabase
-      .from("vod_videos")
-      .insert({
-        title,
-        url: video_url,
-        description: description || null,
-        category_id: category_id ? Number(category_id) : null,
-        order_num: display_order ? Number(display_order) : null,
-        is_recommended: is_recommended ?? false,
-        thumbnail_url: thumbnail_url || null
-      })
+      .from('vod_videos')
+      .insert(payload)
       .select()
-      .single();
+      .single()
 
     if (error) {
-      console.error("[vod_videos/save] DB Error:", error);
-      return new Response(
-        JSON.stringify({ error: "DB insert failed", detail: error.message }),
-        { status: 500 }
-      );
+      console.error('[vod_videos/save] DB Error:', error)
+      return jsonResponse({ error: 'DB insert failed', detail: error.message }, 500)
     }
 
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-
-  } catch (err) {
-    console.error("[vod_videos/save] Internal Error:", err);
-    return new Response(JSON.stringify({ error: "Internal Error" }), {
-      status: 500
-    });
+    return jsonResponse({ data }, 201)
+  } catch (error) {
+    console.error('[vod_videos/save] Internal Error:', error)
+    return jsonResponse({ error: 'Internal Error' }, 500)
   }
 }

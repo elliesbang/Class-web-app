@@ -1,100 +1,181 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react'
 
-const CATEGORY_OPTIONS = [
-  { id: 'recommended', label: '추천' },
-  { id: 'basic', label: '기초' },
-  { id: 'advanced', label: '심화' },
-];
+import { fetchVodCategories, type VodCategory } from '@/lib/api/vod-categories'
+
+type VodItem = {
+  id: number | string
+  title: string
+  url: string
+  description?: string | null
+  createdAt?: string | null
+}
 
 const VodList = () => {
-  const [selectedCategory, setSelectedCategory] = useState('recommended');
-  const [vodList, setVodList] = useState([]);
-  const [activeVideo, setActiveVideo] = useState(null); // 모달에서 재생할 영상
+  const [categories, setCategories] = useState<VodCategory[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [vodList, setVodList] = useState<VodItem[]>([])
+  const [activeVideo, setActiveVideo] = useState<VodItem | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false)
 
   useEffect(() => {
-    fetch(`/.netlify/functions/vod/list?category=${selectedCategory}`)
-      .then((res) => res.json())
-      .then((json) => setVodList(json.results || []))
-      .catch(() => setVodList([]));
-  }, [selectedCategory]);
+    let mounted = true
+    setIsLoadingCategories(true)
 
-  const openModal = (item: any) => {
-    setActiveVideo(item);
-  };
+    const loadCategories = async () => {
+      try {
+        const data = await fetchVodCategories()
+        if (!mounted) return
+        setCategories(data)
+        setSelectedCategory((prev) => prev || (data?.[0]?.id?.toString?.() ?? ''))
+      } catch (error) {
+        console.error('[VodList] failed to load categories', error)
+        if (!mounted) return
+        setCategories([])
+        setSelectedCategory('')
+      } finally {
+        if (!mounted) return
+        setIsLoadingCategories(false)
+      }
+    }
+
+    void loadCategories()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedCategory) {
+      setVodList([])
+      return
+    }
+
+    let mounted = true
+    setIsLoading(true)
+
+    const loadVods = async () => {
+      try {
+        const response = await fetch(`/api/vod-list?category_id=${selectedCategory}`)
+        if (!response.ok) {
+          throw new Error('failed to fetch vod list')
+        }
+        const payload = await response.json()
+        if (!mounted) return
+        setVodList(Array.isArray(payload?.data) ? payload.data : [])
+      } catch (error) {
+        console.error('[VodList] failed to load vod list', error)
+        if (!mounted) return
+        setVodList([])
+      } finally {
+        if (!mounted) return
+        setIsLoading(false)
+      }
+    }
+
+    void loadVods()
+
+    return () => {
+      mounted = false
+    }
+  }, [selectedCategory])
+
+  const activeCategoryName = useMemo(
+    () => categories.find((cat) => String(cat.id) === String(selectedCategory))?.name,
+    [categories, selectedCategory]
+  )
+
+  const openModal = (item: VodItem) => {
+    setActiveVideo(item)
+  }
 
   const closeModal = () => {
-    setActiveVideo(null);
-  };
+    setActiveVideo(null)
+  }
 
-  const formatDate = (date: string) => {
-    if (!date) return '';
+  const formatDate = (date?: string | null) => {
+    if (!date) return ''
     try {
-      return new Date(date).toLocaleDateString('ko-KR');
+      return new Date(date).toLocaleDateString('ko-KR')
     } catch {
-      return '';
+      return ''
     }
-  };
+  }
 
   return (
     <div
       style={{
         padding: '24px',
         maxWidth: '768px',
-        margin: '0 auto',
+        margin: '0 auto'
       }}
     >
-      {/* 제목 */}
       <h2
         style={{
           fontSize: '22px',
           fontWeight: 700,
-          marginBottom: '20px',
+          marginBottom: '20px'
         }}
       >
-        VOD 영상
+        VOD 영상{activeCategoryName ? ` - ${activeCategoryName}` : ''}
       </h2>
 
-      {/* 카테고리 버튼 */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
-        {CATEGORY_OPTIONS.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '10px',
-              border: '1px solid #ddd',
-              background:
-                selectedCategory === cat.id ? '#fff4ce' : '#ffffff',
-              fontWeight: 600,
-              fontSize: '14px',
-              boxShadow:
-                selectedCategory === cat.id
-                  ? '0 0 0 2px #ffd331 inset'
-                  : 'none',
-              cursor: 'pointer',
-            }}
-          >
-            {cat.label}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        {isLoadingCategories ? (
+          <span style={{ color: '#999', fontSize: '14px' }}>카테고리를 불러오는 중입니다...</span>
+        ) : !categories.length ? (
+          <span style={{ color: '#999', fontSize: '14px' }}>표시할 카테고리가 없습니다.</span>
+        ) : (
+          categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(String(cat.id))}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '10px',
+                border: '1px solid #ddd',
+                background: String(selectedCategory) === String(cat.id) ? '#fff4ce' : '#ffffff',
+                fontWeight: 600,
+                fontSize: '14px',
+                boxShadow:
+                  String(selectedCategory) === String(cat.id)
+                    ? '0 0 0 2px #ffd331 inset'
+                    : 'none',
+                cursor: 'pointer'
+              }}
+            >
+              {cat.name}
+            </button>
+          ))
+        )}
       </div>
 
-      {/* 리스트 */}
-      {vodList.length === 0 ? (
+      {isLoading ? (
         <p
           style={{
             marginTop: '30px',
             textAlign: 'center',
             color: '#999',
-            fontSize: '14px',
+            fontSize: '14px'
+          }}
+        >
+          불러오는 중입니다...
+        </p>
+      ) : vodList.length === 0 ? (
+        <p
+          style={{
+            marginTop: '30px',
+            textAlign: 'center',
+            color: '#999',
+            fontSize: '14px'
           }}
         >
           등록된 영상이 없습니다.
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {vodList.map((item: any) => (
+          {vodList.map((item) => (
             <div
               key={item.id}
               onClick={() => openModal(item)}
@@ -107,7 +188,7 @@ const VodList = () => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 cursor: 'pointer',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
               }}
             >
               <div>
@@ -115,13 +196,13 @@ const VodList = () => {
                   style={{
                     fontSize: '16px',
                     fontWeight: 700,
-                    marginBottom: '6px',
+                    marginBottom: '6px'
                   }}
                 >
                   {item.title}
                 </div>
                 <div style={{ fontSize: '12px', color: '#999' }}>
-                  {formatDate(item.created_at)}
+                  {formatDate(item.createdAt)}
                 </div>
               </div>
 
@@ -131,7 +212,6 @@ const VodList = () => {
         </div>
       )}
 
-      {/* 모달 */}
       {activeVideo && (
         <div
           onClick={closeModal}
@@ -143,7 +223,7 @@ const VodList = () => {
             justifyContent: 'center',
             alignItems: 'center',
             padding: '20px',
-            zIndex: 999,
+            zIndex: 999
           }}
         >
           <div
@@ -153,14 +233,14 @@ const VodList = () => {
               borderRadius: '16px',
               maxWidth: '700px',
               width: '100%',
-              padding: '20px',
+              padding: '20px'
             }}
           >
             <div
               style={{
                 fontSize: '18px',
                 fontWeight: 700,
-                marginBottom: '14px',
+                marginBottom: '14px'
               }}
             >
               {activeVideo.title}
@@ -172,7 +252,7 @@ const VodList = () => {
                 aspectRatio: '16/9',
                 background: '#000',
                 borderRadius: '10px',
-                overflow: 'hidden',
+                overflow: 'hidden'
               }}
             >
               <iframe
@@ -193,7 +273,7 @@ const VodList = () => {
                 borderRadius: '10px',
                 border: 'none',
                 fontWeight: 700,
-                cursor: 'pointer',
+                cursor: 'pointer'
               }}
             >
               닫기
@@ -202,7 +282,7 @@ const VodList = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default VodList;
+export default VodList
