@@ -7,7 +7,13 @@ import { Link } from 'react-router-dom';
 async function fetchData(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch: ${url}`);
-  return res.json();
+
+  try {
+    return await res.json();
+  } catch (error) {
+    console.error('[home] failed to parse response', url, error);
+    throw new Error('Invalid JSON response');
+  }
 }
 
 function Home() {
@@ -36,7 +42,8 @@ function Home() {
     async function loadNotices() {
       try {
         const json = await fetchData('/api/global-list');
-        setNotices(json.data ?? []);
+        const rawNotices = Array.isArray(json?.data) ? json.data : [];
+        setNotices(rawNotices);
       } catch (e) {
         console.error('공지 불러오기 실패:', e);
       } finally {
@@ -172,20 +179,25 @@ function Home() {
             <p className="text-sm text-ellieGray/60">등록된 전체 공지가 없습니다.</p>
           ) : (
             <ul className="space-y-3">
-              {visibleNotices.map((notice) => (
-                <li key={notice.id} className="rounded-2xl bg-[#fffaf0] p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-ellieGray">{notice.title}</p>
-                    <time className="text-xs text-ellieGray/60" dateTime={notice.createdAt}>
-                      {new Date(notice.createdAt).toLocaleDateString('ko-KR', {
-                        month: '2-digit',
-                        day: '2-digit',
-                      })}
-                    </time>
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-xs text-ellieGray/70">{notice.content}</p>
-                </li>
-              ))}
+              {visibleNotices.map((notice) => {
+                const createdAt = notice.createdAt ?? notice.created_at;
+                const safeDate = createdAt ? new Date(createdAt) : null;
+                const dateLabel = safeDate && !Number.isNaN(safeDate.getTime())
+                  ? safeDate.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
+                  : '';
+
+                return (
+                  <li key={notice.id} className="rounded-2xl bg-[#fffaf0] p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-ellieGray">{notice.title}</p>
+                      <time className="text-xs text-ellieGray/60" dateTime={createdAt}>
+                        {dateLabel}
+                      </time>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-xs text-ellieGray/70">{notice.content}</p>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>

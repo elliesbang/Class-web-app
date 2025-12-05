@@ -1,62 +1,53 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js'
 
-export async function onRequest({ request, env }) {
+const jsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
+
+const getSupabaseClient = (env) => {
+  const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
+  const key =
+    env.SUPABASE_SERVICE_ROLE_KEY ??
+    env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
+    env.SUPABASE_KEY ??
+    env.SUPABASE_ANON_KEY ??
+    env.VITE_SUPABASE_ANON_KEY
+
+  if (!url || !key) throw new Error('Missing Supabase credentials')
+
+  return createClient(url, key, { auth: { persistSession: false }, global: { fetch } })
+}
+
+export const onRequestPost = async ({ request, env }) => {
   try {
-    if (request.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Method Not Allowed" }),
-        { status: 405 }
-      );
-    }
-
-    const body = await request.json();
-    const { title, content, isVisible } = body;
+    const { title, content, is_visible } = await request.json()
 
     if (!title || !content) {
-      return new Response(
-        JSON.stringify({ error: "title and content are required" }),
-        { status: 400 }
-      );
+      return jsonResponse({ error: 'title and content are required' }, 400)
     }
 
-    // Cloudflare Pages 전용 Supabase Client
-    const supabase = createClient(
-      env.SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: { persistSession: false },
-        global: { fetch }
-      }
-    );
+    const supabase = getSupabaseClient(env)
 
-    // 전체 공지 저장
     const { data, error } = await supabase
-      .from("notifications")
+      .from('classroom_contents')
       .insert({
+        type: 'global_notice',
         title,
         content,
-        is_visible: typeof isVisible === "boolean" ? isVisible : true,
+        is_visible: typeof is_visible === 'boolean' ? is_visible : true
       })
       .select()
-      .single();
+      .single()
 
-    if (error) {
-      console.error("[notifications/save] DB Error:", error);
-      return new Response(
-        JSON.stringify({ error: "DB insert failed", detail: error.message }),
-        { status: 500 }
-      );
-    }
+    if (error) throw error
 
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-
-  } catch (err) {
-    console.error("[notifications/save] Internal Error:", err);
-    return new Response(JSON.stringify({ error: "Internal Error" }), {
-      status: 500
-    });
+    return jsonResponse(data)
+  } catch (error) {
+    console.error('[global/create] ERROR:', error)
+    return jsonResponse({ error: error.message ?? 'Internal Error' }, 500)
   }
 }
+
+export const onRequest = async () => jsonResponse({ error: 'Method not allowed' }, 405)

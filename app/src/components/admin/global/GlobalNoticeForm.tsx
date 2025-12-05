@@ -37,8 +37,14 @@ const GlobalNoticeForm = ({ onSaved, editingItem, onCancelEdit }: GlobalNoticeFo
     setIsSaving(true);
     try {
       const isUpdate = Boolean(editingItem?.id);
+      const editingId = editingItem?.id;
+
+      if (isUpdate && (editingId === undefined || editingId === null || editingId === '')) {
+        throw new Error('수정할 공지의 ID가 올바르지 않습니다.');
+      }
+
       const endpoint = isUpdate
-        ? `/api/admin-content-global-update/${editingItem?.id}`
+        ? `/api/admin-content-global-update/${editingId}`
         : '/api/admin-content-global-create';
       const method = isUpdate ? 'PUT' : 'POST';
 
@@ -55,7 +61,8 @@ const GlobalNoticeForm = ({ onSaved, editingItem, onCancelEdit }: GlobalNoticeFo
       });
 
       if (!response.ok) {
-        throw new Error('failed to save global notice');
+        const message = await response.text().catch(() => '');
+        throw new Error(message || 'failed to save global notice');
       }
 
       await Promise.resolve(onSaved());

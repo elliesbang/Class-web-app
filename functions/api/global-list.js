@@ -28,13 +28,14 @@ export const onRequestGet = async ({ env }) => {
       .from('classroom_contents')
       .select('*')
       .eq('type', 'global_notice')
+      .eq('is_visible', true)
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
     return jsonResponse({ data: data ?? [] })
   } catch (error) {
-    console.error('[global/list] ERROR:', error)
+    console.error('[public/global-list] ERROR:', error)
     return jsonResponse({ error: error.message ?? 'Internal Error' }, 500)
   }
 }
