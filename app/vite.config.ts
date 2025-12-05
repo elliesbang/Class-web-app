@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: './',
+  base: '/',
 
   // ❌ 절대 상위 폴더 지정 금지
   // publicDir: '../',

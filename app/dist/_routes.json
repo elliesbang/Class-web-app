@@ -3,8 +3,11 @@
   "include": ["/*"],
   "exclude": [
     "/api/*",
+    "/functions/*",
+    "/assets/*",
+    "/admin/assets/*",
     "/favicon.ico",
-    "/robots.txt",
-    "/assets/*"
+    "/manifest.json",
+    "/manifest.webmanifest"
   ]
 }
