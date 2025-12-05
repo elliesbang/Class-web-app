@@ -1,0 +1,51 @@
+import { createClient } from '@supabase/supabase-js'
+
+const jsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
+
+const getSupabaseClient = (env) => {
+  const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL
+  const key =
+    env.SUPABASE_SERVICE_ROLE_KEY ??
+    env.SUPABASE_KEY ??
+    env.SUPABASE_ANON_KEY ??
+    env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
+    env.VITE_SUPABASE_ANON_KEY
+
+  return createClient(url, key, { auth: { persistSession: false }, global: { fetch } })
+}
+
+const extractId = (request, params) => {
+  if (params?.id) return params.id
+  const { pathname } = new URL(request.url)
+  const segments = pathname.split('/').filter(Boolean)
+  return segments.pop()
+}
+
+export async function onRequestDelete({ request, env, params }) {
+  try {
+    if (request.method !== 'DELETE') {
+      return jsonResponse({ error: 'Method not allowed' }, 405)
+    }
+
+    const id = extractId(request, params)
+
+    if (!id) {
+      return jsonResponse({ error: 'ID is required' }, 400)
+    }
+
+    const supabase = getSupabaseClient(env)
+
+    const { error } = await supabase.from('vod_videos').delete().eq('id', id)
+
+    if (error) throw error
+
+    return jsonResponse({ success: true })
+  } catch (error) {
+    console.error('[vod_videos/delete] error', error)
+    return jsonResponse({ error: error.message }, 500)
+  }
+}

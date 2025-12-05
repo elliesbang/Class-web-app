@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 
-import { supabase } from '@/lib/supabaseClient';
-
 type VodVideoListProps = {
   categoryId: string;
 };
@@ -11,7 +9,7 @@ type VodVideoItem = {
   title?: string;
   description?: string;
   url?: string;
-  created_at?: string;
+  createdAt?: string;
 };
 
 const VodVideoList = ({ categoryId }: VodVideoListProps) => {
@@ -32,17 +30,15 @@ const VodVideoList = ({ categoryId }: VodVideoListProps) => {
       setError(null);
 
       try {
-        const { data, error: supabaseError } = await supabase
-          .from('vod_videos')
-          .select('*')
-          .eq('category_id', Number(categoryId))
-          .order('order_index', { ascending: true });
-
-        if (supabaseError) {
-          throw supabaseError;
+        const response = await fetch(`/api/vod-list?category_id=${categoryId}`);
+        if (!response.ok) {
+          throw new Error('failed to load vod list');
         }
+
+        const payload = await response.json();
         if (!isMounted) return;
-        const payloadItems = Array.isArray(data) ? data : [];
+
+        const payloadItems = Array.isArray(payload.data) ? payload.data : [];
         setItems(payloadItems as VodVideoItem[]);
       } catch (caught) {
         if (!isMounted) return;
@@ -85,9 +81,9 @@ const VodVideoList = ({ categoryId }: VodVideoListProps) => {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-base font-semibold text-ellieGray">{item.title ?? '제목 없음'}</h3>
-              {item.created_at ? (
+              {item.createdAt ? (
                 <p className="text-xs text-ellieGray/60">
-                  {new Date(item.created_at).toLocaleDateString('ko-KR')}
+                  {new Date(item.createdAt).toLocaleDateString('ko-KR')}
                 </p>
               ) : null}
             </div>
