@@ -1,7 +1,11 @@
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 
-import type { BaseFormProps, CategoryOption } from './ContentTabs';
+type VodVideoFormProps = {
+  onSaved: () => void | Promise<void>;
+  editingItem: Record<string, any> | null;
+  onCancelEdit: () => void;
+};
 
 const toInt = (value: string | number | null | undefined) => {
   if (value === null || value === undefined || value === '') return null;
@@ -9,31 +13,14 @@ const toInt = (value: string | number | null | undefined) => {
   return Number.isNaN(numberValue) ? null : numberValue;
 };
 
-type ClassroomVideoFormProps = BaseFormProps & {
-  categoryId?: string;
-  categoryOptions?: CategoryOption[];
-  onCategoryChange?: (value: string) => void;
-  isCategoryLoading?: boolean;
-  categoryError?: string | null;
-};
-
 const initialState = {
   title: '',
-  videoUrl: '',
   description: '',
+  videoUrl: '',
   displayOrder: '0',
 };
 
-const ClassroomVideoForm = ({
-  onSaved,
-  editingItem,
-  onCancelEdit,
-  categoryId,
-  categoryOptions,
-  onCategoryChange,
-  isCategoryLoading,
-  categoryError,
-}: ClassroomVideoFormProps) => {
+const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: VodVideoFormProps) => {
   const [formState, setFormState] = useState(initialState);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -45,8 +32,8 @@ const ClassroomVideoForm = ({
 
     setFormState({
       title: editingItem.title ?? '',
-      videoUrl: editingItem.url ?? editingItem.videoUrl ?? '',
       description: editingItem.description ?? '',
+      videoUrl: editingItem.url ?? editingItem.videoUrl ?? '',
       displayOrder: String(editingItem.order_num ?? editingItem.displayOrder ?? '0'),
     });
   }, [editingItem]);
@@ -54,24 +41,19 @@ const ClassroomVideoForm = ({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (isSaving) return;
-    if (!categoryId) {
-      alert('카테고리를 선택해주세요.');
-      return;
-    }
 
     setIsSaving(true);
     try {
       const isUpdate = Boolean(editingItem?.id);
       const endpoint = isUpdate
-        ? `/api/admin-content-classroom-video-update/${editingItem?.id}`
-        : '/api/admin-content-classroom-video-create';
+        ? `/api/admin-content-vod-update/${editingItem?.id}`
+        : '/api/admin-content-vod-create';
       const method = isUpdate ? 'PUT' : 'POST';
 
       const payload = {
         title: formState.title,
         description: formState.description,
         url: formState.videoUrl,
-        category_id: toInt(categoryId),
         order_num: toInt(formState.displayOrder) ?? 0,
       };
 
@@ -82,50 +64,22 @@ const ClassroomVideoForm = ({
       });
 
       if (!response.ok) {
-        throw new Error('failed to save classroom video');
+        throw new Error('failed to save vod video');
       }
 
       await Promise.resolve(onSaved());
       setFormState(initialState);
       onCancelEdit();
     } catch (error) {
-      console.error('[content] classroom video save error', error);
+      console.error('[content] vod video save error', error);
       alert('저장에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const renderCategorySelect = () => (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-semibold text-ellieGray">카테고리</label>
-      <select
-        value={categoryId ?? ''}
-        onChange={(event) => onCategoryChange?.(event.target.value)}
-        disabled={isCategoryLoading || (categoryOptions?.length ?? 0) === 0}
-        className="rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
-        required
-      >
-        {isCategoryLoading ? (
-          <option value="">불러오는 중...</option>
-        ) : categoryError ? (
-          <option value="">카테고리를 불러오지 못했습니다.</option>
-        ) : (categoryOptions?.length ?? 0) === 0 ? (
-          <option value="">카테고리가 없습니다.</option>
-        ) : (
-          categoryOptions?.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-            </option>
-          ))
-        )}
-      </select>
-    </div>
-  );
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {renderCategorySelect()}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-ellieGray">제목</label>
         <input
@@ -139,6 +93,16 @@ const ClassroomVideoForm = ({
       </div>
 
       <div className="flex flex-col gap-1">
+        <label className="text-sm font-semibold text-ellieGray">설명</label>
+        <textarea
+          value={formState.description}
+          onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
+          className="h-24 rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
+          placeholder="설명을 입력하세요"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-ellieGray">영상 URL</label>
         <input
           type="url"
@@ -147,16 +111,6 @@ const ClassroomVideoForm = ({
           className="rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
           placeholder="https://example.com"
           required
-        />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-ellieGray">설명</label>
-        <textarea
-          value={formState.description}
-          onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
-          className="h-24 rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
-          placeholder="영상 설명을 입력하세요"
         />
       </div>
 
@@ -193,4 +147,4 @@ const ClassroomVideoForm = ({
   );
 };
 
-export default ClassroomVideoForm;
+export default VodVideoForm;

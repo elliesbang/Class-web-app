@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 
-import type { BaseFormProps, CategoryOption } from './ContentTabs';
+import type { ClassroomFormProps } from './types';
 
 const toInt = (value: string | number | null | undefined) => {
   if (value === null || value === undefined || value === '') return null;
@@ -9,21 +9,14 @@ const toInt = (value: string | number | null | undefined) => {
   return Number.isNaN(numberValue) ? null : numberValue;
 };
 
-type MaterialFormProps = BaseFormProps & {
-  categoryId?: string;
-  categoryOptions?: CategoryOption[];
-  onCategoryChange?: (value: string) => void;
-  isCategoryLoading?: boolean;
-  categoryError?: string | null;
-};
-
 const initialState = {
   title: '',
-  resourceUrl: '',
-  description: '',
+  content: '',
+  isImportant: false,
 };
 
-const MaterialForm = ({
+const ClassroomNoticeForm = ({
+  classId,
   onSaved,
   editingItem,
   onCancelEdit,
@@ -32,7 +25,7 @@ const MaterialForm = ({
   onCategoryChange,
   isCategoryLoading,
   categoryError,
-}: MaterialFormProps) => {
+}: ClassroomFormProps) => {
   const [formState, setFormState] = useState(initialState);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -44,8 +37,8 @@ const MaterialForm = ({
 
     setFormState({
       title: editingItem.title ?? '',
-      resourceUrl: editingItem.url ?? editingItem.resourceUrl ?? '',
-      description: editingItem.description ?? '',
+      content: editingItem.content ?? '',
+      isImportant: Boolean(editingItem.is_important ?? editingItem.isImportant ?? false),
     });
   }, [editingItem]);
 
@@ -57,18 +50,24 @@ const MaterialForm = ({
       return;
     }
 
+    if (!classId) {
+      alert('유효한 class_id가 필요합니다.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const isUpdate = Boolean(editingItem?.id);
       const endpoint = isUpdate
-        ? `/api/admin-content-material-update/${editingItem?.id}`
-        : '/api/admin-content-material-create';
+        ? `/api/admin-content-classroom-notice-update/${editingItem?.id}`
+        : '/api/admin-content-classroom-notice-create';
       const method = isUpdate ? 'PUT' : 'POST';
 
       const payload = {
+        class_id: classId,
         title: formState.title,
-        description: formState.description,
-        url: formState.resourceUrl,
+        content: formState.content,
+        is_important: formState.isImportant,
         category_id: toInt(categoryId),
       };
 
@@ -79,14 +78,14 @@ const MaterialForm = ({
       });
 
       if (!response.ok) {
-        throw new Error('failed to save material');
+        throw new Error('failed to save classroom notice');
       }
 
       await Promise.resolve(onSaved());
       setFormState(initialState);
       onCancelEdit();
     } catch (error) {
-      console.error('[content] material save error', error);
+      console.error('[content] classroom notice save error', error);
       alert('저장에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsSaving(false);
@@ -121,7 +120,7 @@ const MaterialForm = ({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-ellieGray">자료 제목</label>
+        <label className="text-sm font-semibold text-ellieGray">제목</label>
         <input
           type="text"
           value={formState.title}
@@ -133,26 +132,25 @@ const MaterialForm = ({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-ellieGray">URL</label>
-        <input
-          type="url"
-          value={formState.resourceUrl}
-          onChange={(event) => setFormState((prev) => ({ ...prev, resourceUrl: event.target.value }))}
-          className="rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
-          placeholder="https://example.com"
+        <label className="text-sm font-semibold text-ellieGray">내용</label>
+        <textarea
+          value={formState.content}
+          onChange={(event) => setFormState((prev) => ({ ...prev, content: event.target.value }))}
+          className="h-32 rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
+          placeholder="공지 내용을 입력하세요"
           required
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-ellieGray">설명</label>
-        <textarea
-          value={formState.description}
-          onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
-          className="h-24 rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
-          placeholder="자료 설명을 입력하세요"
+      <label className="flex items-center gap-2 text-sm font-semibold text-ellieGray">
+        <input
+          type="checkbox"
+          checked={formState.isImportant}
+          onChange={(event) => setFormState((prev) => ({ ...prev, isImportant: event.target.checked }))}
+          className="h-4 w-4"
         />
-      </div>
+        중요 공지로 표시
+      </label>
 
       <div className="flex gap-3">
         {editingItem ? (
@@ -176,4 +174,4 @@ const MaterialForm = ({
   );
 };
 
-export default MaterialForm;
+export default ClassroomNoticeForm;

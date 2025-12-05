@@ -28,13 +28,9 @@ import ClassDetailPage from './admin/pages/Classes/ClassDetailPage';
 import ClassListPage from './admin/pages/Classes/ClassListPage';
 import AssignmentAdminTab from './pages/admin/tabs/AssignmentAdminTab';
 import StudentsPage from './admin/pages/Students/StudentsPage';
-import ClassroomManagementPage from './pages/admin/classrooms/ClassroomManagementPage';
-import ClassroomMaterialsPage from './pages/admin/classrooms/ClassroomMaterialsPage';
-import ClassroomNoticesPage from './pages/admin/classrooms/ClassroomNoticesPage';
-import ClassroomVideosPage from './pages/admin/classrooms/ClassroomVideosPage';
-import GlobalNoticesPage from './pages/admin/notices/GlobalNoticesPage';
-import VodContentPage from './pages/admin/vod/VodContentPage';
-import VodManagementPage from './pages/admin/vod/VodManagementPage';
+import ClassroomContentTabs from './pages/admin/classroom/ClassroomContentTabs';
+import GlobalContentTabs from './pages/admin/global/GlobalContentTabs';
+import VodContentTabs from './pages/admin/vod/VodContentTabs';
 import VodCategoryPage from './pages/admin/vod/VodCategoryPage';
 import AdminRoutes from './routes/AdminRoutes';
 
@@ -78,14 +74,11 @@ function AppRoutes() {
         <Route path="classes/:id" element={<ClassDetailPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="assignments" element={<AssignmentAdminTab />} />
-        <Route path="classrooms" element={<ClassroomManagementPage />} />
-        <Route path="classrooms/:id/videos" element={<ClassroomVideosPage />} />
-        <Route path="classrooms/:id/materials" element={<ClassroomMaterialsPage />} />
-        <Route path="classrooms/:id/notices" element={<ClassroomNoticesPage />} />
-        <Route path="notices" element={<GlobalNoticesPage />} />
-        <Route path="vod" element={<VodManagementPage />} />
+        <Route path="global" element={<GlobalContentTabs />} />
+        <Route path="vod" element={<VodContentTabs />} />
         <Route path="vod/categories" element={<VodCategoryPage />} />
-        <Route path="vod/content" element={<VodContentPage />} />
+        <Route path="classroom" element={<ClassroomContentTabs />} />
+        <Route path="classroom/:class_id" element={<ClassroomContentTabs />} />
       </Route>
     </Routes>
   );

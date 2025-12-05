@@ -9,13 +9,13 @@ const ACTIONS = [
     id: 'notice',
     label: '전체 공지',
     description: '공지사항을 등록하고 관리합니다.',
-    to: '/admin/notices',
+    to: '/admin/global',
   },
   {
     id: 'classrooms',
     label: '강의실 관리',
     description: '강의실 정보를 확인하고 수정하세요.',
-    to: '/admin/classrooms',
+    to: '/admin/classroom',
   },
   {
     id: 'vod',
