@@ -2,35 +2,39 @@ import type { ComponentType } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import ClassroomNoticeForm from '@/components/admin/content/ClassroomNoticeForm';
-import ClassroomVideoForm from '@/components/admin/content/ClassroomVideoForm';
-import ContentList from '@/components/admin/content/ContentList';
-import MaterialForm from '@/components/admin/content/MaterialForm';
-import type { BaseFormProps, CategoryOption } from '@/components/admin/content/ContentTabs';
+import ClassroomContentList from '@/components/admin/classroom/ClassroomContentList';
+import ClassroomNoticeForm from '@/components/admin/classroom/ClassroomNoticeForm';
+import ClassroomVideoForm from '@/components/admin/classroom/ClassroomVideoForm';
+import MaterialForm from '@/components/admin/classroom/MaterialForm';
+import type { ClassroomFormProps, CategoryOption } from '@/components/admin/classroom/types';
+import useAssignments from '@/hooks/useAssignments';
 import { getCategories } from '@/lib/api/category';
 
-export type ClassroomTabKey = 'classroomVideo' | 'material' | 'classroomNotice';
+type TabKey = 'classroomVideo' | 'classroomNotice' | 'material';
 
-const TAB_DEFINITIONS: {
-  key: ClassroomTabKey;
+type TabDefinition = {
+  key: TabKey;
   label: string;
   showCategory: boolean;
-  FormComponent: ComponentType<BaseFormProps>;
-}[] = [
+  FormComponent: ComponentType<ClassroomFormProps>;
+};
+
+const TAB_DEFINITIONS: TabDefinition[] = [
   { key: 'classroomVideo', label: '강의실 영상', showCategory: true, FormComponent: ClassroomVideoForm },
-  { key: 'material', label: '강의실 자료', showCategory: true, FormComponent: MaterialForm },
   { key: 'classroomNotice', label: '강의실 공지', showCategory: true, FormComponent: ClassroomNoticeForm },
+  { key: 'material', label: '자료', showCategory: true, FormComponent: MaterialForm },
 ];
 
 type CategoryRecord = { id: number; name: string; parent_id: number | null };
 
 type ClassroomContentTabsProps = {
-  initialTab?: ClassroomTabKey;
+  initialTab?: TabKey;
 };
 
 const ClassroomContentTabs = ({ initialTab = 'classroomVideo' }: ClassroomContentTabsProps) => {
   const params = useParams();
-  const [activeTab, setActiveTab] = useState<ClassroomTabKey>(initialTab);
+  const classId = params.class_id ?? '';
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [isCategoryLoading, setIsCategoryLoading] = useState(false);
@@ -38,7 +42,7 @@ const ClassroomContentTabs = ({ initialTab = 'classroomVideo' }: ClassroomConten
   const [refreshToken, setRefreshToken] = useState(0);
   const [editingItem, setEditingItem] = useState<Record<string, any> | null>(null);
 
-  const classroomId = params.id ?? '';
+  useAssignments(classId);
 
   useEffect(() => {
     let isMounted = true;
@@ -88,7 +92,7 @@ const ClassroomContentTabs = ({ initialTab = 'classroomVideo' }: ClassroomConten
 
   useEffect(() => {
     setEditingItem(null);
-  }, [activeTab, selectedCategoryId, classroomId]);
+  }, [activeTab, selectedCategoryId, classId]);
 
   const currentTab = TAB_DEFINITIONS.find((item) => item.key === activeTab) ?? TAB_DEFINITIONS[0];
   const FormComponent = currentTab.FormComponent;
@@ -109,10 +113,10 @@ const ClassroomContentTabs = ({ initialTab = 'classroomVideo' }: ClassroomConten
       <div className="flex flex-col gap-2">
         <h1 className="text-xl font-bold text-ellieGray">강의실 관리 (Classrooms)</h1>
         <p className="text-sm text-ellieGray/70">강의실별 영상, 자료, 공지를 개별적으로 관리합니다.</p>
-        {classroomId ? (
-          <p className="text-sm font-semibold text-ellieGray">대상 강의실 ID: {classroomId}</p>
+        {classId ? (
+          <p className="text-sm font-semibold text-ellieGray">대상 강의실 ID: {classId}</p>
         ) : (
-          <p className="text-sm text-red-500">강의실 ID가 필요합니다. URL에 /:id 를 포함해 이동해주세요.</p>
+          <p className="text-sm text-red-500">강의실 ID가 필요합니다. URL에 /:class_id 를 포함해 이동해주세요.</p>
         )}
       </div>
     </header>
@@ -139,7 +143,8 @@ const ClassroomContentTabs = ({ initialTab = 'classroomVideo' }: ClassroomConten
         </div>
 
         <FormComponent
-          key={`${currentTab.key}-${currentTab.showCategory ? selectedCategoryId : 'none'}-${classroomId}`}
+          key={`${currentTab.key}-${currentTab.showCategory ? selectedCategoryId : 'none'}-${classId}`}
+          classId={classId}
           onSaved={handleSaved}
           editingItem={editingItem}
           onCancelEdit={handleCancelEdit}
@@ -151,8 +156,9 @@ const ClassroomContentTabs = ({ initialTab = 'classroomVideo' }: ClassroomConten
         />
 
         <div className="mt-8">
-          <ContentList
-            type={currentTab.key === 'material' ? 'material' : currentTab.key}
+          <ClassroomContentList
+            classId={classId}
+            type={currentTab.key}
             categoryId={currentTab.showCategory ? selectedCategoryId : undefined}
             requiresCategory={currentTab.showCategory}
             refreshToken={refreshToken}

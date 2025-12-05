@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
-import ContentList from '@/components/admin/content/ContentList';
-import VodVideoForm from '@/components/admin/content/VodVideoForm';
+import VodContentList from '@/components/admin/vod/VodContentList';
+import VodVideoForm from '@/components/admin/vod/VodVideoForm';
 
-const VodContentPage = () => {
+const VodContentTabs = () => {
   const [refreshToken, setRefreshToken] = useState(0);
   const [editingItem, setEditingItem] = useState<Record<string, any> | null>(null);
 
@@ -17,7 +17,7 @@ const VodContentPage = () => {
       <header className="rounded-3xl bg-white px-6 py-4 shadow-soft">
         <div className="flex flex-col gap-2">
           <h1 className="text-xl font-bold text-ellieGray">VOD 콘텐츠 관리</h1>
-          <p className="text-sm text-ellieGray/70">VOD 영상 등록과 목록을 독립된 화면에서 다룹니다.</p>
+          <p className="text-sm text-ellieGray/70">VOD 영상을 등록하고 관리합니다.</p>
         </div>
       </header>
 
@@ -25,17 +25,11 @@ const VodContentPage = () => {
         <VodVideoForm onSaved={handleSaved} editingItem={editingItem} onCancelEdit={() => setEditingItem(null)} />
 
         <div className="mt-8">
-          <ContentList
-            type="vod"
-            requiresCategory={false}
-            refreshToken={refreshToken}
-            onEdit={setEditingItem}
-            onDeleted={handleSaved}
-          />
+          <VodContentList refreshToken={refreshToken} onEdit={setEditingItem} onDeleted={handleSaved} />
         </div>
       </section>
     </div>
   );
 };
 
-export default VodContentPage;
+export default VodContentTabs;

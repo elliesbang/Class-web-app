@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import type { ContentApiType } from './ContentTabs';
+type ClassroomContentType = 'classroomVideo' | 'classroomNotice' | 'material';
 
-type ContentListProps = {
-  type: ContentApiType;
+type ClassroomContentListProps = {
+  classId: string;
+  type: ClassroomContentType;
   categoryId?: string;
-  requiresCategory: boolean;
+  requiresCategory?: boolean;
   refreshToken: number;
   onEdit: (item: Record<string, any>) => void;
   onDeleted: () => void;
@@ -17,23 +18,36 @@ const toInt = (value: string | number | null | undefined) => {
   return Number.isNaN(numberValue) ? null : numberValue;
 };
 
-const ContentList = ({
+const ClassroomContentList = ({
+  classId,
   type,
   categoryId,
-  requiresCategory,
+  requiresCategory = true,
   refreshToken,
   onEdit,
   onDeleted,
-}: ContentListProps) => {
+}: ClassroomContentListProps) => {
   const [items, setItems] = useState<Record<string, any>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  const endpointSuffix = useMemo(() => {
+    if (type === 'classroomVideo') return 'classroom-video';
+    if (type === 'classroomNotice') return 'classroom-notice';
+    return 'material';
+  }, [type]);
+
   useEffect(() => {
     let isMounted = true;
 
     const fetchList = async () => {
+      if (!classId) {
+        setItems([]);
+        setError('class_id가 필요합니다.');
+        return;
+      }
+
       if (requiresCategory && !categoryId) {
         setItems([]);
         return;
@@ -43,18 +57,11 @@ const ContentList = ({
       setError(null);
 
       try {
-        const query = categoryId ? `?category_id=${encodeURIComponent(categoryId)}` : '';
-        const endpointType =
-          type === 'classroomVideo'
-            ? 'classroom-video'
-            : type === 'classroomNotice'
-              ? 'classroom-notice'
-              : type === 'vod'
-                ? 'vod'
-                : type === 'global'
-                  ? 'global'
-                  : 'material';
-        const response = await fetch(`/api/admin-content-${endpointType}-list${query}`);
+        const query = new URLSearchParams({ class_id: classId });
+        if (categoryId) {
+          query.set('category_id', categoryId);
+        }
+        const response = await fetch(`/api/admin-content-${endpointSuffix}-list?${query.toString()}`);
         if (!response.ok) {
           throw new Error('콘텐츠 목록을 불러올 수 없습니다.');
         }
@@ -68,7 +75,7 @@ const ContentList = ({
         setItems(payloadItems);
       } catch (caught) {
         if (!isMounted) return;
-        console.error(`[content] list load failed (${type})`, caught);
+        console.error(`[classroom-content] list load failed (${type})`, caught);
         setError('콘텐츠 목록을 불러오지 못했습니다.');
         setItems([]);
       } finally {
@@ -82,7 +89,7 @@ const ContentList = ({
     return () => {
       isMounted = false;
     };
-  }, [type, categoryId, requiresCategory, refreshToken]);
+  }, [classId, type, categoryId, requiresCategory, refreshToken, endpointSuffix]);
 
   const handleDelete = async (itemId: number | string) => {
     const numericId = toInt(itemId);
@@ -95,17 +102,8 @@ const ContentList = ({
 
     setDeletingId(numericId);
     try {
-      const endpointType =
-        type === 'classroomVideo'
-          ? 'classroom-video'
-          : type === 'classroomNotice'
-            ? 'classroom-notice'
-            : type === 'vod'
-              ? 'vod'
-              : type === 'global'
-                ? 'global'
-                : 'material';
-      const response = await fetch(`/api/admin-content-${endpointType}-delete/${numericId}`, {
+      const query = new URLSearchParams({ class_id: classId });
+      const response = await fetch(`/api/admin-content-${endpointSuffix}-delete/${numericId}?${query.toString()}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -113,7 +111,7 @@ const ContentList = ({
       }
       onDeleted();
     } catch (caught) {
-      console.error('[content] delete failed', caught);
+      console.error('[classroom-content] delete failed', caught);
       alert('삭제에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setDeletingId(null);
@@ -121,8 +119,7 @@ const ContentList = ({
   };
 
   const renderSecondaryText = (item: Record<string, any>) => {
-    if (type === 'global') return item.content ?? '';
-    if (type === 'classroomVideo' || type === 'vod') return item.url ?? item.videoUrl ?? '';
+    if (type === 'classroomVideo') return item.url ?? item.videoUrl ?? '';
     if (type === 'material') return item.url ?? item.resourceUrl ?? '';
     if (type === 'classroomNotice') return item.content ?? '';
     return '';
@@ -132,7 +129,9 @@ const ContentList = ({
 
   return (
     <div className="rounded-2xl border border-ellieGray/10 p-4">
-      {isCategoryMissing ? (
+      {!classId ? (
+        <p className="text-sm text-red-500">class_id가 필요합니다.</p>
+      ) : isCategoryMissing ? (
         <p className="text-sm text-ellieGray/70">카테고리를 먼저 선택해주세요.</p>
       ) : isLoading ? (
         <p className="text-sm text-ellieGray/70">목록을 불러오는 중입니다...</p>
@@ -178,4 +177,4 @@ const ContentList = ({
   );
 };
 
-export default ContentList;
+export default ClassroomContentList;

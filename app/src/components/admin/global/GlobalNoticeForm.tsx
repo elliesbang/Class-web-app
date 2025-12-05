@@ -1,22 +1,19 @@
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 
-import type { BaseFormProps } from './ContentTabs';
-
-const toInt = (value: string | number | null | undefined) => {
-  if (value === null || value === undefined || value === '') return null;
-  const numberValue = Number.parseInt(String(value), 10);
-  return Number.isNaN(numberValue) ? null : numberValue;
+type GlobalNoticeFormProps = {
+  onSaved: () => void | Promise<void>;
+  editingItem: Record<string, any> | null;
+  onCancelEdit: () => void;
 };
 
 const initialState = {
   title: '',
-  description: '',
-  videoUrl: '',
-  displayOrder: '0',
+  content: '',
+  isVisible: true,
 };
 
-const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: BaseFormProps) => {
+const GlobalNoticeForm = ({ onSaved, editingItem, onCancelEdit }: GlobalNoticeFormProps) => {
   const [formState, setFormState] = useState(initialState);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -28,9 +25,8 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: BaseFormProps) => 
 
     setFormState({
       title: editingItem.title ?? '',
-      description: editingItem.description ?? '',
-      videoUrl: editingItem.url ?? editingItem.videoUrl ?? '',
-      displayOrder: String(editingItem.order_num ?? editingItem.displayOrder ?? '0'),
+      content: editingItem.content ?? '',
+      isVisible: Boolean(editingItem.is_visible ?? editingItem.isVisible ?? true),
     });
   }, [editingItem]);
 
@@ -42,15 +38,14 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: BaseFormProps) => 
     try {
       const isUpdate = Boolean(editingItem?.id);
       const endpoint = isUpdate
-        ? `/api/admin-content-vod-update/${editingItem?.id}`
-        : '/api/admin-content-vod-create';
+        ? `/api/admin-content-global-update/${editingItem?.id}`
+        : '/api/admin-content-global-create';
       const method = isUpdate ? 'PUT' : 'POST';
 
       const payload = {
         title: formState.title,
-        description: formState.description,
-        url: formState.videoUrl,
-        order_num: toInt(formState.displayOrder) ?? 0,
+        content: formState.content,
+        is_visible: formState.isVisible,
       };
 
       const response = await fetch(endpoint, {
@@ -60,14 +55,14 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: BaseFormProps) => 
       });
 
       if (!response.ok) {
-        throw new Error('failed to save vod video');
+        throw new Error('failed to save global notice');
       }
 
       await Promise.resolve(onSaved());
       setFormState(initialState);
       onCancelEdit();
     } catch (error) {
-      console.error('[content] vod video save error', error);
+      console.error('[content] global notice save error', error);
       alert('저장에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsSaving(false);
@@ -89,37 +84,25 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: BaseFormProps) => 
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-ellieGray">설명</label>
+        <label className="text-sm font-semibold text-ellieGray">내용</label>
         <textarea
-          value={formState.description}
-          onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
-          className="h-24 rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
-          placeholder="설명을 입력하세요"
-        />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-ellieGray">영상 URL</label>
-        <input
-          type="url"
-          value={formState.videoUrl}
-          onChange={(event) => setFormState((prev) => ({ ...prev, videoUrl: event.target.value }))}
-          className="rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
-          placeholder="https://example.com"
+          value={formState.content}
+          onChange={(event) => setFormState((prev) => ({ ...prev, content: event.target.value }))}
+          className="h-32 rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
+          placeholder="내용을 입력하세요"
           required
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-ellieGray">노출 순서</label>
+      <label className="flex items-center gap-2 text-sm font-semibold text-ellieGray">
         <input
-          type="number"
-          value={formState.displayOrder}
-          onChange={(event) => setFormState((prev) => ({ ...prev, displayOrder: event.target.value }))}
-          className="rounded-2xl border border-ellieGray/20 px-4 py-2 text-sm focus:border-ellieOrange focus:outline-none"
-          min="0"
+          type="checkbox"
+          checked={formState.isVisible}
+          onChange={(event) => setFormState((prev) => ({ ...prev, isVisible: event.target.checked }))}
+          className="h-4 w-4"
         />
-      </div>
+        노출 여부
+      </label>
 
       <div className="flex gap-3">
         {editingItem ? (
@@ -143,4 +126,4 @@ const VodVideoForm = ({ onSaved, editingItem, onCancelEdit }: BaseFormProps) => 
   );
 };
 
-export default VodVideoForm;
+export default GlobalNoticeForm;
