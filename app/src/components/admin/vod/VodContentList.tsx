@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-type VodCategoryOption = {
-  id: string;
-  name: string;
-};
+import { supabase } from '@/lib/supabaseClient';
 
 type VodContentListProps = {
   categoryId: string;
-  categoryOptions: VodCategoryOption[];
   refreshToken: number;
   onEdit: (item: Record<string, any>) => void;
   onDeleted: () => void;
+};
+
+const normalizeCategoryId = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return null;
+  const numeric = Number(value);
+  return Number.isNaN(numeric) ? null : numeric;
 };
 
 const toInt = (value: string | number | null | undefined) => {
@@ -19,7 +21,7 @@ const toInt = (value: string | number | null | undefined) => {
   return Number.isNaN(numberValue) ? null : numberValue;
 };
 
-const VodContentList = ({ categoryId, categoryOptions, refreshToken, onEdit, onDeleted }: VodContentListProps) => {
+const VodContentList = ({ categoryId, refreshToken, onEdit, onDeleted }: VodContentListProps) => {
   const [items, setItems] = useState<Record<string, any>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,20 +35,23 @@ const VodContentList = ({ categoryId, categoryOptions, refreshToken, onEdit, onD
       setError(null);
 
       try {
-        const url = categoryId
-          ? `/api/admin-content-vod-list?category_id=${encodeURIComponent(categoryId)}`
-          : '/api/admin-content-vod-list';
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error('콘텐츠 목록을 불러올 수 없습니다.');
+        const normalizedCategoryId = normalizeCategoryId(categoryId);
+        if (normalizedCategoryId === null) {
+          setItems([]);
+          return;
         }
-        const data = await response.json();
+
+        const { data, error: supabaseError } = await supabase
+          .from('vod_videos')
+          .select('*')
+          .eq('category_id', normalizedCategoryId)
+          .order('order_index', { ascending: true });
+
+        if (supabaseError) {
+          throw supabaseError;
+        }
         if (!isMounted) return;
-        const payloadItems = Array.isArray(data)
-          ? data
-          : Array.isArray((data as Record<string, any>)?.data)
-            ? (data as Record<string, any>).data
-            : [];
+        const payloadItems = Array.isArray(data) ? data : [];
         setItems(payloadItems);
       } catch (caught) {
         if (!isMounted) return;
@@ -92,40 +97,25 @@ const VodContentList = ({ categoryId, categoryOptions, refreshToken, onEdit, onD
     }
   };
 
-  const filteredItems = useMemo(() => {
-    if (!categoryId) return items;
-    return items.filter((item) => {
-      const itemCategoryId = item.category_id ?? item.categoryId;
-      return String(itemCategoryId ?? '') === String(categoryId);
-    });
-  }, [items, categoryId]);
-
-  const renderCategoryName = (itemCategoryId: string | number | null | undefined) => {
-    const normalizedId = itemCategoryId?.toString?.() ?? '';
-    return categoryOptions.find((option) => option.id?.toString?.() === normalizedId)?.name ?? '';
-  };
-
   return (
     <div className="rounded-2xl border border-ellieGray/10 p-4">
       {isLoading ? (
         <p className="text-sm text-ellieGray/70">목록을 불러오는 중입니다...</p>
       ) : error ? (
         <p className="text-sm text-red-500">{error}</p>
-      ) : filteredItems.length === 0 ? (
+      ) : items.length === 0 ? (
         <p className="text-sm text-ellieGray/70">데이터 없음</p>
       ) : (
         <ul className="divide-y divide-ellieGray/10">
-          {filteredItems.map((item) => {
+          {items.map((item) => {
             const itemId = item.id ?? item.content_id;
             const normalizedItemId = typeof itemId === 'number' ? itemId : toInt(itemId);
             const isDeleting = normalizedItemId !== null && deletingId === normalizedItemId;
-            const categoryName = renderCategoryName(item.category_id ?? item.categoryId);
             return (
               <li key={itemId} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-semibold text-ellieGray">{item.title ?? '제목 없음'}</p>
                   <p className="text-sm text-ellieGray/70">{item.url ?? item.videoUrl ?? ''}</p>
-                  {categoryName ? <p className="text-xs text-ellieGray/60">카테고리: {categoryName}</p> : null}
                 </div>
                 <div className="flex gap-2">
                   <button

@@ -1,7 +1,9 @@
 import type { FC } from 'react';
 
+import type { VodCategory } from '@/lib/api/vod-categories';
+
 type VodCategoryNavProps = {
-  categories: { id: string; name: string }[];
+  categories: VodCategory[];
   selectedCategoryId: string;
   onChange: (categoryId: string) => void;
 };
@@ -19,7 +21,7 @@ const VodCategoryNav: FC<VodCategoryNavProps> = ({ categories, selectedCategoryI
           <button
             key={category.id}
             type="button"
-            onClick={() => onChange(category.id)}
+            onClick={() => onChange(String(category.id))}
             className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${isActive ? 'border-ellieOrange bg-ellieYellow text-ellieGray shadow-sm' : 'border-ellieGray/20 bg-white text-ellieGray hover:border-ellieGray/50'}`}
           >
             {category.name}
