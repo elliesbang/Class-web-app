@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { AuthRole, AuthUser } from '@/lib/authUser';
-import { clearAuthUser, setAuthUser } from '@/lib/authUser';
+import { clearAuthUser, hydrateAuthUserFromSession, setAuthUser } from '@/lib/authUser';
+import { supabase } from '@/lib/supabaseClient';
 
 const getStoredToken = () =>
   typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -51,6 +52,26 @@ export function useAuthUserState(): AuthUserState {
   }, []);
 
   const refresh = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        const hydratedUser = await hydrateAuthUserFromSession(session);
+
+        if (hydratedUser) {
+          syncUser(hydratedUser);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('[useAuthUser] Failed to restore Supabase session', error);
+    }
+
     const token = getStoredToken();
     const storedRole = getStoredRole();
 
@@ -59,8 +80,6 @@ export function useAuthUserState(): AuthUserState {
       setLoading(false);
       return;
     }
-
-    setLoading(true);
 
     try {
       const response = await fetch('/auth/me', {
@@ -99,6 +118,17 @@ export function useAuthUserState(): AuthUserState {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setLoading(true);
+      const hydratedUser = session ? await hydrateAuthUserFromSession(session) : null;
+      syncUser(hydratedUser);
+      setLoading(false);
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, [syncUser]);
 
   return {
     user,
