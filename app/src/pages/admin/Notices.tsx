@@ -38,7 +38,7 @@ function Notices() {
 
     const fetchNotices = async () => {
       try {
-        const response = await fetch('/.netlify/functions/content/global-notice/list', {
+        const response = await fetch('/api/global-list', {
           signal: controller.signal,
         });
 
@@ -46,14 +46,20 @@ function Notices() {
           throw new Error('공지 데이터를 불러오지 못했습니다.');
         }
 
-        const payload = await response.json();
+        let payload: any = {};
+        try {
+          payload = await response.json();
+        } catch (parseError) {
+          throw new Error('잘못된 응답 형식입니다.');
+        }
+
         const rawList = Array.isArray(payload?.data)
           ? payload.data
           : Array.isArray(payload?.notices)
-          ? payload.notices
-          : Array.isArray(payload)
-          ? payload
-          : [];
+            ? payload.notices
+            : Array.isArray(payload)
+              ? payload
+              : [];
 
         const parsedNotices: GlobalNoticeRecord[] = rawList
           .map((item: any) => ({

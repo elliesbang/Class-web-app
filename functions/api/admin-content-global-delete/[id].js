@@ -20,21 +20,29 @@ const getSupabaseClient = (env) => {
   return createClient(url, key, { auth: { persistSession: false }, global: { fetch } })
 }
 
-export const onRequestGet = async ({ env }) => {
-  try {
-    const supabase = getSupabaseClient(env)
+const parseId = (rawId) => {
+  if (rawId === undefined || rawId === null || rawId === '') return null
+  const num = Number.parseInt(String(rawId), 10)
+  return Number.isNaN(num) ? null : num
+}
 
-    const { data, error } = await supabase
+export const onRequestDelete = async ({ env, params }) => {
+  try {
+    const id = parseId(params?.id)
+    if (id === null) return jsonResponse({ error: 'Valid id is required' }, 400)
+
+    const supabase = getSupabaseClient(env)
+    const { error } = await supabase
       .from('classroom_contents')
-      .select('*')
+      .delete()
+      .eq('id', id)
       .eq('type', 'global_notice')
-      .order('created_at', { ascending: false })
 
     if (error) throw error
 
-    return jsonResponse({ data: data ?? [] })
+    return jsonResponse({ success: true })
   } catch (error) {
-    console.error('[global/list] ERROR:', error)
+    console.error('[global/delete] ERROR:', error)
     return jsonResponse({ error: error.message ?? 'Internal Error' }, 500)
   }
 }
