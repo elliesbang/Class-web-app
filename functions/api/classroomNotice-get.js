@@ -25,7 +25,6 @@ export async function onRequest({ request, env }) {
     }
 
     const supabase = getSupabaseClient(env)
-
     const { searchParams } = new URL(request.url)
     const classId = searchParams.get('class_id')
 
@@ -35,15 +34,12 @@ export async function onRequest({ request, env }) {
 
     const { data, error } = await supabase
       .from('classroom_content')
-      .select('*')
+      .select('*, classes(*)')
       .eq('class_id', classId)
       .eq('type', 'notice')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      throw error
-    }
-
+    if (error) throw error
     return jsonResponse(data ?? [])
   } catch (error) {
     return jsonResponse({ error: error.message }, 500)

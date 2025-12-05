@@ -28,8 +28,15 @@ export async function onRequest({ request, env }) {
     const segments = pathname.split('/').filter(Boolean)
     const id = segments.pop()
 
+    const { searchParams } = new URL(request.url)
+    const classId = searchParams.get('class_id')
+
     if (!id) {
       return jsonResponse({ error: 'ID is required' }, 400)
+    }
+
+    if (!classId) {
+      return jsonResponse({ error: 'class_id required' }, 400)
     }
 
     const supabase = getSupabaseClient(env)
@@ -38,6 +45,7 @@ export async function onRequest({ request, env }) {
       .from('classroom_content')
       .delete()
       .eq('id', id)
+      .eq('class_id', classId)
 
     if (error) {
       throw error
