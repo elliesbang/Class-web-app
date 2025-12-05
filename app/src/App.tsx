@@ -77,8 +77,8 @@ function AppRoutes() {
         <Route path="global" element={<GlobalContentTabs />} />
         <Route path="vod" element={<VodContentTabs />} />
         <Route path="vod/categories" element={<VodCategoryPage />} />
-        <Route path="classroom" element={<ClassroomContentTabs />} />
-        <Route path="classroom/:class_id" element={<ClassroomContentTabs />} />
+        <Route path="classrooms" element={<Navigate to="/admin/classes" replace />} />
+        <Route path="classrooms/:class_id" element={<ClassroomContentTabs />} />
       </Route>
     </Routes>
   );
