@@ -36,6 +36,8 @@ import AdminRoutes from './routes/AdminRoutes';
 
 import LoginModal from './components/LoginModal';
 import LoginModalProvider, { LoginModalContext } from './context/LoginModalContext';
+import BottomNav from './components/BottomNav';
+import NotificationSettings from './pages/MyPage/NotificationSettings.jsx';
 
 function AppRoutes() {
   return (
@@ -58,11 +60,16 @@ function AppRoutes() {
 
         <Route path="/notices" element={<Notices />} />
         <Route path="/my" element={<MyPage />} />
+        <Route path="/student/my" element={<MyPage />} />
+        <Route path="/admin/my" element={<MyPage />} />
+        <Route path="/vod/my" element={<MyPage />} />
 
         {AdminRoutes()}
 
         <Route path="/signup" element={<Signup />} />
-        <Route path="/vod" element={<VodPage />} />
+        <Route path="/vod" element={<Navigate to="/vod/list" replace />} />
+        <Route path="/vod/list" element={<VodPage />} />
+        <Route path="/notifications" element={<NotificationSettings />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
@@ -96,10 +103,11 @@ function App() {
 function AppShell() {
   const { isOpen, close } = useContext(LoginModalContext);
   return (
-    <>
+    <div className="min-h-screen pt-16 pb-20 bg-[#fffdf6]">
       <AppRoutes />
+      <BottomNav />
       {isOpen && <LoginModal onClose={close} />}
-    </>
+    </div>
   );
 }
 
