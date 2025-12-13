@@ -29,7 +29,7 @@ export const onRequest = async ({ env }) => {
     const { data, error } = await supabase
       .from('vod_category')
       .select('*')
-      .order('sort_order', { ascending: true })
+      .order('order_num', { ascending: true })
 
     if (error) throw error
 
