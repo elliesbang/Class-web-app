@@ -21,9 +21,9 @@ const getSupabaseClient = (env) => {
 const mapCategory = (row) => ({
   id: row.id,
   name: row.name,
-  description: row.description,
-  orderNum: row.order_num,
-  isVisible: row.is_visible
+  description: row.description ?? row.text,
+  orderNum: row.order_num ?? 0,
+  isVisible: row.is_visible ?? true
 })
 
 export async function onRequestGet({ env }) {
@@ -33,7 +33,6 @@ export async function onRequestGet({ env }) {
     const { data, error } = await supabase
       .from('vod_category')
       .select('*')
-      .eq('is_visible', true)
       .order('order_num', { ascending: true })
 
     if (error) throw error
